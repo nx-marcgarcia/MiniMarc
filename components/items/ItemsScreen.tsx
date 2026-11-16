@@ -203,7 +203,13 @@ export function ItemsScreen({
         leading={leading}
         trailing={
           newItem && (
-            <button type="button" className="ui-bar-button" aria-label={newItem.label} onClick={openNew}>
+            <button
+              type="button"
+              className="ui-bar-button"
+              aria-label={newItem.label}
+              title="Formulario manual. Para escribir y que la IA lo ordene, usa la barra «Apunta algo»"
+              onClick={openNew}
+            >
               <PlusIcon />
             </button>
           )

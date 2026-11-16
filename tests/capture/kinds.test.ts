@@ -20,7 +20,7 @@ const key = (code: string, mods: Partial<{ altKey: boolean; ctrlKey: boolean; me
 
 describe('capturePlaceholder', () => {
   it('Auto invita a apuntar cualquier cosa; el resto nombra el tipo', () => {
-    expect(capturePlaceholder('auto')).toBe('Apunta algo…');
+    expect(capturePlaceholder('auto')).toBe('Apunta algo y la IA lo ordena…');
     expect(capturePlaceholder('tarea')).toBe('Apunta una tarea…');
     expect(capturePlaceholder('idea')).toBe('Apunta una idea…');
     expect(capturePlaceholder('compra')).toBe('Apunta una compra…');

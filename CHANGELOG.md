@@ -2,6 +2,15 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Fase 2: captura con IA que acierta
+
+- **Clasificador v2:** tipos `enlace` y `nota`; tienda, precio, cantidad, tags, prioridad, categoría, ocasión y tipo de enlace, validados con Zod. Recibe las tiendas, tags y personas (con sus alias) que ya existen para enlazar en vez de duplicar. Una captura puede crear varios items («Aliexpress: masaje, cajón» → 2 compras de la misma tienda).
+- **Atajos** `#tag @persona !alta /compra $25 >proyecto`, leídos en código antes de la IA. Un enlace suelto se resuelve por su dominio (vídeo, hilo, libro, tienda conocida o tuya) sin gastar IA; lo desconocido lo decide la IA con el título de la página.
+- **Pipeline:** guarda tienda, enlaces (`item_links` con vista previa), tags y campos propios; un regalo para alguien con cumpleaños toma esa ocasión. Un item dudoso va a la Bandeja con la sugerencia de la IA. Aviso de posible duplicado por texto (y fusión). Cada captura queda en `capture_log` (migración `0012`). Si algo falla, la captura se guarda igual.
+- **Toast con lo que ha entendido:** líneas («2 compras en Aliexpress», «Regalo para Rosendo · Cumpleaños 14 ene · 30 €»), chips para cambiar tipo, persona o tienda con un toque (cada corrección va al registro), Deshacer y Editar.
+- **Bandeja** (antes «Sin clasificar»): sugerencia de la IA con Aceptar / Cambiar tipo / Descartar y modo Procesar con teclado (A, D, S, 1…7, Esc). La barra de captura dice que la IA lo ordena y el «+» de cada sección explica que es el formulario manual.
+- **Tests:** 36 frases reales con su salida esperada (`tests/fixtures/phrases.ts`) y `scripts/eval-classify.ts` para medir el prompt contra Gemini real.
+
 ## Fase 1: base sólida
 
 - **Modelo:** migración `0011` (tablas `stores`, `item_links`, `tags`; columnas nuevas en `items` y `people`; fuera los CHECK de `type` y `status`). Los items guardan estados por tipo y sus campos propios en `data`, validados por el registro; el repositorio es la única puerta a la tabla (hay un test que lo impone). Las filas antiguas se leen traducidas.

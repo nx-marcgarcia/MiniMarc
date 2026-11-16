@@ -36,7 +36,8 @@ function Hub({ counts }: { counts: Counts | null }) {
       <Row
         href="/sin-clasificar"
         leading={tile(<TrayIcon />)}
-        title="Sin clasificar"
+        title="Bandeja"
+        subtitle="Lo que la IA no tuvo claro"
         detail={count(counts?.sinClasificar)}
       />
       <Row href="/bandeja" leading={tile(<ClockIcon />)} title="Recién añadido" subtitle="Lo capturado en las últimas 24 h" />

@@ -26,7 +26,7 @@ export function usesArea(kind: QuickKind): boolean {
 
 /** The field's placeholder: it hints at the type the text will be saved as. */
 const PLACEHOLDERS: Record<QuickKind, string> = {
-  auto: 'Apunta algo…',
+  auto: 'Apunta algo y la IA lo ordena…',
   tarea: 'Apunta una tarea…',
   idea: 'Apunta una idea…',
   compra: 'Apunta una compra…',

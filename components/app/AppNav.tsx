@@ -54,7 +54,7 @@ const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
       { key: 'regalos', label: 'Regalos', href: '/regalos', icon: <GiftIcon /> },
       { key: 'libros', label: 'Libros', href: '/libros', icon: <BookIcon /> },
       { key: 'personas', label: 'Personas', href: '/personas', icon: <PersonIcon /> },
-      { key: 'sin-clasificar', label: 'Sin clasificar', href: '/sin-clasificar', icon: <TrayIcon /> },
+      { key: 'sin-clasificar', label: 'Bandeja', href: '/sin-clasificar', icon: <TrayIcon /> },
     ],
   },
   { links: [{ key: 'ajustes', label: 'Ajustes', href: '/ajustes', icon: <SettingsIcon /> }] },

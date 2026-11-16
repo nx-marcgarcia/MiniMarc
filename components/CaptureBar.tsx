@@ -120,7 +120,7 @@ export function CaptureBarFallback() {
 
 /**
  * The always-visible capture field: above the tab bar on iPhone, at the top of the column on
- * desktop. At rest it is just the field ("Apunta algo…", or the screen's type: "Apunta una
+ * desktop. At rest it is just the field ("Apunta algo y la IA lo ordena…", or the screen's type: "Apunta una
  * compra…"), with a small briefcase when Trabajo is on. Focused, it opens into a card with the
  * row of types (Auto sends the text to the AI pipeline; Tarea, Idea, Compra, Regalo, Libro and Cita
  * save it as that type directly, no AI), the Trabajo briefcase (Auto and Tarea only; Auto +
