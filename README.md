@@ -5,8 +5,12 @@ PWA personal (Next.js + Supabase + Google Calendar + Gemini) para capturar tarea
 ## Qué hace
 
 - **Captura** desde la app, Siri, la extensión de Chrome o "Compartir" en Android; Gemini la clasifica (nunca lo de Trabajo) y, si falla, queda en la Bandeja (Por revisar).
-- **Cinco pestañas:** **Hoy** (con su vista **Semana**), **Agenda** (Google Calendar), **Tareas** (Personal / Trabajo), **Bandeja** (**Por revisar**: lo que la IA no tuvo claro; **Últimas 24 h**: lo recién capturado, con la Papelera) y **Listas**.
-- **Listas**, agrupadas por lo que haces con ellas: *Por conseguir* (Compras, Personas y regalos), *Para leer y ver* (Libros, Enlaces) y *Para pensar* (Ideas, Notas). Ajustes también vive aquí.
+- **Cinco pestañas, una tarea cada una** (PARA ligero de Tiago Forte): **Hoy** (tu día en una línea de tiempo, con citas y tareas juntas; vistas **Semana** y **Calendario**), **Bandeja** (**Por revisar**: lo que la IA no tuvo claro; **Últimas 24 h**, con la Papelera), **Tareas**, **Proyectos** y **Biblioteca**.
+- **Personal | Trabajo | Todo:** un solo filtro, recordado, para Hoy, Tareas, Bandeja y Proyectos.
+- **Proyectos:** planes con final («Viaje a Japón», «Reforma del baño») que juntan tareas, compras, enlaces, ideas y notas. Se crean con «+», escribiendo `>nombre` al capturar o convirtiendo una idea. Avisan cuando no tienen siguiente paso; lo de un proyecto de Trabajo nunca pasa por la IA.
+- **Biblioteca**, agrupada por lo que haces con cada cosa: *Por conseguir* (Compras, Personas y regalos), *Para leer y ver* (Libros, Enlaces) y *Para pensar* (Ideas, Notas), más **Archivo** (lo terminado, por meses, con «Reabrir»), **Revisión semanal** y Ajustes.
+- **⌘K** (o `/`) en el ordenador: ir a cualquier sitio, buscar cualquier cosa o hacer cualquier acción desde el teclado.
+- **Revisión semanal** guiada: Bandeja a cero, proyectos, atrasado, rescatar lo olvidado y la semana que viene. Hoy la recuerda los lunes.
 - **Personas y regalos:** cumpleaños y fechas especiales con aviso, y las ideas de regalo de cada persona.
 - **Tus datos:** exportación completa en JSON o de los elementos en CSV desde Ajustes.
 

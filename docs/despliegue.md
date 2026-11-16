@@ -199,7 +199,7 @@ Cada 30 minutos, Supabase llama a `POST /api/cron/morning` con `pg_cron` + `pg_n
 ## 9. Personas y fechas especiales
 
 1. Aplica la migración `0006_person_dates.sql` (`npx supabase db push`, o pégala en el SQL Editor). Crea la tabla `person_dates` (aniversario, santo, el día que os conocisteis…) con RLS como las demás (propietario y correo permitido). Hasta aplicarla, **Personas**, **Hoy** y el resumen de la mañana fallan al leer fechas.
-2. **Listas → Personas** muestra una tarjeta por persona, ordenadas por la fecha más cercana. `/regalos/<id>` lleva ahora a `/personas/<id>`.
+2. **Biblioteca → Personas y regalos** muestra una tarjeta por persona, ordenadas por la fecha más cercana. `/regalos/<id>` lleva ahora a `/personas/<id>`.
 3. El día de una fecha, el aviso de la mañana se titula con ella, por ejemplo «Hoy: aniversario con Ainhoa (5 años)». A la IA solo llegan nombres y etiquetas, nunca notas.
 
 ## 10. Resumen semanal
@@ -212,7 +212,7 @@ Cada 30 minutos, Supabase llama a `POST /api/cron/morning` con `pg_cron` + `pg_n
 
 1. Aplica la migración `0008_libros.sql` (`npx supabase db push`, o pégala en el SQL Editor). Amplía la restricción de `items.type` con `libro` y añade a `items` las columnas `author`, `reading_state` (`por_leer`, `leyendo` o `leido`) y `link`. RLS no cambia. Se puede ejecutar otra vez sin problema. Hasta aplicarla, todo lo demás funciona; solo falla guardar un libro.
 2. Compruébalo en el SQL Editor: `select pg_get_constraintdef(oid) from pg_constraint where conname = 'items_type_check';` debe incluir `'libro'`.
-3. **Listas → Libros** tiene tres pestañas: **Por leer · Leyendo · Leídos**. Desliza a la derecha (o pulsa «Empezar», «Terminado», «Releer») para pasar el libro al siguiente estado; a la izquierda, para archivarlo. La primera foto es la portada. Un libro leído cuenta como hecho.
+3. **Biblioteca → Libros** tiene tres pestañas: **Por leer · Leyendo · Leídos**. Desliza a la derecha (o pulsa «Empezar», «Terminado», «Releer») para pasar el libro al siguiente estado; a la izquierda, para archivarlo. La primera foto es la portada. Un libro leído cuenta como hecho.
 4. **Extensión de Chrome:** recárgala en `chrome://extensions` para ver el chip **Libro** con su campo «Autor».
 
 ## 12. Enlaces, vista previa y buscador

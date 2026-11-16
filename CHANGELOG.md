@@ -2,6 +2,18 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Reformulación: segundo cerebro (PARA ligero)
+
+Ordenar por *para qué* sirve cada cosa, no por *qué tipo* es. Inspirado en Things 3 y GTD (Bandeja y revisión semanal), PARA de Tiago Forte (Proyectos, Áreas, Recursos, Archivo), Capacities (fichas que reúnen lo suyo), Sunsama y Amie (el día en una línea) y Raycast/Linear (⌘K).
+
+- **Pestañas:** Hoy · Bandeja · Tareas · **Proyectos** · **Biblioteca**. La Agenda pasa a ser la vista **Calendario** de Hoy; Listas pasa a llamarse Biblioteca (`/listas` redirige).
+- **Hoy en una línea de tiempo:** «Tu día» mezcla citas y tareas con hora por orden; las tareas se completan desde ahí (con Deshacer). La copia de una tarea en el calendario «Tareas» no sale dos veces. Debajo, «Sin hora» (las atrasadas primero) y «Próximas fechas». Selector **Día | Semana | Calendario**.
+- **Filtro de área global:** Personal | Trabajo | Todo, recordado en una cookie, en Hoy, Tareas, Bandeja y Proyectos. `?area=` sigue funcionando (avisos, marcadores). Con «Todo», las tareas de trabajo dicen «Trabajo».
+- **Proyectos** (migración `0014`, la aplicas tú en el SQL Editor; sin ella todo funciona y Proyectos lo avisa): tarjetas con el siguiente paso o «Sin siguiente paso»; ficha con estado (Activo, En pausa, Terminado), notas, fecha límite y todo lo suyo por tipo. Selector **Proyecto** en la hoja de cualquier elemento; **Convertir en proyecto** en las ideas. Al capturar, `>nombre` lo manda a su proyecto (lo crea si no existe; sin acentos ni mayúsculas; si dos empiezan igual no adivina). Lo de un proyecto de Trabajo no pasa por la IA. Terminar un proyecto no toca sus elementos. La copia de seguridad incluye los proyectos.
+- **Archivo:** lo terminado o archivado, por meses, filtrable por tipo, con **Reabrir**.
+- **⌘K / `/`:** paleta de comandos con acciones (Capturar, Nuevo proyecto, Procesar Bandeja, Revisión semanal, Ir a…), proyectos y la búsqueda de siempre.
+- **Revisión semanal** (`/revision`): cinco pasos con una decisión por toque; Hoy la recuerda los lunes si no la has hecho esa semana en ese dispositivo.
+
 ## Reorganización de la app
 
 Menos pantallas sueltas y un sitio claro para cada cosa.
