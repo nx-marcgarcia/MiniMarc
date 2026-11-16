@@ -103,6 +103,16 @@ export async function readEnlaces() {
   return { cards: toCards(items, links) };
 }
 
+/** Ideas: every idea not archived, discarded ones included (the screen filters them out until asked). */
+export async function readIdeas() {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items']);
+  const ideas = await deps.items.listItems({ type: 'idea', needsReview: false, archived: false });
+  return { ideas };
+}
+
 export async function readLibros() {
   'use cache: private';
   cacheLife('userData');

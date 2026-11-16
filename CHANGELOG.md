@@ -8,6 +8,7 @@ Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la
 - **Estado por tipo y campos propios** en la hoja de edición y en el formulario manual (compra: cantidad, precio, variante, urgencia; idea: categoría, potencial, siguiente paso; regalo: precio aproximado, ocasión).
 - **Tareas y notas:** correos y teléfonos pulsables (`mailto:` y `tel:`).
 - **Enlaces** (nueva): por ver / vistos, con vista previa, filtros por tipo y dominio. Lo que se captura como enlace llega aquí.
+- **Ideas:** sin círculo de completar; cada idea lleva su selector de estado (semilla, explorando, en marcha, descartada) que guarda al momento. Filtros por estado, categoría y tag; las descartadas solo salen al filtrar por ese estado; orden por potencial.
 
 ## Fase 2: captura con IA que acierta
 
