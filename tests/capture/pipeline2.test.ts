@@ -381,3 +381,20 @@ describe('captureText v2 · sugerencia y registro de clasificación', () => {
     expect(res.logId).toBeUndefined();
   });
 });
+
+describe('captureText v2 · precio de la página', () => {
+  it('un enlace de tienda con precio en la página: la compra lo lleva', async () => {
+    const { ai } = aiForbidden();
+    const preview = async () => ({ title: 'Cafetera', image: null, site: 'Amazon', price: 199.9, currency: 'EUR' });
+    const { deps } = setup(ai, { preview });
+    const res = await captureText({ text: 'https://www.amazon.es/dp/B0123', origin: 'web' }, deps);
+    expect(res.items[0].data).toMatchObject({ price: 199.9, currency: 'EUR' });
+  });
+
+  it('sin precio en la página, la compra no lo inventa', async () => {
+    const { ai } = aiForbidden();
+    const { deps } = setup(ai, { preview: async () => ({ title: 'Cafetera', image: null, site: 'Amazon' }) });
+    const res = await captureText({ text: 'https://www.amazon.es/dp/B0123', origin: 'web' }, deps);
+    expect(res.items[0].data).not.toHaveProperty('price');
+  });
+});

@@ -159,6 +159,8 @@ function fromLinkGuess(g: LinkGuess, page: LinkPreview | null): Classification {
     hasTime: false,
     confidence: 0.9,
     ...(g.store && { store: g.store }),
+    // The page's own price, when it gives one (shop pages): the purchase starts with it.
+    ...(page?.price != null && { price: page.price, ...(page.currency && { currency: page.currency }) }),
     ...(g.linkKind && { linkKind: g.linkKind }),
     ...(g.tags.length > 0 && { tags: g.tags }),
   };

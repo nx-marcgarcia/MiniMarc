@@ -59,3 +59,53 @@ describe('parsePreview', () => {
     expect(parsePreview(html, BASE).title).toBe('Real');
   });
 });
+
+describe('parsePreview: precio de la página', () => {
+  it('lee el precio de las etiquetas de producto (product:price:*)', () => {
+    const html = '<meta property="product:price:amount" content="29,99"><meta property="product:price:currency" content="EUR">';
+    expect(parsePreview(html, BASE)).toMatchObject({ price: 29.99, currency: 'EUR' });
+  });
+
+  it('o de og:price:*', () => {
+    expect(parsePreview('<meta property="og:price:amount" content="12.5"><meta property="og:price:currency" content="USD">', BASE)).toMatchObject({ price: 12.5, currency: 'USD' });
+  });
+
+  it('o del JSON-LD de un producto (oferta suelta, lista de ofertas, @graph o rango)', () => {
+    const ld = (o: unknown) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`;
+    expect(parsePreview(ld({ '@type': 'Product', offers: { '@type': 'Offer', price: '25.99', priceCurrency: 'EUR' } }), BASE)).toMatchObject({ price: 25.99, currency: 'EUR' });
+    expect(parsePreview(ld({ '@type': 'Product', offers: [{ price: 40, priceCurrency: 'EUR' }, { price: 50 }] }), BASE)).toMatchObject({ price: 40 });
+    expect(parsePreview(ld({ '@graph': [{ '@type': 'WebSite' }, { '@type': 'Product', offers: { price: '9,90', priceCurrency: 'EUR' } }] }), BASE)).toMatchObject({ price: 9.9 });
+    expect(parsePreview(ld({ '@type': 'Product', offers: { '@type': 'AggregateOffer', lowPrice: '15', priceCurrency: 'EUR' } }), BASE)).toMatchObject({ price: 15 });
+  });
+
+  it('entiende los separadores de miles y decimales', () => {
+    const p = (amount: string) => parsePreview(`<meta property="product:price:amount" content="${amount}">`, BASE).price;
+    expect(p('1.299,00')).toBe(1299);
+    expect(p('1,299.50')).toBe(1299.5);
+    expect(p('1299')).toBe(1299);
+    expect(p('29.99')).toBe(29.99);
+    expect(p('€ 45')).toBe(45);
+    expect(p('1.299')).toBe(1299);
+  });
+
+  it('sin precio, o con uno que no vale (0, negativo, texto), no hay campos de precio', () => {
+    expect(parsePreview('<meta property="og:title" content="X">', BASE)).toEqual({ title: 'X', image: null, site: null });
+    expect(parsePreview('<meta property="product:price:amount" content="0">', BASE)).not.toHaveProperty('price');
+    expect(parsePreview('<meta property="product:price:amount" content="-5">', BASE)).not.toHaveProperty('price');
+    expect(parsePreview('<meta property="product:price:amount" content="gratis">', BASE)).not.toHaveProperty('price');
+  });
+
+  it('un JSON-LD roto no rompe la lectura', () => {
+    const html = '<meta property="og:title" content="X"><script type="application/ld+json">{no es json</script>';
+    expect(parsePreview(html, BASE)).toEqual({ title: 'X', image: null, site: null });
+  });
+
+  it('una moneda que no son 3 letras se ignora, y sin moneda queda solo el precio', () => {
+    expect(parsePreview('<meta property="product:price:amount" content="10"><meta property="product:price:currency" content="euros">', BASE)).toEqual({
+      title: null,
+      image: null,
+      site: null,
+      price: 10,
+    });
+  });
+});
