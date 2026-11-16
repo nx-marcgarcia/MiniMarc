@@ -41,6 +41,12 @@ export const EMPTY_TEXT: Record<ReadingState, string> = {
   abandonado: 'Aquí irán los libros que dejes a medias.',
 };
 
+/** "★★★★☆" for a 1-5 rating. */
+export function stars(rating: number): string {
+  const n = Math.max(0, Math.min(5, Math.round(rating)));
+  return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
 export function isReadingState(v: string): v is ReadingState {
   return (READING_STATES as readonly string[]).includes(v) || v === 'abandonado';
 }

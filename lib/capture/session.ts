@@ -4,6 +4,7 @@ import { getCalendarGateway } from '@/lib/calendar/server';
 import { createSupabaseItemsRepo } from '@/lib/db/items';
 import { createSupabasePeopleRepo } from '@/lib/db/people';
 import { withServerPreviews } from '@/lib/links/server';
+import { withServerBookInfo } from '@/lib/books/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CaptureDeps } from './pipeline';
@@ -15,7 +16,7 @@ export async function sessionCaptureDeps(): Promise<CaptureDeps> {
   const client = await createClient();
   return {
     ai: createGeminiProvider(),
-    items: withServerPreviews(createSupabaseItemsRepo(client), user.id),
+    items: withServerBookInfo(withServerPreviews(createSupabaseItemsRepo(client), user.id), user.id),
     people: createSupabasePeopleRepo(client),
     ...brainDeps(client),
     calendar: () => getCalendarGateway(),

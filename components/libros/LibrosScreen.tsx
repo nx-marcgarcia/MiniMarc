@@ -16,6 +16,7 @@ import {
   nextReadingState,
   READING_LABELS,
   READING_STATES,
+  stars,
 } from '@/lib/libros';
 import type { PhotoMap } from '@/lib/photos/view';
 import { LibroSheet, type LibroSheetMode } from './LibroSheet';
@@ -39,7 +40,7 @@ function firstLine(notes: string | null): string | undefined {
 }
 
 /**
- * Libros: Por leer · Leyendo · Leídos. Each row shows the cover (first photo), title, author and
+ * Libros: Por leer · Leyendo · Leídos. Each row shows the cover (first photo, else the automatic one), title, author and
  * the first line of the notes. Swipe right, or the button at the end, moves the book on
  * (por leer → leyendo → leído → por leer again); swipe left archives. Tap opens the sheet.
  */
@@ -142,7 +143,8 @@ export function LibrosScreen({ books, photos }: { books: Item[]; photos: PhotoMa
           <InsetList>
             {shown.map((book) => {
               const state = book.readingState ?? 'por_leer';
-              const cover = photos[book.id]?.[0]?.url;
+              // An uploaded photo wins over the cover found automatically (Open Library / Google Books).
+              const cover = photos[book.id]?.[0]?.url ?? (typeof book.data.cover === 'string' ? book.data.cover : undefined);
               const note = firstLine(book.notes);
               return (
                 <SwipeRow
@@ -170,6 +172,11 @@ export function LibrosScreen({ books, photos }: { books: Item[]; photos: PhotoMa
                           <LinkText text={book.title} />
                         </span>
                         {book.author && <span className="ui-row__subtitle">{book.author}</span>}
+                        {typeof book.data.rating === 'number' && (
+                          <span className="ui-row__subtitle" role="img" aria-label={`Valoración: ${book.data.rating} de 5`}>
+                            {stars(book.data.rating)}
+                          </span>
+                        )}
                         {note && (
                           <span className="ui-row__subtitle app-book__note">
                             <LinkText text={note} />

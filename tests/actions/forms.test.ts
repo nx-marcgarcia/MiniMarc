@@ -168,6 +168,14 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
     expect(dataFromForm('regalo', form({ approxPrice: 'x' }), {})).toEqual({ ok: false, error: 'El precio no es válido.' });
   });
 
+  it('libro: valoración de 1 a 5 y páginas; no pierde la portada que ya tenía', () => {
+    const base = { cover: 'https://covers.openlibrary.org/b/id/7-M.jpg' };
+    expect(dataFromForm('libro', form({ rating: '4', pages: '320' }), base)).toEqual({ ok: true, value: { ...base, rating: 4, pages: 320 } });
+    expect(dataFromForm('libro', form({ rating: '' }), { ...base, rating: 3 })).toEqual({ ok: true, value: base });
+    expect(dataFromForm('libro', form({ rating: '6' }), {})).toEqual({ ok: false, error: 'La valoración va de 1 a 5.' });
+    expect(dataFromForm('libro', form({ pages: '0' }), {})).toEqual({ ok: false, error: 'Las páginas no son válidas.' });
+  });
+
   it('idea: categoría, potencial de 1 a 5 y siguiente paso', () => {
     expect(dataFromForm('idea', form({ category: 'app', potential: '4', nextStep: 'Hacer un prototipo' }), {})).toEqual({
       ok: true,

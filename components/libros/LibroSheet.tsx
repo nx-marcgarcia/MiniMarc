@@ -11,7 +11,7 @@ import { editPatchFromForm, newItemFormError } from '@/lib/actions/forms';
 import { settle } from '@/lib/actions/result';
 import type { Item, ReadingState } from '@/lib/db/types';
 import { originalText } from '@/lib/format';
-import { linkHref, READING_LABELS, READING_STATES } from '@/lib/libros';
+import { linkHref, READING_LABELS, READING_STATES, stars } from '@/lib/libros';
 import type { PhotoView } from '@/lib/photos/view';
 
 export type LibroSheetMode = { kind: 'new'; state: ReadingState } | { kind: 'edit'; item: Item };
@@ -98,7 +98,7 @@ function LibroForm(props: LibroSheetProps & { startTransition: TransitionStartFu
     const fd = new FormData(e.currentTarget);
     let save: () => Promise<{ ok: true; notice?: string } | { ok: false; error: string }>;
     if (book) {
-      const patch = editPatchFromForm(fd, { type: 'libro', area: 'personal' });
+      const patch = editPatchFromForm(fd, { type: 'libro', area: 'personal', item: book });
       if (!patch.ok) return setError(patch.error);
       save = async () => {
         const r = await settle(() => moveItem(book.id, patch.value), OFFLINE);
@@ -164,6 +164,17 @@ function LibroForm(props: LibroSheetProps & { startTransition: TransitionStartFu
       </div>
 
       <InsetList>
+        <label className="app-field">
+          <span>Valoración</span>
+          <select className="app-input" name="rating" defaultValue={typeof book?.data.rating === 'number' ? String(book.data.rating) : ''} aria-label="Valoración">
+            <option value="">Sin valorar</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {stars(n)}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="app-field">
           <span>Enlace</span>
           <input

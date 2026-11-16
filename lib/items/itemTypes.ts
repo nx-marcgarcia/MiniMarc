@@ -133,6 +133,8 @@ export const ITEM_TYPES = {
       /** Notas y citas de lectura, en markdown. */
       readingNotes: z.string().optional(),
       recommendedBy: text.optional(),
+      /** Portada (https), de Open Library o Google Books; una foto subida tiene prioridad al mostrarla. */
+      cover: z.string().url().max(500).optional(),
     }),
     states: states(['por_leer', 'Por leer'], ['leyendo', 'Leyendo'], ['leido', 'Leídos'], ['abandonado', 'Abandonados']),
     initialState: 'por_leer',

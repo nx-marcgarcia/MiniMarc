@@ -90,6 +90,10 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
     { key: 'approxPrice', kind: 'money', error: PRICE_ERROR },
     { key: 'occasion', kind: 'text' },
   ],
+  libro: [
+    { key: 'rating', kind: 'int', error: 'La valoración va de 1 a 5.' },
+    { key: 'pages', kind: 'int', error: 'Las páginas no son válidas.' },
+  ],
   idea: [
     { key: 'category', kind: 'text' },
     { key: 'potential', kind: 'int', error: 'El potencial va de 1 a 5.' },
