@@ -14,6 +14,7 @@
  * and the app refreshes its screen when it returns to the foreground (RefreshOnReturn), since
  * the private results live in the client router where a server-side revalidation cannot reach.
  */
+import type { AreaFilter } from '@/lib/area';
 import { cacheLife } from 'next/cache';
 import { listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
 import { listPersonas, NEXT_DATE_WINDOW_DAYS } from '@/lib/actions/people';
@@ -36,7 +37,7 @@ import { toCards } from '@/lib/enlaces';
 import { DATE_WINDOW_DAYS, findCandidates } from '@/lib/resurfacing/candidates';
 import { pickForToday } from '@/lib/resurfacing/today';
 import { isOpen } from '@/lib/items/itemTypes';
-import type { Area, ItemType } from '@/lib/db/types';
+import type { ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { toMadrid } from '@/lib/time';
@@ -54,7 +55,7 @@ export async function readRecent() {
   return { ...recent, people, photos, today: madridToday() };
 }
 
-export async function readTareas(area: Area) {
+export async function readTareas(area: AreaFilter) {
   'use cache: private';
   cacheLife('userData');
   const { userId, deps } = await sessionDeps();
@@ -148,7 +149,7 @@ export async function readRegalos() {
   };
 }
 
-export async function readSinClasificar(area: Area) {
+export async function readSinClasificar(area: AreaFilter) {
   'use cache: private';
   cacheLife('userData');
   const { userId, deps } = await sessionDeps();

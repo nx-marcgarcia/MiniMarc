@@ -3,6 +3,7 @@
  * Pure: everything goes through the repos in `deps`, so tests run on the memory backend.
  */
 import { z } from 'zod';
+import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo } from '@/lib/db/people';
 import type { Area, Item, ItemPatch, ItemType, NewItem, Person } from '@/lib/db/types';
@@ -259,10 +260,10 @@ const byDueThenNewest = (a: Item, b: Item) => {
   return Date.parse(b.createdAt) - Date.parse(a.createdAt);
 };
 
-/** Pending, classified tasks of one area. A task without area counts as Personal. */
-export async function listTareas(deps: ActionDeps, area: Area): Promise<Item[]> {
+/** Pending, classified tasks of one area (or both, with 'todo'). A task without area counts as Personal. */
+export async function listTareas(deps: ActionDeps, area: AreaFilter): Promise<Item[]> {
   const all = await deps.items.listItems({ type: 'tarea', open: true, needsReview: false });
-  return all.filter((i) => (i.area ?? 'personal') === area).sort(byDueThenNewest);
+  return all.filter((i) => matchesArea(i.area, area)).sort(byDueThenNewest);
 }
 
 /** Pending, classified items of one type (Ideas, Compras…), newest first. */
@@ -279,9 +280,9 @@ export async function listLibros(deps: ActionDeps): Promise<Item[]> {
  * Pending items waiting for review. With `area`, only that area (no area counts as Personal),
  * so Personal and Trabajo are never listed together; without it, all of them (for counts).
  */
-export async function listSinClasificar(deps: ActionDeps, area?: Area): Promise<Item[]> {
+export async function listSinClasificar(deps: ActionDeps, area?: AreaFilter): Promise<Item[]> {
   const all = await deps.items.listItems({ open: true, needsReview: true });
-  return area ? all.filter((i) => (i.area ?? 'personal') === area) : all;
+  return area ? all.filter((i) => matchesArea(i.area, area)) : all;
 }
 
 /** The Bandeja shows what came in during this window. */

@@ -72,6 +72,20 @@ describe('/tareas', () => {
     expect(trabajo.every((i) => i.area === 'trabajo')).toBe(true);
   });
 
+  it('con Todo devuelve las de las dos áreas en el mismo orden', async () => {
+    await actions.addItem(deps, form({ type: 'tarea', title: 'Dentista', area: 'personal', dueDate: '2026-10-23' }));
+    await actions.addItem(deps, form({ type: 'tarea', title: 'Informe', area: 'trabajo', dueDate: '2026-10-22' }));
+    const all = await actions.listTareas(deps, 'todo');
+    expect(all.map((i) => i.title)).toEqual(['Informe', 'Dentista']);
+  });
+
+  it('la Bandeja con Todo lista las dos áreas', async () => {
+    await deps.items.createItem({ type: 'tarea', title: 'A', area: 'personal', needsReview: true });
+    await deps.items.createItem({ type: 'tarea', title: 'B', area: 'trabajo', needsReview: true });
+    expect((await actions.listSinClasificar(deps, 'todo')).map((i) => i.title).sort()).toEqual(['A', 'B']);
+    expect((await actions.listSinClasificar(deps, 'trabajo')).map((i) => i.title)).toEqual(['B']);
+  });
+
   it('no muestra las tareas sin clasificar ni las hechas', async () => {
     const a = await actions.addItem(deps, form({ type: 'tarea', title: 'Hecha' }));
     await deps.items.createItem({ type: 'tarea', title: 'Dudosa', area: 'personal', needsReview: true });

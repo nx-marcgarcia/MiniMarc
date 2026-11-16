@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { AreaFilter } from '@/components/app/AreaFilter';
 import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
+import { matchesArea, type AreaFilter as Filter } from '@/lib/area';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
 import type { Digest, DigestDate } from '@/lib/digest/build';
 import { formatDay } from '@/lib/format';
@@ -22,6 +24,8 @@ export type HoyScreenProps = {
   vapidPublicKey: string;
   /** What the brain would bring back now (the block at the top); none hides it. */
   paraHoy?: Candidate[];
+  /** Which tasks the day shows (citas, dates and Para hoy are not filtered). */
+  area?: Filter;
 };
 
 /** A section header with either its rows or one quiet line. */
@@ -56,13 +60,14 @@ function dateRow(d: DigestDate, today: string) {
 }
 
 /** The morning digest as a screen: readable in ~20 s, one calm section per area. */
-export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }: HoyScreenProps) {
+export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], area = 'todo' }: HoyScreenProps) {
   const today = digest.date;
   const longDate = formatLongDate(madridToUtc(today, '12:00', tz), tz);
 
   return (
     <LargeTitle title="Hoy">
       <ViewSwitch label="Periodo" options={HOY_VIEWS} current="/hoy" />
+      <AreaFilter value={area} />
       <div className="app-hoy__intro">
         <p className="app-hoy__date">{longDate.charAt(0).toUpperCase() + longDate.slice(1)}</p>
         <p className="app-hoy__headline">{headline ?? digest.headline}</p>
@@ -86,7 +91,7 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }
       )}
 
       <DayTimeline
-        timeline={buildDayTimeline({ events: digest.events, tasks: digest.dayTasks, tz, dayEndsAt: madridToUtc(today, '23:59', tz) })}
+        timeline={buildDayTimeline({ events: digest.events, tasks: digest.dayTasks.filter((t) => matchesArea(t.item.area, area)), tz, dayEndsAt: madridToUtc(today, '23:59', tz) })}
         today={today}
         tz={tz}
       />

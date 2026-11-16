@@ -54,6 +54,8 @@ export type ItemsScreenProps = {
   /** Compras: store names by id, and whether a row says its store (not when the section is the store). */
   storeNames?: Record<string, string>;
   showStore?: boolean;
+  /** Personal and Trabajo together (area filter "Todo"): work tasks say "Trabajo". */
+  showArea?: boolean;
 };
 
 type ToastState = NonNullable<ToastProps['toast']>;
@@ -81,6 +83,7 @@ export function ItemsScreen({
   photos = {},
   storeNames = {},
   showStore,
+  showArea,
 }: ItemsScreenProps) {
   const [, startTransition] = useTransition();
   // Pending writes, applied over the server's lists: rows change at once and React drops these
@@ -225,7 +228,7 @@ export function ItemsScreen({
       const name = peopleById.get(item.personId);
       if (name) parts.push(`Para ${name}`);
     }
-    if (item.area === 'trabajo' && item.type !== 'tarea') parts.push('Trabajo');
+    if (item.area === 'trabajo' && (item.type !== 'tarea' || showArea)) parts.push('Trabajo');
     const progress = subtaskProgress(item.data);
     if (item.type === 'tarea' && progress) parts.push(`${progress} subtareas`);
     let detail = time;

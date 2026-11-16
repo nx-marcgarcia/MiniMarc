@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { AreaSelector } from '@/components/items/AreaSelector';
+import { AreaFilter } from '@/components/app/AreaFilter';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ScreenFallback } from '@/components/items/ScreenFallback';
+import { currentAreaFilter } from '@/lib/areaServer';
 import { readTareas } from '@/lib/cache/reads';
-import type { Area } from '@/lib/db/types';
 import { groupTareas } from '@/lib/tareas';
 
 export const metadata: Metadata = { title: 'Tareas' };
@@ -19,21 +19,28 @@ export default function TareasPage({ searchParams }: { searchParams: SearchParam
   );
 }
 
+const EMPTY = {
+  personal: 'No hay tareas personales pendientes.',
+  trabajo: 'No hay tareas de trabajo pendientes.',
+  todo: 'No hay tareas pendientes.',
+} as const;
+
 async function Tareas({ searchParams }: { searchParams: SearchParams }) {
-  const area: Area = (await searchParams).area === 'trabajo' ? 'trabajo' : 'personal';
+  const area = await currentAreaFilter(await searchParams);
   const { items, photos, today } = await readTareas(area);
   return (
     <ItemsScreen
-      // A fresh screen per area: the two lists never share state.
+      // A fresh screen per area: the lists never share state.
       key={area}
       title="Tareas"
       today={today}
-      before={<AreaSelector area={area} />}
+      before={<AreaFilter value={area} />}
       sections={groupTareas(items, today).map((g) => ({ ...g, takesNew: g.key === 'sin-fecha' }))}
       syncNotices
+      showArea={area === 'todo'}
       photos={photos}
-      emptyText={area === 'trabajo' ? 'No hay tareas de trabajo pendientes.' : 'No hay tareas personales pendientes.'}
-      newItem={{ type: 'tarea', area, label: area === 'trabajo' ? 'Nueva tarea de trabajo' : 'Nueva tarea' }}
+      emptyText={EMPTY[area]}
+      newItem={{ type: 'tarea', area: area === 'trabajo' ? 'trabajo' : 'personal', label: area === 'trabajo' ? 'Nueva tarea de trabajo' : 'Nueva tarea' }}
     />
   );
 }

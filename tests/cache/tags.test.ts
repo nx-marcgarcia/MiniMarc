@@ -115,8 +115,11 @@ describe('write actions invalidate through the shared runner', () => {
 
 describe('every Server Action that writes invalidates', () => {
   const dir = path.resolve(__dirname, '../../app/actions');
-  /** Read-only actions (search, the Regalo picker) and sign-out, which ends the session. */
-  const READS = new Set(['search', 'listCapturePeople', 'signOut']);
+  /**
+   * Read-only actions (search, the Regalo picker), sign-out, which ends the session, and the area
+   * filter, which only sets a cookie (the cached reads never depend on it: pages filter after).
+   */
+  const READS = new Set(['search', 'listCapturePeople', 'signOut', 'setAreaFilter']);
 
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
     const src = readFileSync(path.join(dir, file), 'utf8');
