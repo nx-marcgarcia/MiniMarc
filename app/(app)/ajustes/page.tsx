@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { AvisosSection } from '@/components/ajustes/AvisosSection';
 import { DigestSection } from '@/components/ajustes/DigestSection';
 import { ExportSection } from '@/components/ajustes/ExportSection';
 import { SignOutButton } from '@/components/ajustes/SignOutButton';
@@ -9,6 +10,8 @@ import { InsetList, LargeTitle, Row } from '@/components/ui';
 import { madridToday } from '@/lib/actions/today';
 import { listApiTokens } from '@/lib/auth/tokens';
 import { readSettings } from '@/lib/cache/reads';
+import { DEFAULT_REMINDER_TIMES } from '@/lib/db/settings';
+import { telegramFromEnv } from '@/lib/telegram/env';
 import { requireUser } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Ajustes' };
@@ -94,6 +97,13 @@ async function Digest() {
     <>
       <DigestSection hour={settings.digestHour} tz={settings.tz} />
       <WeeklySection value={settings.weeklyDigest} />
+      <AvisosSection
+        notifyPush={settings.notifyPush}
+        notifyTelegram={settings.notifyTelegram}
+        skipHolidays={settings.skipHolidays}
+        reminderTimes={settings.reminderTimes.length ? settings.reminderTimes : [...DEFAULT_REMINDER_TIMES]}
+        telegramConfigured={telegramFromEnv(process.env) !== null}
+      />
     </>
   );
 }

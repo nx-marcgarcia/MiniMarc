@@ -2,10 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_TZ } from '@/lib/time';
 
 export const DEFAULT_DIGEST_HOUR = 8;
-/** Hours offered in Ajustes for the morning digest. */
-export const DIGEST_HOURS = [6, 7, 8, 9, 10, 11] as const;
+/** Hours offered in Ajustes for the briefing: the send window opens at 9:00 (an older 6 to 8 means 9:00). */
+export const DIGEST_HOURS = [9, 10, 11] as const;
 
-/** Ajustes → "Resumen semanal": Monday 08:00, Sunday 20:00 (next week) or off. */
+/** Ajustes → "Resumen semanal": Monday (first working day), or off. "domingo" is kept for old rows: it now means Monday too. */
 export const WEEKLY_OPTIONS = ['lunes', 'domingo', 'off'] as const;
 export type WeeklyDigest = (typeof WEEKLY_OPTIONS)[number];
 export const DEFAULT_WEEKLY: WeeklyDigest = 'lunes';

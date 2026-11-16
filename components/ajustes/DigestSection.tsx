@@ -14,12 +14,13 @@ export type DigestSectionProps = {
 
 const pad = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
-/** Ajustes → "Resumen de la mañana": hour of the morning push (6–11) and the time zone it uses. */
+/** Ajustes → "Resumen de la mañana": hour of the briefing (9–11, inside the Mon-Fri window) and the time zone it uses. */
 export function DigestSection({ hour, tz }: DigestSectionProps) {
   const [value, setValue] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const current = value ?? hour;
+  // An hour saved before the window existed (6 to 8) is shown as what it now means: 9:00.
+  const current = value ?? (hour === null ? null : Math.max(hour, DIGEST_HOURS[0]));
 
   function change(next: number) {
     const previous = current;
@@ -35,7 +36,7 @@ export function DigestSection({ hour, tz }: DigestSectionProps) {
   }
 
   return (
-    <InsetList header="Resumen de la mañana" footer={error ?? 'Un aviso al día con citas, tareas y cumpleaños. Se abre en Hoy.'}>
+    <InsetList header="Resumen de la mañana" footer={error ?? 'Un aviso cada día laborable con citas, tareas, cumpleaños y una cosa rescatada. Se abre en Hoy.'}>
       <Row
         title="Hora"
         trailing={

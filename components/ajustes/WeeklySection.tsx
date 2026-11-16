@@ -12,23 +12,28 @@ export type WeeklySectionProps = {
 };
 
 const LABELS: Record<WeeklyDigest, string> = {
-  lunes: 'Lunes 08:00',
-  domingo: 'Domingo 20:00',
+  lunes: 'Lunes',
+  domingo: 'Lunes',
   off: 'Desactivado',
 };
 
 const FOOTERS: Record<WeeklyDigest, string> = {
-  lunes: 'El lunes por la mañana, la semana que empieza. Se abre en Semana.',
-  domingo: 'El domingo por la noche, la semana siguiente. Se abre en Semana.',
+  lunes: 'El primer día laborable de la semana, con el resumen de la mañana. Se abre en Semana.',
+  domingo: 'El primer día laborable de la semana, con el resumen de la mañana. Se abre en Semana.',
   off: 'Sin aviso semanal. La semana sigue en Hoy → Ver la semana.',
 };
+
+/** What the select offers: Sunday night is outside the 9:00-16:00 window, so "domingo" is no longer a choice. */
+const OPTIONS = WEEKLY_OPTIONS.filter((o) => o !== 'domingo');
 
 /** Ajustes → "Resumen semanal": when the weekly push goes out (or never). */
 export function WeeklySection({ value }: WeeklySectionProps) {
   const [chosen, setChosen] = useState<WeeklyDigest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const current = chosen ?? value;
+  // A row saved as "domingo" now behaves as Monday: show it as such.
+  const shown = chosen ?? value;
+  const current = shown === 'domingo' ? 'lunes' : shown;
 
   function change(next: WeeklyDigest) {
     const previous = current;
@@ -56,7 +61,7 @@ export function WeeklySection({ value }: WeeklySectionProps) {
             onChange={(e) => change(e.target.value as WeeklyDigest)}
           >
             {current === null && <option value="">—</option>}
-            {WEEKLY_OPTIONS.map((o) => (
+            {OPTIONS.map((o) => (
               <option key={o} value={o}>
                 {LABELS[o]}
               </option>
