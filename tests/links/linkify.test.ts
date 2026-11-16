@@ -33,10 +33,15 @@ describe('linkify', () => {
     ]);
   });
 
-  it('solo http y https: javascript:, data:, ftp: y mailto: quedan como texto', () => {
-    for (const t of ['javascript:alert(1)', 'data:text/html,<b>x</b>', 'ftp://ejemplo.com/x', 'mailto:a@b.es']) {
+  it('solo http y https: javascript:, data: y ftp: quedan como texto', () => {
+    for (const t of ['javascript:alert(1)', 'data:text/html,<b>x</b>', 'ftp://ejemplo.com/x']) {
       expect(linkify(t).every((s) => s.kind === 'text')).toBe(true);
     }
+  });
+
+  it('un mailto: escrito a mano no es un enlace propio: solo su correo, con el href que construye el código', () => {
+    expect(linkify('mailto:a@b.es').map((s) => s.kind)).toEqual(['text', 'email']);
+    expect(linkify('mailto:a@b.es')[1]).toMatchObject({ href: 'mailto:a@b.es' });
   });
 
   it('no enlaza un esquema sin host', () => {
@@ -85,5 +90,51 @@ describe('extractUrls / deriveLink', () => {
   it('sin URL en ningún sitio: null', () => {
     expect(deriveLink({ title: 'Pan', notes: null, link: null })).toBeNull();
     expect(deriveLink({ title: 'Pan', notes: undefined, link: '  ' })).toBeNull();
+  });
+});
+
+describe('linkify: correos y teléfonos', () => {
+  const parts = (text: string) => linkify(text).map((s) => (s.kind === 'text' ? s.text : `[${s.kind}:${s.text}→${s.href}]`));
+
+  it('un correo es pulsable (mailto:) y la puntuación final se queda fuera', () => {
+    expect(parts('Escribir a webmaster@gamesuniversal.es.')).toEqual(['Escribir a ', '[email:webmaster@gamesuniversal.es→mailto:webmaster@gamesuniversal.es]', '.']);
+    expect(parts('ana.perez+pedidos@correo.com, gracias')).toEqual(['[email:ana.perez+pedidos@correo.com→mailto:ana.perez+pedidos@correo.com]', ', gracias']);
+  });
+
+  it('un teléfono español, con o sin prefijo y como se escriba, es pulsable (tel:)', () => {
+    expect(parts('llamar al 600 000 000 mañana')).toEqual(['llamar al ', '[phone:600 000 000→tel:600000000]', ' mañana']);
+    expect(parts('+34 961 234 567')).toEqual(['[phone:+34 961 234 567→tel:+34961234567]']);
+    expect(parts('961234567')).toEqual(['[phone:961234567→tel:961234567]']);
+    expect(parts('961-23-45-67')).toEqual(['[phone:961-23-45-67→tel:961234567]']);
+  });
+
+  it('un teléfono internacional con + también', () => {
+    expect(parts('+1 415 555 2671')).toEqual(['[phone:+1 415 555 2671→tel:+14155552671]']);
+  });
+
+  it('no confunde números con teléfonos: precios, fechas, códigos cortos o muy largos', () => {
+    for (const text of ['pagar 1.299,00 €', 'el 2026-11-16', 'código 12345678', 'pedido 6001234567890', 'son 3,5 kg', 'hay 100 200 300 cosas']) {
+      expect(linkify(text)).toEqual([{ kind: 'text', text }]);
+    }
+  });
+
+  it('un enlace con un correo o un número dentro sigue siendo un solo enlace', () => {
+    expect(linkify('https://x.com/u/ana@correo.com/600000000')).toEqual([{ kind: 'link', href: 'https://x.com/u/ana@correo.com/600000000', text: 'x.com/u/…' }]);
+  });
+
+  it('todo mezclado en una nota', () => {
+    expect(parts('Funko: webmaster@gamesuniversal.es, 961 234 567 y https://funko.es/oferta')).toEqual([
+      'Funko: ',
+      '[email:webmaster@gamesuniversal.es→mailto:webmaster@gamesuniversal.es]',
+      ', ',
+      '[phone:961 234 567→tel:961234567]',
+      ' y ',
+      '[link:funko.es/oferta→https://funko.es/oferta]',
+    ]);
+  });
+
+  it('extractUrls y deriveLink solo miran las URL, no los correos ni los teléfonos', () => {
+    expect(extractUrls('webmaster@gamesuniversal.es 600 000 000')).toEqual([]);
+    expect(deriveLink({ title: 'Llamar 600 000 000', notes: 'a x@y.es' })).toBeNull();
   });
 });

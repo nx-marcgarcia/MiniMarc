@@ -19,9 +19,8 @@ export function LinkText({ text, links = true }: { text: string; links?: boolean
             key={i}
             className="app-link"
             href={s.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={s.href}
+            // Web links open aside; a mail or a call hands over to the system's app.
+            {...(s.kind === 'link' && { target: '_blank', rel: 'noopener noreferrer', title: s.href })}
             onClick={(e) => e.stopPropagation()}
           >
             {s.text}
