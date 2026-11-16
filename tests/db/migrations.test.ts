@@ -197,3 +197,56 @@ describe('0009_link_preview.sql', () => {
     expect(s).not.toMatch(/add column (?!if not exists)/);
   });
 });
+
+describe('0011_segundo_cerebro.sql', () => {
+  const s = sql('0011_segundo_cerebro.sql');
+  const owner =
+    'for all to authenticated\\s+using \\(user_id = \\(select auth\\.uid\\(\\)\\) and \\(select private\\.is_allowed_user\\(\\)\\)\\)\\s+with check \\(user_id = \\(select auth\\.uid\\(\\)\\) and \\(select private\\.is_allowed_user\\(\\)\\)\\);';
+
+  it.each(['stores', 'item_links', 'tags'])('crea %s con RLS de propietario y usuario permitido', (table) => {
+    expect(s).toMatch(new RegExp(`create table if not exists public\\.${table} \\(`));
+    expect(s).toMatch(new RegExp(`alter table public\\.${table}\\s+enable row level security;`));
+    expect(s).toMatch(new RegExp(`drop policy if exists ${table}_owner on public\\.${table};`));
+    expect(s).toMatch(new RegExp(`create policy ${table}_owner on public\\.${table}\\s+${owner}`));
+  });
+
+  it('las filas de item_links se borran con su item', () => {
+    expect(s).toMatch(/item_id\s+uuid not null references public\.items\(id\) on delete cascade/);
+  });
+
+  it('una tienda no se repite por nombre (sin mayúsculas) y un tag tampoco', () => {
+    expect(s).toMatch(/create unique index if not exists stores_user_name_uniq on public\.stores \(user_id, lower\(btrim\(name\)\)\);/);
+    expect(s).toMatch(/create unique index if not exists tags_user_name_uniq on public\.tags \(user_id, lower\(btrim\(name\)\)\);/);
+  });
+
+  it.each([
+    'data jsonb not null default',
+    'store_id uuid references public\\.stores\\(id\\) on delete set null',
+    'priority text',
+    'remind_at timestamptz',
+    'pinned boolean not null default false',
+    'archived boolean not null default false',
+    'completed_at timestamptz',
+    'tags text\\[\\] not null default',
+  ])('items gana la columna %s', (col) => {
+    expect(s).toMatch(new RegExp(`add column if not exists ${col}`));
+  });
+
+  it.each(['alias text\\[\\]', 'relation text', 'likes text', 'sizes jsonb', 'dislikes text', 'contact jsonb'])(
+    'people gana la columna %s',
+    (col) => {
+      expect(s).toMatch(new RegExp(`add column if not exists ${col}`));
+    },
+  );
+
+  it('quita los CHECK de type y status (los valida el registro de tipos) y no toca los datos', () => {
+    expect(s).toMatch(/drop constraint/);
+    expect(s).not.toMatch(/add constraint items_(type|status)_check/);
+    expect(s).not.toMatch(/\bupdate public\.items\b|\bdelete from\b|\bdrop table\b|\bdrop column\b|\btruncate\b/i);
+  });
+
+  it('es repetible', () => {
+    expect(s).not.toMatch(/create (table|index|unique index) (?!if not exists)/);
+    expect(s).not.toMatch(/add column (?!if not exists)/);
+  });
+});
