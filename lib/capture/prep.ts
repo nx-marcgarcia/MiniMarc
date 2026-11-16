@@ -22,8 +22,6 @@ export interface Shortcuts {
   project?: string;
 }
 
-const KINDS: readonly ItemTypeId[] = ['tarea', 'idea', 'compra', 'regalo', 'libro', 'nota', 'enlace'];
-
 const TAG = /^#([\p{L}\p{N}][\p{L}\p{N}_-]*)$/u;
 const PERSON = /^@([\p{L}\p{N}][\p{L}\p{N}_.-]*)$/u;
 const PRIORITY = /^!(alta|media|baja|urgente)$/i;

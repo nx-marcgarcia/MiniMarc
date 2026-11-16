@@ -13,9 +13,16 @@ import type { AiProvider } from '@/lib/ai/provider';
 import type { CalendarGateway } from '@/lib/calendar/client';
 import { taskSyncHook } from '@/lib/calendar/taskSync';
 import type { ItemsRepo } from '@/lib/db/items';
+import type { LinksRepo } from '@/lib/db/links';
 import type { PeopleRepo } from '@/lib/db/people';
-import type { Item, ItemType, NewItem, Origin, PersonDate } from '@/lib/db/types';
+import { domainOf, type StoresRepo } from '@/lib/db/stores';
+import type { TagsRepo } from '@/lib/db/tags';
+import type { Item, ItemType, NewItem, Origin, Person, PersonDate } from '@/lib/db/types';
+import { ITEM_TYPES, isItemType } from '@/lib/items/itemTypes';
+import type { LinkPreview } from '@/lib/links/ogParser';
+import { extractUrls } from '@/lib/links/linkify';
 import { DEFAULT_TZ } from '@/lib/time';
+import { guessFromLink, parseShortcuts, type LinkGuess, type Shortcuts } from './prep';
 
 export const TITLE_MAX = 200;
 export const MIN_CONFIDENCE = 0.6;
@@ -36,6 +43,12 @@ export interface CaptureDeps {
   ai: AiProvider;
   items: ItemsRepo;
   people: PeopleRepo;
+  /** Stores, links and tags of the second brain. Optional: without them a capture keeps its item and drops those extras. */
+  stores?: StoresRepo;
+  links?: LinksRepo;
+  tags?: TagsRepo;
+  /** Fetches a pasted link's page (title, image, site); never throws. Optional. */
+  preview?: (url: string) => Promise<LinkPreview | null>;
   /**
    * Loads the Calendar gateway (calendarGatewayFor on the server). Lazy, so a capture that needs
    * no event reads no credentials, and a load failure (no refresh token) only becomes a syncError.
@@ -97,6 +110,61 @@ export async function captureText(input: CaptureInput, deps: CaptureDeps): Promi
   return run(text, input, deps);
 }
 
+/** What the model is told about what already exists, so it links instead of duplicating. */
+type Known = { people: string[]; stores: string[]; storeDomains: { name: string; domain: string | null }[]; tags: string[] };
+
+const personLabel = (p: Person) => (p.alias.length ? `${p.name} (también: ${p.alias.join(', ')})` : p.name);
+
+/** Each list is an extra for the prompt: if one cannot be read, the capture goes on without it. */
+async function loadKnown(deps: CaptureDeps): Promise<Known> {
+  const safe = async <T>(what: string, read: (() => Promise<T[]>) | undefined): Promise<T[]> => {
+    if (!read) return [];
+    try {
+      return await read();
+    } catch (err) {
+      // Not the AI's fault: logged by name only, the capture goes on without this list.
+      console.error(`${what} failed:`, err instanceof Error ? err.name : 'unknown error');
+      return [];
+    }
+  };
+  const [people, stores, tags] = await Promise.all([
+    safe('listPeople', () => deps.people.listPeople()),
+    safe('listStores', deps.stores && (() => deps.stores!.listStores())),
+    safe('listTags', deps.tags && (() => deps.tags!.listTags())),
+  ]);
+  return {
+    people: people.map(personLabel),
+    stores: stores.map((s) => s.name),
+    storeDomains: stores.map((s) => ({ name: s.name, domain: s.domain })),
+    tags: tags.map((t) => t.name),
+  };
+}
+
+/** A pasted link whose type its domain gives away (a video, a known store…): no AI needed. */
+function fromLinkGuess(g: LinkGuess, page: LinkPreview | null): Classification {
+  const domain = domainOf(g.url);
+  const title = (page?.title ?? domain ?? g.url).slice(0, TITLE_MAX);
+  const kind = g.type as 'enlace' | 'libro' | 'compra';
+  return {
+    kind,
+    title,
+    hasTime: false,
+    confidence: 0.9,
+    ...(g.store && { store: g.store }),
+    ...(g.linkKind && { linkKind: g.linkKind }),
+    ...(g.tags.length > 0 && { tags: g.tags }),
+  };
+}
+
+async function fetchPage(deps: CaptureDeps, url: string): Promise<LinkPreview | null> {
+  if (!deps.preview) return null;
+  try {
+    return await deps.preview(url);
+  } catch {
+    return null;
+  }
+}
+
 async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promise<CaptureResult> {
   const { origin } = input;
 
@@ -106,38 +174,75 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
     return { items: [item], eventIds: [] };
   }
 
+  // The shortcuts (#tag, @persona, !alta, /compra, $25) are read in code; the AI gets the rest.
+  const shortcuts = parseShortcuts(text);
+  const body = shortcuts.text || text;
+
   // Fuera del try de la IA: si la base de datos no da las personas, la captura sigue (sin la
   // lista de nombres) y, sobre todo, el fallo no se cuenta como si fuera de la IA.
-  let people: string[] = [];
-  try {
-    people = (await deps.people.listPeople()).map((p) => p.name);
-  } catch (err) {
-    console.error('listPeople failed:', err instanceof Error ? err.name : 'unknown error');
-  }
+  const known = await loadKnown(deps);
+
+  // Only a link: its domain may say what it is; otherwise the AI gets the page's title.
+  const guess = guessFromLink(body, known.storeDomains);
+  const page = guess ? await fetchPage(deps, guess.url) : null;
+  const urls = extractUrls(body);
 
   let classified: Classification[] = [];
   let aiError: string | undefined;
-  try {
-    classified = await classify(text, { now: deps.now, tz: deps.tz ?? DEFAULT_TZ, people }, deps.ai);
-  } catch (err) {
-    aiError = causeMessage(err);
-    // ClassifyError (timeout, daily cap, invalid JSON) or anything else: fall through to "Sin clasificar".
-    // Logged (never the text) so a capture that lands in Sin clasificar says why. Con una causa
-    // desconocida se añade el nombre del error, que no lleva datos dentro: los que sí podrían
-    // llevarlos (JSON, esquema) ya salen clasificados como invalid_output.
-    console.error('classify failed:', aiError, aiError === 'unknown' ? `(${errorName(err)})` : '');
+  if (guess && guess.type) {
+    classified = [fromLinkGuess(guess, page)];
+  } else {
+    try {
+      classified = await classify(
+        body,
+        {
+          now: deps.now,
+          tz: deps.tz ?? DEFAULT_TZ,
+          people: known.people,
+          stores: known.stores,
+          tags: known.tags,
+          ...(guess && { page: { url: guess.url, title: page?.title ?? null, site: page?.site ?? null } }),
+        },
+        deps.ai,
+      );
+    } catch (err) {
+      aiError = causeMessage(err);
+      // ClassifyError (timeout, daily cap, invalid JSON) or anything else: fall through to "Sin clasificar".
+      // Logged (never the text) so a capture that lands in Sin clasificar says why. Con una causa
+      // desconocida se añade el nombre del error, que no lleva datos dentro: los que sí podrían
+      // llevarlos (JSON, esquema) ya salen clasificados como invalid_output.
+      console.error('classify failed:', aiError, aiError === 'unknown' ? `(${errorName(err)})` : '');
+    }
   }
+
   const unclassified = (): NewItem => ({ ...textFields(text), type: 'tarea', area: null, needsReview: true, origin, sourceText: text });
   if (classified.length === 0) {
+    // A pasted link that the AI could not read is still worth keeping as a link, to review.
+    if (guess) {
+      const fallback = await saveClassified(
+        { kind: 'enlace', title: (page?.title ?? domainOf(guess.url) ?? guess.url).slice(0, TITLE_MAX), hasTime: false, confidence: 0 },
+        text,
+        input,
+        deps,
+        { items: [], eventIds: [] },
+        { shortcuts, urls: [guess.url], page },
+      ).then(
+        (out) => out,
+        () => null,
+      );
+      if (fallback && fallback.items.length > 0) return { ...fallback, ...(aiError && { aiError }) };
+    }
     return { items: [await deps.items.createItem(unclassified())], eventIds: [], ...(aiError && { aiError }) };
   }
 
   // Each element is saved on its own: one failure does not undo or block the others.
   const out: CaptureResult = { items: [], eventIds: [] };
   let failure: unknown = null;
-  for (const c of classified) {
+  // The links of the note go with its first item (a note with one thing and one link: that thing).
+  const linkTarget = classified.findIndex((c) => c.kind !== 'cita' && c.kind !== 'fecha');
+  for (const [n, c] of classified.entries()) {
     try {
-      await saveClassified(c, text, input, deps, out);
+      await saveClassified(c, text, input, deps, out, { shortcuts, urls: n === linkTarget ? urls : [], page: n === linkTarget ? page : null });
     } catch (err) {
       failure ??= err;
     }
@@ -154,8 +259,17 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
   return out;
 }
 
+type SaveExtras = { shortcuts: Shortcuts; urls: string[]; page: LinkPreview | null };
+
 /** Saves one classified element into `out`: a cita in Calendar, or an item. Throws if the item insert fails. */
-async function saveClassified(c: Classification, text: string, input: CaptureInput, deps: CaptureDeps, out: CaptureResult) {
+async function saveClassified(
+  c: Classification,
+  text: string,
+  input: CaptureInput,
+  deps: CaptureDeps,
+  out: CaptureResult,
+  extras: SaveExtras,
+): Promise<CaptureResult> {
   const { origin } = input;
   const confident = c.confidence >= MIN_CONFIDENCE;
 
@@ -170,24 +284,106 @@ async function saveClassified(c: Classification, text: string, input: CaptureInp
     const r = await createCita({ calendar: deps.calendar }, event);
     if (r.ok) {
       out.eventIds.push(r.eventId);
-      return;
+      return out;
     }
     // Calendar failed: keep the cita as an item to review, with the error visible.
     out.items.push(
       await deps.items.createItem({ ...fromClassification(c, origin), needsReview: true, syncError: r.error, sourceText: text }),
     );
-    return;
+    return out;
   }
 
   if (c.kind === 'fecha' && confident && c.personName && c.label && c.date) {
     (out.dates ??= []).push(await savePersonDate(deps, c.personName, c.label, c.date, c.notes));
-    return;
+    return out;
   }
 
   const fields: NewItem = { ...fromClassification(c, origin), needsReview: !confident, sourceText: text };
-  if (c.kind === 'regalo' && c.personName) fields.personId = await personId(deps, c.personName);
+  const { shortcuts } = extras;
+  // The shortcuts the AI does not have to guess: they win over what it said.
+  if (shortcuts.kind && isItemType(shortcuts.kind) && c.kind !== 'cita' && c.kind !== 'fecha') {
+    fields.type = shortcuts.kind;
+    fields.area = shortcuts.kind === 'tarea' ? 'personal' : null;
+  }
+  if (shortcuts.priority) fields.priority = shortcuts.priority;
+  const personName = c.personName ?? shortcuts.person;
+  let person: Person | null = null;
+  if (fields.type === 'regalo' && personName) {
+    person = await personFor(deps, personName);
+    fields.personId = person?.id ?? null;
+  }
+  const storeId = await storeFor(deps, c.store);
+  if (storeId) fields.storeId = storeId;
+  const tags = await tagsFor(deps, [...(c.tags ?? []), ...shortcuts.tags]);
+  if (tags.length) fields.tags = tags;
+  fields.data = dataFor(fields.type as ItemType, c, shortcuts, person);
+  if (extras.urls.length > 0) fields.link = extras.urls[0];
+
   const item = await deps.items.createItem(fields);
-  out.items.push(await syncDatedTask(deps, item));
+  const saved = await syncDatedTask(deps, item);
+  out.items.push(saved);
+  await saveLinks(deps, saved, extras);
+  return out;
+}
+
+/** The type's own fields (item.data) from what the AI and the shortcuts said; invalid ones are dropped, never the item. */
+function dataFor(type: ItemType, c: Classification, sc: Shortcuts, person: Person | null): Record<string, unknown> {
+  const price = c.price ?? sc.price;
+  let data: Record<string, unknown> = {};
+  if (type === 'compra') {
+    data = { ...(price != null && { price }), ...(c.currency && { currency: c.currency }), ...(c.quantity && { quantity: c.quantity }) };
+  } else if (type === 'regalo') {
+    // With nothing said, a gift for someone with a birthday is, for now, for that birthday.
+    const occasion = c.occasion ?? (person?.birthday ? 'Cumpleaños' : undefined);
+    data = { ...(price != null && { approxPrice: price }), ...(occasion && { occasion }) };
+  } else if (type === 'idea') {
+    data = { ...(c.category && { category: c.category }) };
+  } else if (type === 'enlace') {
+    data = { ...(c.linkKind && { kind: c.linkKind }) };
+  }
+  return isItemType(type) && ITEM_TYPES[type].fields.safeParse(data).success ? data : {};
+}
+
+/** The person by name or alias, created if new; null if that fails (the gift is still saved, without a person). */
+async function personFor(deps: CaptureDeps, name: string): Promise<Person | null> {
+  try {
+    return await deps.people.upsertPersonByName(name);
+  } catch {
+    return null;
+  }
+}
+
+async function storeFor(deps: CaptureDeps, store: Classification['store']): Promise<string | undefined> {
+  if (!store || !deps.stores) return undefined;
+  try {
+    return (await deps.stores.upsertStoreByName(store.name, store.domain ? { domain: store.domain } : undefined)).id;
+  } catch {
+    return undefined;
+  }
+}
+
+async function tagsFor(deps: CaptureDeps, names: string[]): Promise<string[]> {
+  if (!deps.tags || names.length === 0) return [];
+  try {
+    return await deps.tags.upsertTags(names);
+  } catch {
+    return [];
+  }
+}
+
+/** Every link of the note goes to item_links (the first with the preview that was fetched). Never throws: the item is saved. */
+async function saveLinks(deps: CaptureDeps, item: Item, extras: SaveExtras): Promise<void> {
+  if (!deps.links) return;
+  for (const [n, url] of extras.urls.entries()) {
+    try {
+      await deps.links.addLink(item.id, {
+        url,
+        ...(n === 0 && extras.page && { title: extras.page.title ?? undefined, image: extras.page.image ?? undefined }),
+      });
+    } catch {
+      // A link row is an extra.
+    }
+  }
 }
 
 /** El nombre del error más profundo de la cadena: TypeError, PostgrestError, CalendarError… */
@@ -253,6 +449,7 @@ function fromClassification(c: Classification, origin: Origin): NewItem & { type
     confidence: c.confidence,
     origin,
   };
+  if (c.priority) item.priority = c.priority;
   // A book starts as "por leer" (the repo's default); its author is kept for the future search.
   if (type === 'libro' && c.author) item.author = c.author.slice(0, TITLE_MAX);
   const location = c.location ? locationField(c.location) : null;
@@ -283,15 +480,6 @@ async function savePersonDate(
     await deps.people.addDate({ personId: person.id, label, date, notes: notes ?? null });
   }
   return { ...saved, label };
-}
-
-/** Links a gift to its person; if that fails the gift is still saved, just without a person. */
-async function personId(deps: CaptureDeps, name: string): Promise<string | null> {
-  try {
-    return (await deps.people.upsertPersonByName(name)).id;
-  } catch {
-    return null;
-  }
 }
 
 /**

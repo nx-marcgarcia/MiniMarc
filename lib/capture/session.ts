@@ -7,6 +7,7 @@ import { withServerPreviews } from '@/lib/links/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CaptureDeps } from './pipeline';
+import { brainDeps } from './repos';
 
 /** Redirects to /login without an allowed session. Used by the CaptureBar and /compartir. */
 export async function sessionCaptureDeps(): Promise<CaptureDeps> {
@@ -16,6 +17,7 @@ export async function sessionCaptureDeps(): Promise<CaptureDeps> {
     ai: createGeminiProvider(),
     items: withServerPreviews(createSupabaseItemsRepo(client), user.id),
     people: createSupabasePeopleRepo(client),
+    ...brainDeps(client),
     calendar: () => getCalendarGateway(),
     now: new Date(),
     tz: process.env.APP_TZ || DEFAULT_TZ,

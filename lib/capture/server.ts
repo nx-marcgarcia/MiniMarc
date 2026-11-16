@@ -9,6 +9,7 @@ import { withServerPreviews } from '@/lib/links/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DEFAULT_TZ } from '@/lib/time';
 import type { CaptureRouteDeps } from './handler';
+import { brainDeps } from './repos';
 
 export const captureRouteDeps: CaptureRouteDeps = {
   verify: (authHeader) => verifyApiToken(authHeader),
@@ -19,6 +20,7 @@ export const captureRouteDeps: CaptureRouteDeps = {
       ai: createGeminiProvider(),
       items: withServerPreviews(createSupabaseItemsRepo(admin, { userId }), userId),
       people: createSupabasePeopleRepo(admin, { userId }),
+      ...brainDeps(admin, { userId }),
       calendar: () => calendarGatewayFor(userId),
       now: new Date(),
       tz: process.env.APP_TZ || DEFAULT_TZ,
