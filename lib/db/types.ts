@@ -48,8 +48,6 @@ export interface Item {
   linkSite: string | null;
   /** Dirección o sitio de la nota (0010); va al campo Ubicación del evento de Calendar. */
   location: string | null;
-  /** Clasificación diferida (0010): 'pendiente' = la IA aún no la ha visto, 'fallo' = falló; null = nada que hacer. */
-  aiState: 'pendiente' | 'fallo' | null;
   /** Fields of the item's type (0011), validated by the registry: `ITEM_TYPES[type].fields`. */
   data: Record<string, unknown>;
   storeId: string | null;
@@ -82,8 +80,6 @@ export interface ItemFilter {
   archived?: boolean;
   storeId?: string;
   needsReview?: boolean;
-  /** Solo los de clasificación diferida: 'pendiente' o 'fallo' (lo busca el cron). */
-  aiState?: 'pendiente' | 'fallo';
   /** Only items created at or after this ISO instant (Bandeja "Recién añadido"). */
   createdSince?: string;
 }

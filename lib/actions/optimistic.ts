@@ -70,7 +70,6 @@ export function draftItem(fd: FormData, n: number, now: Date): Item | null {
     linkImage: null,
     linkSite: null,
     location: null,
-    aiState: null,
     data: {},
     storeId: null,
     priority: null,

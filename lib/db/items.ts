@@ -63,7 +63,6 @@ const COLUMNS = {
   linkImage: 'link_image',
   linkSite: 'link_site',
   location: 'location',
-  aiState: 'ai_state',
   data: 'data',
   storeId: 'store_id',
   priority: 'priority',
@@ -132,7 +131,6 @@ const OPTIONAL_FIELDS = [
   'linkImage',
   'linkSite',
   'location',
-  'aiState',
   'storeId',
   'priority',
   'remindAt',
@@ -193,7 +191,6 @@ export function createItemsRepo(
         linkImage: null,
         linkSite: null,
         location: null,
-        aiState: null,
         data: {},
         storeId: null,
         priority: null,
@@ -226,7 +223,6 @@ export function createItemsRepo(
         area: f.area,
         storeId: f.storeId,
         needsReview: f.needsReview,
-        aiState: f.aiState,
       });
       const gte = f.createdSince ? { created_at: f.createdSince } : undefined;
       const rows = await backend.select('items', { eq, isNull: ['deleted_at'], gte });

@@ -50,12 +50,6 @@ describe('items repo', () => {
     expect((await items.listItems({ status: 'semilla' })).map((i) => i.title)).toEqual(['B']);
   });
 
-  it('filtra items por aiState', async () => {
-    await items.createItem({ type: 'tarea', title: 'Pendiente', aiState: 'pendiente' });
-    await items.createItem({ type: 'tarea', title: 'Clasificada' });
-    expect((await items.listItems({ aiState: 'pendiente' })).map((i) => i.title)).toEqual(['Pendiente']);
-  });
-
   it('updateItem aplica el parche en camelCase', async () => {
     const it1 = await items.createItem({ type: 'tarea', title: 'X' });
     const up = await items.updateItem(it1.id, {
@@ -265,16 +259,15 @@ describe('items repo: libros', () => {
   });
 });
 
-describe('items repo: ubicación y clasificación diferida', () => {
-  it('guarda la ubicación y el estado de la IA, y sin ellos no escribe las columnas', async () => {
+describe('items repo: ubicación', () => {
+  it('guarda la ubicación, y sin ella no escribe la columna', async () => {
     const backend = createMemoryBackend({ now: () => now });
     const repo = createItemsRepo(backend, { now: () => now });
     const plain = await repo.createItem({ type: 'tarea', title: 'Algo' });
-    expect(plain).toMatchObject({ location: null, aiState: null });
+    expect(plain).toMatchObject({ location: null });
     expect(backend.tables.items[0]).not.toHaveProperty('location');
-    expect(backend.tables.items[0]).not.toHaveProperty('ai_state');
-    const placed = await repo.createItem({ type: 'tarea', title: 'Cita', location: 'Calle Mayor 5', aiState: 'pendiente' });
-    expect(placed).toMatchObject({ location: 'Calle Mayor 5', aiState: 'pendiente' });
-    expect(backend.tables.items[1]).toMatchObject({ location: 'Calle Mayor 5', ai_state: 'pendiente' });
+    const placed = await repo.createItem({ type: 'tarea', title: 'Cita', location: 'Calle Mayor 5' });
+    expect(placed).toMatchObject({ location: 'Calle Mayor 5' });
+    expect(backend.tables.items[1]).toMatchObject({ location: 'Calle Mayor 5' });
   });
 });

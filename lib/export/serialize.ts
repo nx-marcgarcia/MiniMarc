@@ -71,7 +71,6 @@ export const CSV_COLUMNS = [
   'linkImage',
   'linkSite',
   'location',
-  'aiState',
   'data',
   'storeId',
   'priority',

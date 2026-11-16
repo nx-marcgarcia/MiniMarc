@@ -106,7 +106,6 @@ export function makeItem(over: Partial<Item> = {}): Item {
     linkImage: null,
     linkSite: null,
     location: null,
-    aiState: null,
     data: {},
     storeId: null,
     priority: null,

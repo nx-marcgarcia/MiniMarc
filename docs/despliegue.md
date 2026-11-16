@@ -28,7 +28,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | 7 | `0007_weekly.sql` | Resumen semanal en `settings` | 10 |
    | 8 | `0008_libros.sql` | Tipo `libro` y columnas `author`, `reading_state`, `link` | 11 |
    | 9 | `0009_link_preview.sql` | Vista previa de enlaces y columnas de búsqueda sin acentos | 12 |
-   | 10 | `0010_ubicacion_y_clasificacion_diferida.sql` | `items.location` (va al campo Ubicación de Calendar) y `items.ai_state`. Sin la migración, la app funciona: no escribe esas columnas mientras valgan null | — |
+   | 10 | `0010_ubicacion_y_clasificacion_diferida.sql` | `items.location` (va al campo Ubicación de Calendar) y `items.ai_state` (ya sin uso: la captura es síncrona; la columna se puede dejar). Sin la migración, la app funciona: no escribe la ubicación mientras valga null | — |
    | 11 | `0011_segundo_cerebro.sql` | Tablas `stores`, `item_links` y `tags`; columnas nuevas en `items` y `people`; quita los CHECK de `type` y `status`. **Aplícala antes de desplegar el código de la fase 1.** Después, ver `docs/migracion.md` para migrar tus datos | — |
 
    Hay dos formas de aplicarlas:
