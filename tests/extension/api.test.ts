@@ -103,7 +103,7 @@ describe('fetchHoy', () => {
   });
 
   it('el tipo de la extensión coincide con la respuesta del servidor', () => {
-    const digest: Digest = { ...summary, dates: [], tasks: { personal: { items: [], more: 0 }, trabajo: { items: [], more: 0 } } };
+    const digest: Digest = { ...summary, dates: [], dayTasks: [], tasks: { personal: { items: [], more: 0 }, trabajo: { items: [], more: 0 } } };
     const fromServer: HoySummary = toHoyResponse(digest);
     expect(fromServer).toEqual(summary);
   });

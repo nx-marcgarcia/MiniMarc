@@ -22,6 +22,7 @@ const item = (p: Partial<Item>): Item =>
   }) as Item;
 
 const DIGEST: Digest = {
+  dayTasks: [],
   date: '2026-10-22',
   headline: 'Día de pan.',
   events: [{ id: 'e1', title: 'Dentista', startsAt: '2026-10-22T09:00:00.000Z', endsAt: '2026-10-22T09:30:00.000Z' }],

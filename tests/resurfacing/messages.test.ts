@@ -5,6 +5,7 @@ import { briefingLines, escapeHtml, KIND_LABELS, parseCallback, reminderButtons,
 import { makeItem } from '../screens/setup';
 
 const digest = (over: Partial<Digest> = {}): Digest => ({
+  dayTasks: [],
   date: '2026-11-17',
   events: [],
   calendarError: null,

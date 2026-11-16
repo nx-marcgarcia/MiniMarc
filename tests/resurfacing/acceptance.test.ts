@@ -51,7 +51,7 @@ function world(start: string) {
     const today = madridToUtc(date, '00:00', TZ).getTime();
     const tasks = open.filter((i) => i.type === 'tarea' && i.dueAt && Date.parse(i.dueAt) < today + DAY);
     return {
-      date, events: [], calendarError: null,
+      date, events: [], calendarError: null, dayTasks: [],
       tasks: { personal: { items: tasks.map((item) => ({ item, overdue: Date.parse(item.dueAt!) < today })), more: 0 }, trabajo: { items: [], more: 0 } },
       unclassified: 0, dates: [], headline: tasks.length ? 'Buenos días' : 'Buenos días. Día tranquilo.',
     };

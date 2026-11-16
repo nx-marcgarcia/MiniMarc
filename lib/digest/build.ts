@@ -69,6 +69,8 @@ export interface Digest {
   events: DigestEvent[];
   calendarError: DigestCalendarError | null;
   tasks: Record<Area, DigestArea>;
+  /** Every task of the day (overdue or due today), both areas, uncapped: Hoy's timeline. */
+  dayTasks: DigestTask[];
   /** Pending items waiting in "Sin clasificar" (left out of the lists). */
   unclassified: number;
   /** Birthdays and special dates, today to today + 14, nearest first. */
@@ -110,6 +112,7 @@ export async function buildDigest(date: string, deps: DigestDeps): Promise<Diges
     events: eventsResult.events,
     calendarError: eventsResult.error,
     tasks: { personal: toArea(dueTasks.personal), trabajo: toArea(dueTasks.trabajo) },
+    dayTasks: [...dueTasks.personal, ...dueTasks.trabajo].sort(byOrder),
     unclassified,
     dates,
     headline,

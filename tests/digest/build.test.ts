@@ -249,6 +249,17 @@ describe('buildDigest', () => {
     expect(d.tasks.personal).toEqual({ items: [], more: 0 });
   });
 
+  it('dayTasks keeps every task of the day, both areas, without the cap', async () => {
+    const s = setup({ ai: fakeAi().ai });
+    for (const h of [9, 10, 11, 12, 13, 14]) {
+      await s.add({ type: 'tarea', title: `T${h}`, area: 'trabajo', ...due(DATE, `${h}:00`) });
+    }
+    await s.add({ type: 'tarea', title: 'Mía', ...due(DATE) });
+    await s.add({ type: 'tarea', title: 'Mañana', ...due('2026-10-23') });
+    const d = await buildDigest(DATE, s.deps);
+    expect(d.dayTasks.map((t) => t.item.title).sort()).toEqual(['Mía', 'T10', 'T11', 'T12', 'T13', 'T14', 'T9']);
+  });
+
   it('counts items to review apart and leaves them out of the lists', async () => {
     const { ai, prompts } = fakeAi();
     const s = setup({ ai });

@@ -64,6 +64,7 @@ function item(over: Partial<Item>): Item {
 
 function digest(over: Partial<Digest> = {}): Digest {
   return {
+    dayTasks: [],
     date: '2026-10-22',
     events: [
       { id: 'e1', title: 'SENTINELA_CITA reunión', startsAt: AT_DUE.toISOString(), endsAt: AT_DUE.toISOString() },
