@@ -62,6 +62,14 @@ export const CSV_COLUMNS = [
   'linkSite',
   'location',
   'aiState',
+  'data',
+  'storeId',
+  'priority',
+  'remindAt',
+  'pinned',
+  'archived',
+  'completedAt',
+  'tags',
   'createdAt',
   'deletedAt',
 ] as const satisfies readonly (keyof Item)[];
@@ -71,7 +79,8 @@ const FORMULA_START = /^[=+\-@\t\r]/;
 
 function csvCell(v: unknown): string {
   if (v == null) return '';
-  const raw = String(v);
+  // Campos propios y tags son estructuras: una celda de JSON, no «[object Object]».
+  const raw = typeof v === 'object' ? JSON.stringify(v) : String(v);
   const s = FORMULA_START.test(raw) ? `'${raw}` : raw;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }

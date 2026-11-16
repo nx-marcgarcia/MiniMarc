@@ -24,7 +24,7 @@ describe('items repo', () => {
     expect(item.id).toBeTruthy();
     expect(item.type).toBe('regalo');
     expect(item.personId).toBe(ana.id);
-    expect(item.status).toBe('pendiente');
+    expect(item.status).toBe('idea');
     expect(item.origin).toBe('web');
     expect(item.needsReview).toBe(false);
     expect(item.hasTime).toBe(false);
@@ -44,10 +44,10 @@ describe('items repo', () => {
   it('filtra por status y needsReview', async () => {
     const a = await items.createItem({ type: 'idea', title: 'A', needsReview: true });
     await items.createItem({ type: 'idea', title: 'B' });
-    await items.updateItem(a.id, { status: 'hecho' });
+    await items.updateItem(a.id, { status: 'explorando' });
     expect((await items.listItems({ needsReview: true })).map((i) => i.title)).toEqual(['A']);
-    expect((await items.listItems({ status: 'hecho' })).map((i) => i.title)).toEqual(['A']);
-    expect((await items.listItems({ status: 'pendiente' })).map((i) => i.title)).toEqual(['B']);
+    expect((await items.listItems({ status: 'explorando' })).map((i) => i.title)).toEqual(['A']);
+    expect((await items.listItems({ status: 'semilla' })).map((i) => i.title)).toEqual(['B']);
   });
 
   it('filtra items por aiState', async () => {
@@ -228,29 +228,30 @@ describe('items repo · mantenimiento del cron (Tarea 14)', () => {
 });
 
 describe('items repo: libros', () => {
-  it('crea un libro con autor, por leer y pendiente por defecto', async () => {
+  it('crea un libro con autor, por leer por defecto', async () => {
     const book = await items.createItem({ type: 'libro', title: 'Sapiens', author: 'Yuval Noah Harari' });
     expect(book.type).toBe('libro');
     expect(book.author).toBe('Yuval Noah Harari');
     expect(book.readingState).toBe('por_leer');
-    expect(book.status).toBe('pendiente');
+    expect(book.status).toBe('por_leer');
     expect(book.link).toBeNull();
     expect((await items.listItems({ type: 'libro' })).map((i) => i.id)).toEqual([book.id]);
   });
 
-  it('un libro creado como leído queda hecho', async () => {
+  it('un libro creado como leído queda leído y completado', async () => {
     const book = await items.createItem({ type: 'libro', title: 'Dune', readingState: 'leido' });
-    expect(book.status).toBe('hecho');
+    expect(book.status).toBe('leido');
+    expect(book.completedAt).toBe(now.toISOString());
   });
 
-  it('cambiar el estado de lectura sigue la regla leído ⇔ hecho', async () => {
+  it('el estado de lectura es el estado del libro', async () => {
     const book = await items.createItem({ type: 'libro', title: 'Sapiens' });
     const reading = await items.updateItem(book.id, { readingState: 'leyendo' });
-    expect(reading).toMatchObject({ readingState: 'leyendo', status: 'pendiente' });
+    expect(reading).toMatchObject({ readingState: 'leyendo', status: 'leyendo' });
     const read = await items.updateItem(book.id, { readingState: 'leido' });
-    expect(read).toMatchObject({ readingState: 'leido', status: 'hecho' });
+    expect(read).toMatchObject({ readingState: 'leido', status: 'leido' });
     const again = await items.updateItem(book.id, { readingState: 'por_leer' });
-    expect(again).toMatchObject({ readingState: 'por_leer', status: 'pendiente' });
+    expect(again).toMatchObject({ readingState: 'por_leer', status: 'por_leer' });
   });
 
   it('los demás tipos no tienen estado de lectura ni escriben las columnas de libros', async () => {

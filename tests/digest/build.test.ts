@@ -147,7 +147,7 @@ describe('buildDigest', () => {
     const luis = await s.people.upsertPersonByName('Luis');
     await s.people.updatePerson(luis.id, { birthday: '1985-11-11' });
     await s.add({ type: 'regalo', title: 'Libro de cocina', personId: ana.id });
-    await s.add({ type: 'regalo', title: 'Ya regalado', personId: ana.id, status: 'hecho' });
+    await s.add({ type: 'regalo', title: 'Ya regalado', personId: ana.id, status: 'entregado' });
     await s.add({ type: 'regalo', title: 'Bufanda', personId: luis.id });
 
     const d = await buildDigest(DATE, s.deps);
@@ -221,7 +221,7 @@ describe('buildDigest', () => {
     await s.add({ type: 'tarea', title: 'Sin área', ...due(DATE, '12:00') });
     await s.add({ type: 'tarea', title: 'Mañana', area: 'personal', ...due('2026-10-23') });
     await s.add({ type: 'tarea', title: 'Sin fecha', area: 'personal' });
-    await s.add({ type: 'tarea', title: 'Hecha', area: 'personal', status: 'hecho', ...due(DATE) });
+    await s.add({ type: 'tarea', title: 'Hecha', area: 'personal', status: 'hecha', ...due(DATE) });
     await s.add({ type: 'compra', title: 'Leche', area: 'personal', ...due(DATE) });
     await s.add({ type: 'tarea', title: 'Vencida trabajo', area: 'trabajo', ...due('2026-10-21', '23:30') });
 

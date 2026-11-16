@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  closedLabel,
+  completionStatus,
   defaultStatus,
   isDoneStatus,
   isItemType,
+  isOpen,
   isValidStatus,
   ITEM_TYPE_IDS,
   ITEM_TYPES,
+  normalizeLegacyStatus,
   parseItemData,
 } from '@/lib/items/itemTypes';
 
@@ -141,5 +145,70 @@ describe('parseItemData', () => {
 
   it('un tipo que no está en el registro se rechaza', () => {
     expect(() => parseItemData('viaje', {})).toThrow(/tipo/i);
+  });
+});
+
+describe('completionStatus', () => {
+  it.each([
+    ['tarea', 'hecha'],
+    ['compra', 'comprado'],
+    ['regalo', 'entregado'],
+    ['libro', 'leido'],
+    ['enlace', 'visto'],
+    ['idea', 'en_marcha'],
+  ] as const)('%s se completa en %s', (type, state) => {
+    expect(completionStatus(type)).toBe(state);
+    expect(isValidStatus(type, state)).toBe(true);
+  });
+});
+
+describe('normalizeLegacyStatus (estados de antes de la fase 1)', () => {
+  it('pendiente pasa al estado inicial del tipo', () => {
+    expect(normalizeLegacyStatus('compra', 'pendiente', null)).toEqual({ status: 'quiero', archived: false });
+    expect(normalizeLegacyStatus('tarea', 'pendiente', null)).toEqual({ status: 'pendiente', archived: false });
+  });
+
+  it('hecho pasa al estado de completar del tipo', () => {
+    expect(normalizeLegacyStatus('tarea', 'hecho', null)).toEqual({ status: 'hecha', archived: false });
+    expect(normalizeLegacyStatus('compra', 'hecho', null)).toEqual({ status: 'comprado', archived: false });
+    expect(normalizeLegacyStatus('regalo', 'hecho', null)).toEqual({ status: 'entregado', archived: false });
+    expect(normalizeLegacyStatus('idea', 'hecho', null)).toEqual({ status: 'en_marcha', archived: false });
+  });
+
+  it('archivado marca archived y deja el estado inicial', () => {
+    expect(normalizeLegacyStatus('compra', 'archivado', null)).toEqual({ status: 'quiero', archived: true });
+  });
+
+  it('un libro toma su estado de lectura, también archivado', () => {
+    expect(normalizeLegacyStatus('libro', 'pendiente', 'leyendo')).toEqual({ status: 'leyendo', archived: false });
+    expect(normalizeLegacyStatus('libro', 'hecho', 'leido')).toEqual({ status: 'leido', archived: false });
+    expect(normalizeLegacyStatus('libro', 'archivado', 'leyendo')).toEqual({ status: 'leyendo', archived: true });
+    expect(normalizeLegacyStatus('libro', 'pendiente', null)).toEqual({ status: 'por_leer', archived: false });
+  });
+
+  it('un estado que ya es del tipo no cambia', () => {
+    expect(normalizeLegacyStatus('compra', 'en_carrito', null)).toEqual({ status: 'en_carrito', archived: false });
+  });
+
+  it('un valor desconocido cae al estado inicial', () => {
+    expect(normalizeLegacyStatus('idea', 'raro', null)).toEqual({ status: 'semilla', archived: false });
+  });
+});
+
+describe('isOpen', () => {
+  it('un item abierto no está archivado ni en un estado que cierra', () => {
+    expect(isOpen({ type: 'compra', status: 'quiero', archived: false })).toBe(true);
+    expect(isOpen({ type: 'regalo', status: 'comprado', archived: false })).toBe(true);
+    expect(isOpen({ type: 'compra', status: 'comprado', archived: false })).toBe(false);
+    expect(isOpen({ type: 'tarea', status: 'pendiente', archived: true })).toBe(false);
+  });
+});
+
+describe('closedLabel', () => {
+  it('un item abierto no tiene etiqueta; uno cerrado dice su estado; uno archivado, Archivado', () => {
+    expect(closedLabel({ type: 'compra', status: 'quiero', archived: false })).toBeNull();
+    expect(closedLabel({ type: 'compra', status: 'comprado', archived: false })).toBe('Comprado');
+    expect(closedLabel({ type: 'tarea', status: 'hecha', archived: false })).toBe('Hecha');
+    expect(closedLabel({ type: 'tarea', status: 'pendiente', archived: true })).toBe('Archivado');
   });
 });

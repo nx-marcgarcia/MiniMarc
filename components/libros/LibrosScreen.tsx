@@ -16,7 +16,6 @@ import {
   nextReadingState,
   READING_LABELS,
   READING_STATES,
-  statusForReading,
 } from '@/lib/libros';
 import type { PhotoMap } from '@/lib/photos/view';
 import { LibroSheet, type LibroSheetMode } from './LibroSheet';
@@ -31,6 +30,7 @@ const MOVED_TO: Record<ReadingState, string> = {
   por_leer: 'Movido a Por leer',
   leyendo: 'Movido a Leyendo',
   leido: 'Marcado como leído',
+  abandonado: 'Marcado como abandonado',
 };
 
 /** First non-empty line of the notes, for the row. */
@@ -92,11 +92,10 @@ export function LibrosScreen({ books, photos }: { books: Item[]; photos: PhotoMa
   const advance = (book: Item) => moveTo(book, nextReadingState(book.readingState));
 
   function archive(book: Item) {
-    const back = statusForReading(book.readingState ?? 'por_leer');
     startTransition(async () => {
       applyChange({ id: book.id, removed: true });
-      if (await run(() => moveItem(book.id, { status: 'archivado' }))) {
-        showToast('Archivado', () => moveItem(book.id, { status: back }));
+      if (await run(() => moveItem(book.id, { archived: true }))) {
+        showToast('Archivado', () => moveItem(book.id, { archived: false }));
       }
     });
   }

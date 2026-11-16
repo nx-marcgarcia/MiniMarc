@@ -33,6 +33,8 @@ export interface ItemTypeDef {
   initialState: string;
   /** Estados que cierran el item (hecho, comprado, descartado…). */
   doneStates: readonly string[];
+  /** El estado que pone el check de completar o "Marcar como hecho" (tarea → hecha, compra → comprado…). */
+  completeState: string;
   /** Si la fila lleva el círculo de completar (tareas y compras), o solo estado (ideas, libros…). */
   hasCheck: boolean;
   defaultView: 'list' | 'cards' | 'grouped';
@@ -55,6 +57,7 @@ export const ITEM_TYPES = {
     states: states(['pendiente', 'Pendiente'], ['hecha', 'Hecha']),
     initialState: 'pendiente',
     doneStates: ['hecha'],
+    completeState: 'hecha',
     hasCheck: true,
     defaultView: 'list',
   },
@@ -71,6 +74,7 @@ export const ITEM_TYPES = {
     states: states(['semilla', 'Semilla'], ['explorando', 'Explorando'], ['en_marcha', 'En marcha'], ['descartada', 'Descartada']),
     initialState: 'semilla',
     doneStates: ['descartada'],
+    completeState: 'en_marcha',
     hasCheck: false,
     defaultView: 'cards',
   },
@@ -97,6 +101,7 @@ export const ITEM_TYPES = {
     states: states(['quiero', 'Quiero'], ['en_carrito', 'En el carrito'], ['comprado', 'Comprado'], ['descartado', 'Descartado']),
     initialState: 'quiero',
     doneStates: ['comprado', 'descartado'],
+    completeState: 'comprado',
     hasCheck: true,
     defaultView: 'grouped',
   },
@@ -113,6 +118,7 @@ export const ITEM_TYPES = {
     states: states(['idea', 'Idea'], ['comprado', 'Comprado'], ['envuelto', 'Envuelto'], ['entregado', 'Entregado']),
     initialState: 'idea',
     doneStates: ['entregado'],
+    completeState: 'entregado',
     hasCheck: false,
     defaultView: 'grouped',
   },
@@ -131,6 +137,7 @@ export const ITEM_TYPES = {
     states: states(['por_leer', 'Por leer'], ['leyendo', 'Leyendo'], ['leido', 'Leídos'], ['abandonado', 'Abandonados']),
     initialState: 'por_leer',
     doneStates: ['leido', 'abandonado'],
+    completeState: 'leido',
     hasCheck: false,
     defaultView: 'cards',
   },
@@ -146,6 +153,7 @@ export const ITEM_TYPES = {
     states: states(['por_ver', 'Por ver'], ['visto', 'Visto']),
     initialState: 'por_ver',
     doneStates: ['visto'],
+    completeState: 'visto',
     hasCheck: false,
     defaultView: 'cards',
   },
@@ -158,6 +166,7 @@ export const ITEM_TYPES = {
     states: states(['activa', 'Activa']),
     initialState: 'activa',
     doneStates: [],
+    completeState: 'activa',
     hasCheck: false,
     defaultView: 'list',
   },
@@ -193,4 +202,49 @@ export function isDoneStatus(type: ItemTypeId, status: string): boolean {
 export function parseItemData(type: string, data: unknown): Record<string, unknown> {
   if (!isItemType(type)) throw new Error(`Tipo de item desconocido: ${type}`);
   return ITEM_TYPES[type].fields.parse(data);
+}
+
+/** Abierto = lo que enseña una lista de pendientes: ni archivado ni en un estado que cierra su tipo. */
+export function isOpen(item: { type: string; status: string; archived?: boolean }): boolean {
+  if (item.archived) return false;
+  return !(isItemType(item.type) && isDoneStatus(item.type, item.status));
+}
+
+/** Lo que una fila cerrada dice de sí misma: "Archivado" o el nombre de su estado ("Hecha", "Comprado"…); null si sigue abierta. */
+export function closedLabel(item: { type: string; status: string; archived?: boolean }): string | null {
+  if (item.archived) return 'Archivado';
+  if (isOpen(item) || !isItemType(item.type)) return null;
+  return ITEM_TYPES[item.type].states.find((s) => s.id === item.status)?.label ?? null;
+}
+
+/** El estado que pone "completar" para este tipo. */
+export function completionStatus(type: ItemTypeId): string {
+  return ITEM_TYPES[type].completeState;
+}
+
+/** Estado de lectura de un libro antes de la fase 1 (columna reading_state). */
+const LEGACY_READING = ['por_leer', 'leyendo', 'leido'];
+
+/**
+ * Traduce un estado de antes de la fase 1 (pendiente, hecho, archivado, más el reading_state de
+ * los libros) al estado propio del tipo y al flag `archived`. Un estado que ya es del tipo no
+ * cambia; un valor desconocido cae al estado inicial. Pura: la usan el lector de filas (para que
+ * la app funcione antes y después de migrar) y el script de migración.
+ */
+export function normalizeLegacyStatus(
+  type: ItemTypeId,
+  raw: string,
+  readingState: string | null,
+): { status: string; archived: boolean } {
+  const archived = raw === 'archivado';
+  if (type === 'libro') {
+    const reading = readingState && LEGACY_READING.includes(readingState) ? readingState : null;
+    if (isValidStatus(type, raw) && raw !== 'pendiente') return { status: raw, archived: false };
+    if (raw === 'hecho') return { status: reading ?? 'leido', archived: false };
+    return { status: reading ?? defaultStatus(type), archived };
+  }
+  if (isValidStatus(type, raw)) return { status: raw, archived: false };
+  if (raw === 'pendiente') return { status: defaultStatus(type), archived: false };
+  if (raw === 'hecho') return { status: completionStatus(type), archived: false };
+  return { status: defaultStatus(type), archived };
 }

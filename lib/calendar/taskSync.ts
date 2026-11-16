@@ -2,6 +2,7 @@
  * Keeps one Calendar event (in the "Tareas" calendar) per pending, timed task.
  * Plugged into the item actions as their `sync` hook (lib/actions/server.ts).
  */
+import { isOpen } from '@/lib/items/itemTypes';
 import type { ItemSync, SyncResult } from '@/lib/actions/items';
 import type { Item } from '@/lib/db/types';
 import { calendarErrorKind, type CalendarGateway, type EventInput } from './client';
@@ -23,7 +24,7 @@ export function wantsEvent(item: Item): boolean {
   return (
     item.type === 'tarea' &&
     item.dueAt !== null &&
-    item.status === 'pendiente' &&
+    isOpen(item) &&
     !item.needsReview &&
     !item.deletedAt
   );

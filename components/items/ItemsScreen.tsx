@@ -115,8 +115,8 @@ export function ItemsScreen({
   const complete = (item: Item) =>
     removeWith(item, () => toggleDone(item.id), 'Marcado como hecho', () => toggleDone(item.id));
   const archive = (item: Item) =>
-    removeWith(item, () => moveItem(item.id, { status: 'archivado' }), 'Archivado', () =>
-      moveItem(item.id, { status: 'pendiente' }),
+    removeWith(item, () => moveItem(item.id, { archived: true }), 'Archivado', () =>
+      moveItem(item.id, { archived: false }),
     );
   const remove = (item: Item) =>
     removeWith(item, () => deleteItem(item.id), 'Eliminado', () => undoDelete(item.id));

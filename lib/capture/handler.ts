@@ -3,6 +3,7 @@
  * deps come in through `CaptureRouteDeps`. The response is lean because a Siri Shortcut reads
  * it and speaks `message`. Never logs the Authorization header or the text.
  */
+import { ITEM_TYPES } from '@/lib/items/itemTypes';
 import { z } from 'zod';
 import { UserError } from '@/lib/actions/result';
 import { extensionCors, extensionPreflight } from '@/lib/auth/extensionCors';
@@ -42,12 +43,11 @@ export function captureOptions(req: Request): Response {
 
 // ---------- POST ----------
 
-const LABELS: Record<Item['type'], string> = { tarea: 'Tareas', idea: 'Ideas', compra: 'Compras', regalo: 'Regalos', libro: 'Libros' };
 
 function destination(item: Item): string {
   if (item.needsReview) return 'Sin clasificar';
   if (item.type === 'tarea') return `Tareas · ${item.area === 'trabajo' ? 'Trabajo' : 'Personal'}`;
-  return LABELS[item.type];
+  return ITEM_TYPES[item.type].plural;
 }
 
 /** Por qué no se clasificó, dicho como se lo diría una persona (y como Siri lo lee). */

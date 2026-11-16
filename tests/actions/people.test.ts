@@ -61,7 +61,7 @@ describe('listPersonas (summary cards)', () => {
     await deps.people.upsertPersonByName('Bea');
     const g1 = await deps.items.createItem({ type: 'regalo', title: 'Taza', personId: ainhoa.id });
     await deps.items.createItem({ type: 'regalo', title: 'Libro', personId: ainhoa.id });
-    await deps.items.createItem({ type: 'regalo', title: 'Hecho', personId: ainhoa.id, status: 'hecho' });
+    await deps.items.createItem({ type: 'regalo', title: 'Hecho', personId: ainhoa.id, status: 'entregado' });
 
     const cards = await people.listPersonas(deps, '2026-10-22', async (ids) => {
       expect(ids).toHaveLength(2);

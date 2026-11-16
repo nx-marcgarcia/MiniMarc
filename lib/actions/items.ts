@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo } from '@/lib/db/people';
 import type { Area, Item, ItemPatch, ItemType, NewItem, Person } from '@/lib/db/types';
+import { completionStatus, defaultStatus, ITEM_TYPE_IDS } from '@/lib/items/itemTypes';
 import { READING_STATES } from '@/lib/libros';
 import { deriveLink } from '@/lib/links/linkify';
 import { isValidDate, toDue } from '@/lib/time';
@@ -31,7 +32,7 @@ export interface ActionDeps {
   sync?: ItemSync;
 }
 
-const ITEM_TYPES = ['tarea', 'idea', 'compra', 'regalo', 'libro'] as const satisfies readonly ItemType[];
+const ITEM_TYPES = ITEM_TYPE_IDS as [ItemType, ...ItemType[]];
 const AREAS = ['personal', 'trabajo'] as const satisfies readonly Area[];
 
 const EMPTY_TITLE = 'El título no puede estar vacío';
@@ -87,13 +88,21 @@ export const movePatchSchema = z
     type: z.enum(ITEM_TYPES),
     area: z.enum(AREAS).nullable(),
     personId: z.string().nullable(),
-    status: z.enum(['pendiente', 'hecho', 'archivado']),
+    /** One of the type's states (the repo checks it against the registry). */
+    status: z.string().min(1),
+    archived: z.boolean(),
+    pinned: z.boolean(),
+    priority: z.enum(['baja', 'media', 'alta']).nullable(),
+    tags: z.array(z.string().trim().min(1)),
+    storeId: z.string().nullable(),
+    remindAt: z.iso.datetime({ offset: true }).nullable(),
+    data: z.record(z.string(), z.unknown()),
     dueAt: z.iso.datetime({ offset: true }).nullable(),
     hasTime: z.boolean(),
     needsReview: z.boolean(),
     author: z.string().max(AUTHOR_MAX).nullable(),
     link: z.string().nullable(),
-    readingState: z.enum(READING_STATES).nullable(),
+    readingState: z.enum([...READING_STATES, 'abandonado']).nullable(),
   })
   .partial()
   .strict();
@@ -144,12 +153,9 @@ export async function saveNewItem(deps: ActionDeps, fields: NewItem): Promise<It
 
 export async function toggleDone(deps: ActionDeps, id: string): Promise<Item> {
   const item = await findItem(deps, id);
-  if (item.type === 'libro') {
-    // A book is done when it is read (the repo sets the status from the reading state).
-    const readingState = item.readingState === 'leido' ? 'por_leer' : 'leido';
-    return afterWrite(deps, await deps.items.updateItem(id, { readingState }));
-  }
-  const status = item.status === 'hecho' ? 'pendiente' : 'hecho';
+  // Complete ⇄ reopen: the state the type's check sets (tarea: hecha, compra: comprado, libro: leido…)
+  // and the type's initial one.
+  const status = item.status === completionStatus(item.type) ? defaultStatus(item.type) : completionStatus(item.type);
   return afterWrite(deps, await deps.items.updateItem(id, { status }));
 }
 
@@ -164,14 +170,8 @@ export async function moveItem(deps: ActionDeps, id: string, patch: MovePatch): 
   // A task always belongs to one area, so it never shows up in both Tareas views.
   if (type === 'tarea' && (clean.area ?? current.area) == null) clean.area = 'personal';
   if (type !== 'regalo' && current.personId && clean.personId === undefined) clean.personId = null;
-  // A book always has a reading state; nothing else has one.
-  if (type === 'libro') {
-    if (clean.readingState === null || (clean.readingState === undefined && !current.readingState)) {
-      clean.readingState = 'por_leer';
-    }
-  } else if (current.readingState || clean.readingState) {
-    clean.readingState = null;
-  }
+  // A libro's status is its reading state, and changing type restarts the status: both are the repo's job.
+  if (clean.readingState === null) delete clean.readingState;
   if (clean.author !== undefined) clean.author = clean.author?.trim() || null;
   if (clean.link !== undefined) clean.link = clean.link?.trim() || null;
   // No link of its own but a URL in the title or notes: that URL is the link. Only a real change
@@ -249,19 +249,18 @@ const byDueThenNewest = (a: Item, b: Item) => {
 
 /** Pending, classified tasks of one area. A task without area counts as Personal. */
 export async function listTareas(deps: ActionDeps, area: Area): Promise<Item[]> {
-  const all = await deps.items.listItems({ type: 'tarea', status: 'pendiente', needsReview: false });
+  const all = await deps.items.listItems({ type: 'tarea', open: true, needsReview: false });
   return all.filter((i) => (i.area ?? 'personal') === area).sort(byDueThenNewest);
 }
 
 /** Pending, classified items of one type (Ideas, Compras…), newest first. */
 export async function listByType(deps: ActionDeps, type: ItemType): Promise<Item[]> {
-  return deps.items.listItems({ type, status: 'pendiente', needsReview: false });
+  return deps.items.listItems({ type, open: true, needsReview: false });
 }
 
 /** Every classified, not archived book (por leer, leyendo and leídos), newest first. */
 export async function listLibros(deps: ActionDeps): Promise<Item[]> {
-  const all = await deps.items.listItems({ type: 'libro', needsReview: false });
-  return all.filter((i) => i.status !== 'archivado');
+  return deps.items.listItems({ type: 'libro', needsReview: false, archived: false });
 }
 
 /**
@@ -269,7 +268,7 @@ export async function listLibros(deps: ActionDeps): Promise<Item[]> {
  * so Personal and Trabajo are never listed together; without it, all of them (for counts).
  */
 export async function listSinClasificar(deps: ActionDeps, area?: Area): Promise<Item[]> {
-  const all = await deps.items.listItems({ status: 'pendiente', needsReview: true });
+  const all = await deps.items.listItems({ open: true, needsReview: true });
   return area ? all.filter((i) => (i.area ?? 'personal') === area) : all;
 }
 

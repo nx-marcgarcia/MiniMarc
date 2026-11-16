@@ -1,5 +1,6 @@
 'use client';
 
+import { closedLabel, isOpen } from '@/lib/items/itemTypes';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import { listCapturePeople } from '@/app/actions/capture';
@@ -215,7 +216,7 @@ export function SearchScreen() {
                             />
                           )}
                           <span className="ui-row__text">
-                            <span className="ui-row__title" data-done={i.status === 'hecho' || undefined}>
+                            <span className="ui-row__title" data-done={(!i.archived && !isOpen(i)) || undefined}>
                               <LinkText text={i.title} />
                             </span>
                             {subtitle && (
@@ -224,8 +225,7 @@ export function SearchScreen() {
                               </span>
                             )}
                           </span>
-                          {i.status === 'hecho' && <span className="ui-row__detail">Hecho</span>}
-                          {i.status === 'archivado' && <span className="ui-row__detail">Archivado</span>}
+                          {closedLabel(i) && <span className="ui-row__detail">{closedLabel(i)}</span>}
                           {photos[i.id]?.[0] && <RowThumb url={photos[i.id][0].url} />}
                         </div>
                       </div>
@@ -251,7 +251,7 @@ export function SearchScreen() {
         onSave={save}
         onComplete={(i) => act(() => toggleDone(i.id), 'Marcado como hecho', () => toggleDone(i.id))}
         onArchive={(i) =>
-          act(() => moveItem(i.id, { status: 'archivado' }), 'Archivado', () => moveItem(i.id, { status: 'pendiente' }))
+          act(() => moveItem(i.id, { archived: true }), 'Archivado', () => moveItem(i.id, { archived: false }))
         }
         onDelete={(i) => act(() => deleteItem(i.id), 'Eliminado', () => undoDelete(i.id))}
       />
@@ -264,7 +264,7 @@ export function SearchScreen() {
           if (notice) showToast(notice);
           refresh();
         }}
-        onArchive={(b) => act(() => moveItem(b.id, { status: 'archivado' }), 'Archivado', () => moveItem(b.id, { status: 'pendiente' }))}
+        onArchive={(b) => act(() => moveItem(b.id, { archived: true }), 'Archivado', () => moveItem(b.id, { archived: false }))}
         onDelete={(b) => act(() => deleteItem(b.id), 'Eliminado', () => undoDelete(b.id))}
       />
       <Toast toast={toast} onDismiss={() => setToast(null)} />

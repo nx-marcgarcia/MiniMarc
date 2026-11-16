@@ -72,6 +72,14 @@ function task(overrides: Partial<Item> = {}): Item {
     linkSite: null,
     location: null,
     aiState: null,
+    data: {},
+    storeId: null,
+    priority: null,
+    remindAt: null,
+    pinned: false,
+    archived: false,
+    completedAt: null,
+    tags: [],
     createdAt: '2026-10-21T10:00:00.000Z',
     deletedAt: null,
     ...overrides,
@@ -145,8 +153,8 @@ describe('syncTaskEvent', () => {
   });
 
   it.each([
-    ['completarla', { status: 'hecho' as const }],
-    ['archivarla', { status: 'archivado' as const }],
+    ['completarla', { status: 'hecha' as const }],
+    ['archivarla', { archived: true }],
     ['borrarla', { deletedAt: '2026-10-21T11:00:00.000Z' }],
     ['cambiarle el tipo', { type: 'idea' as const, dueAt: null, hasTime: false }],
   ])('al %s elimina el evento', async (_, overrides) => {
@@ -168,7 +176,7 @@ describe('syncTaskEvent', () => {
 
   it('si el evento ya no existe al borrarlo, lo da por borrado', async () => {
     const { gw } = fakeGateway({ delete: new CalendarError('not_found', 'Gone') });
-    const r = await syncTaskEvent(task({ calendarEventId: 'ev1', status: 'hecho' }), gw);
+    const r = await syncTaskEvent(task({ calendarEventId: 'ev1', status: 'hecha' }), gw);
     expect(r).toEqual({ eventId: null, error: null });
   });
 
@@ -215,7 +223,7 @@ describe('syncTaskEvent', () => {
       error: 'calendar_unavailable',
     });
     const del = fakeGateway({ delete: httpError(401) });
-    expect(await syncTaskEvent(task({ calendarEventId: 'ev1', status: 'hecho' }), del.gw)).toEqual({
+    expect(await syncTaskEvent(task({ calendarEventId: 'ev1', status: 'hecha' }), del.gw)).toEqual({
       eventId: 'ev1',
       error: 'calendar_auth',
     });

@@ -52,7 +52,7 @@ describe('optimistic list updates', () => {
     expect(staysInList(a, { title: 'Otro' })).toBe(true);
     expect(staysInList(a, { type: 'idea' })).toBe(false);
     expect(staysInList(a, { area: 'trabajo' })).toBe(false);
-    expect(staysInList(a, { status: 'archivado' })).toBe(false);
+    expect(staysInList(a, { archived: true })).toBe(false);
     expect(staysInList(a, { title: 'Otro' }, { reviewMode: true })).toBe(false);
     const gift = item('g', { type: 'regalo', personId: 'p1' });
     expect(staysInList(gift, { personId: 'p2' }, { personId: 'p1' })).toBe(false);

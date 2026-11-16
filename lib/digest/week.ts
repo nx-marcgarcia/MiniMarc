@@ -65,7 +65,7 @@ export async function buildWeekDigest(weekStart: string, deps: DigestDeps): Prom
 
   const [eventsResult, pending, upcoming] = await Promise.all([
     loadEvents(deps.calendar, from, until),
-    deps.items.listItems({ status: 'pendiente' }),
+    deps.items.listItems({ open: true }),
     deps.people.upcomingDates(start, 6),
   ]);
 

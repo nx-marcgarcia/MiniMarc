@@ -1,3 +1,4 @@
+import { ITEM_TYPE_IDS, ITEM_TYPES } from '@/lib/items/itemTypes';
 import { madridDateTime } from './time';
 import type { Item } from './db/types';
 
@@ -39,13 +40,7 @@ export function formatBirthday(birthday: string): string {
   return dayMonth.format(new Date(`2000-${birthday.slice(5, 10)}T00:00:00Z`));
 }
 
-export const TYPE_LABELS: Record<Item['type'], string> = {
-  tarea: 'Tarea',
-  idea: 'Idea',
-  compra: 'Compra',
-  regalo: 'Regalo',
-  libro: 'Libro',
-};
+export const TYPE_LABELS = Object.fromEntries(ITEM_TYPE_IDS.map((t) => [t, ITEM_TYPES[t].label])) as Record<Item['type'], string>;
 
 /**
  * Where a captured item went, as the Bandeja shows it: "Tareas · Personal", "Ideas",
@@ -67,6 +62,10 @@ export function destinationLabel(
       return personName ? `Regalo · ${personName}` : 'Regalos';
     case 'libro':
       return 'Libros';
+    case 'enlace':
+      return 'Enlaces';
+    case 'nota':
+      return 'Notas';
   }
 }
 

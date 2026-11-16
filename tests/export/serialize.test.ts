@@ -36,6 +36,14 @@ const item = (over: Partial<Item> = {}): Item => ({
   linkSite: null,
   location: null,
   aiState: null,
+  data: {},
+  storeId: null,
+  priority: null,
+  remindAt: null,
+  pinned: false,
+  archived: false,
+  completedAt: null,
+  tags: [],
   createdAt: '2026-10-21T10:00:00.000Z',
   deletedAt: null,
   ...over,
@@ -99,6 +107,15 @@ describe('serializeExport csv', () => {
   it('cabecera estable con todos los campos del elemento', () => {
     expect([...CSV_COLUMNS].sort()).toEqual(Object.keys(item()).sort());
     expect(CSV_COLUMNS[0]).toBe('id');
+  });
+
+  it('los campos propios y los tags salen como JSON en su celda', () => {
+    const csv = serializeExport(
+      data({ items: [item({ type: 'compra', data: { price: 25, currency: 'EUR' }, tags: ['casio', 'reloj'] })] }),
+      'csv',
+    );
+    expect(csv).toContain('"{""price"":25,""currency"":""EUR""}"');
+    expect(csv).toContain('"[""casio"",""reloj""]"');
   });
 
   it('escapa comas, comillas y saltos de línea', () => {

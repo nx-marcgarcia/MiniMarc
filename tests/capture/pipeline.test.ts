@@ -655,7 +655,7 @@ describe('captureText: libros', () => {
       title: 'Sapiens',
       author: 'Harari',
       readingState: 'por_leer',
-      status: 'pendiente',
+      status: 'por_leer',
       area: null,
       needsReview: false,
       sourceText: 'quiero leer Sapiens de Harari',

@@ -43,6 +43,14 @@ function item(over: Partial<Item>): Item {
     linkSite: null,
     location: null,
     aiState: null,
+    data: {},
+    storeId: null,
+    priority: null,
+    remindAt: null,
+    pinned: false,
+    archived: false,
+    completedAt: null,
+    tags: [],
     createdAt: '2026-10-01T00:00:00Z',
     deletedAt: null,
     ...over,
@@ -432,8 +440,8 @@ describe('runMorning · mantenimiento', () => {
 
   it('borra el evento de una tarea hecha, archivada o eliminada (avisos huérfanos, I-3)', async () => {
     const t = setup({ now: AT_7 });
-    const done = await t.create({ type: 'tarea', title: 'a', dueAt: '2026-10-23T10:00:00Z', hasTime: true, status: 'hecho', calendarEventId: 'ev-done' });
-    const arch = await t.create({ type: 'tarea', title: 'b', dueAt: '2026-10-23T10:00:00Z', hasTime: true, status: 'archivado', calendarEventId: 'ev-arch', syncError: 'calendar_unavailable' });
+    const done = await t.create({ type: 'tarea', title: 'a', dueAt: '2026-10-23T10:00:00Z', hasTime: true, status: 'hecha', calendarEventId: 'ev-done' });
+    const arch = await t.create({ type: 'tarea', title: 'b', dueAt: '2026-10-23T10:00:00Z', hasTime: true, archived: true, calendarEventId: 'ev-arch', syncError: 'calendar_unavailable' });
     const del = await t.create({ type: 'tarea', title: 'c', dueAt: '2026-10-23T10:00:00Z', hasTime: true, calendarEventId: 'ev-del', syncError: 'calendar_auth' });
     const keep = await t.create({ type: 'tarea', title: 'd', dueAt: '2026-10-23T10:00:00Z', hasTime: true, calendarEventId: 'ev-keep' });
     await t.items.softDeleteItem(del.id);

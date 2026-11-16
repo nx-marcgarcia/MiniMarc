@@ -89,7 +89,7 @@ export async function buildDigest(date: string, deps: DigestDeps): Promise<Diges
 
   const [eventsResult, pending, upcoming] = await Promise.all([
     loadEvents(deps.calendar, dayStart, dayEnd),
-    deps.items.listItems({ status: 'pendiente' }),
+    deps.items.listItems({ open: true }),
     deps.people.upcomingDates(date, DATES_WINDOW_DAYS),
   ]);
 

@@ -71,10 +71,13 @@ export async function captureFromWeb(fd: FormData, deps: WebCaptureDeps): Promis
 /** `href` is where the toast's "Ver" goes. */
 export type QuickCapture = { message: string; href: string };
 
+/** Enlaces y notas aún no tienen pantalla propia (fase 3): hasta entonces, "Recién añadido". */
 const ITEM_HREF: Record<Exclude<ItemType, 'tarea' | 'regalo'>, string> = {
   idea: '/ideas',
   compra: '/compras',
   libro: '/libros',
+  enlace: BANDEJA_HREF,
+  nota: BANDEJA_HREF,
 };
 
 function itemHref(item: Item): string {

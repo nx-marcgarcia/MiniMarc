@@ -136,7 +136,7 @@ describe('quickCapture', () => {
         title: 'Sapiens',
         author: 'Yuval Noah Harari',
         readingState: 'por_leer',
-        status: 'pendiente',
+        status: 'por_leer',
         area: null,
         needsReview: false,
         sourceText: 'Sapiens',

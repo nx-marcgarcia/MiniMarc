@@ -1,9 +1,18 @@
-export type ItemType = 'tarea' | 'idea' | 'compra' | 'regalo' | 'libro';
+import type { ItemTypeId } from '@/lib/items/itemTypes';
+
+/** Every type of the registry (lib/items/itemTypes.ts). */
+export type ItemType = ItemTypeId;
 export type Area = 'personal' | 'trabajo';
-export type ItemStatus = 'pendiente' | 'hecho' | 'archivado';
+/**
+ * The item's state, one of its type's states (compra: quiero, en_carrito…; tarea: pendiente,
+ * hecha…). Rows written before phase 1 ('hecho', 'archivado') are translated on read
+ * (normalizeLegacyStatus); archiving is the separate flag `archived`.
+ */
+export type ItemStatus = string;
 export type Origin = 'web' | 'siri' | 'extension';
-/** Only libros have one; every other item has null. */
-export type ReadingState = 'por_leer' | 'leyendo' | 'leido';
+export type Priority = 'baja' | 'media' | 'alta';
+/** Libro only (its status is the reading state); every other item has null. */
+export type ReadingState = 'por_leer' | 'leyendo' | 'leido' | 'abandonado';
 
 export interface Item {
   id: string;
@@ -25,7 +34,7 @@ export interface Item {
   sourceText: string | null;
   /** Libro: its author (kept on the item so a future search finds it). */
   author: string | null;
-  /** Libro: 'por_leer' (default), 'leyendo' or 'leido'. 'leido' ⇔ status 'hecho'. Null otherwise. */
+  /** Libro: its reading state, which is its status. Null otherwise. Derived on read; write `status`. */
   readingState: ReadingState | null;
   /**
    * The item's link: a libro's ficha, tienda o reseña, or the first URL of the title or notes
@@ -41,6 +50,18 @@ export interface Item {
   location: string | null;
   /** Clasificación diferida (0010): 'pendiente' = la IA aún no la ha visto, 'fallo' = falló; null = nada que hacer. */
   aiState: 'pendiente' | 'fallo' | null;
+  /** Fields of the item's type (0011), validated by the registry: `ITEM_TYPES[type].fields`. */
+  data: Record<string, unknown>;
+  storeId: string | null;
+  priority: Priority | null;
+  /** ISO 8601 (UTC). */
+  remindAt: string | null;
+  pinned: boolean;
+  /** Archived apart from its status (it keeps the state it had). */
+  archived: boolean;
+  /** Set by the repo when the status enters a closing state of the type. */
+  completedAt: string | null;
+  tags: string[];
   createdAt: string;
   deletedAt: string | null;
 }
@@ -54,7 +75,12 @@ export type ItemPatch = Partial<Omit<Item, 'id' | 'createdAt' | 'deletedAt'>>;
 export interface ItemFilter {
   type?: ItemType;
   area?: Area;
+  /** Exactly this state. */
   status?: ItemStatus;
+  /** Not archived and not in a closing state of its type: what a to-do list shows. */
+  open?: boolean;
+  archived?: boolean;
+  storeId?: string;
   needsReview?: boolean;
   /** Solo los de clasificación diferida: 'pendiente' o 'fallo' (lo busca el cron). */
   aiState?: 'pendiente' | 'fallo';

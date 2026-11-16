@@ -3,6 +3,7 @@
  * server's answer replaces it; on failure React drops the optimistic state by itself (rollback)
  * and the screen shows a calm toast. Pure: unit-tested.
  */
+import { defaultStatus, isOpen } from '@/lib/items/itemTypes';
 import type { Item } from '@/lib/db/types';
 import { parseNewItem, type MovePatch } from './items';
 
@@ -36,7 +37,7 @@ export function staysInList(item: Item, patch: MovePatch, opts: { reviewMode?: b
   if (opts.reviewMode) return false;
   if (next.type !== item.type) return false;
   if (item.type === 'tarea' && next.area !== item.area) return false;
-  if (item.status === 'pendiente' && next.status !== 'pendiente') return false;
+  if (isOpen(item) && !isOpen(next)) return false;
   if (opts.personId && next.personId !== opts.personId) return false;
   return true;
 }
@@ -55,7 +56,6 @@ export function draftItem(fd: FormData, n: number, now: Date): Item | null {
     area: null,
     dueAt: null,
     hasTime: false,
-    status: 'pendiente',
     personId: null,
     origin: 'web',
     needsReview: false,
@@ -71,9 +71,18 @@ export function draftItem(fd: FormData, n: number, now: Date): Item | null {
     linkSite: null,
     location: null,
     aiState: null,
+    data: {},
+    storeId: null,
+    priority: null,
+    remindAt: null,
+    pinned: false,
+    archived: false,
+    completedAt: null,
+    tags: [],
     createdAt: now.toISOString(),
     deletedAt: null,
     ...fields,
+    status: fields.status ?? (fields.type === 'libro' ? fields.readingState : null) ?? defaultStatus(fields.type),
   };
 }
 

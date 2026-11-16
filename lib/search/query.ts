@@ -28,6 +28,8 @@ export type SearchGroupKey =
   | 'compras'
   | 'regalos'
   | 'libros'
+  | 'enlaces'
+  | 'notas'
   | 'personas'
   | 'sin-clasificar'
   | 'sin-clasificar-trabajo'
@@ -83,6 +85,8 @@ const LABELS: Record<SearchGroupKey, string> = {
   compras: 'Compras',
   regalos: 'Regalos',
   libros: 'Libros',
+  enlaces: 'Enlaces',
+  notas: 'Notas',
   personas: 'Personas',
   'sin-clasificar': 'Sin clasificar',
   'sin-clasificar-trabajo': 'Sin clasificar · Trabajo',
@@ -92,7 +96,7 @@ const LABELS: Record<SearchGroupKey, string> = {
 
 const ORDER = Object.keys(LABELS) as SearchGroupKey[];
 
-const TYPE_GROUP = { idea: 'ideas', compra: 'compras', regalo: 'regalos', libro: 'libros' } as const;
+const TYPE_GROUP = { idea: 'ideas', compra: 'compras', regalo: 'regalos', libro: 'libros', enlace: 'enlaces', nota: 'notas' } as const;
 
 /** Where an item goes. No area counts as Personal; Trabajo always has its own group. */
 function groupOf(item: Item): Exclude<SearchGroupKey, 'personas'> {

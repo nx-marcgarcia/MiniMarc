@@ -6,10 +6,11 @@ import { LinkText } from '@/components/links/LinkText';
 import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { deleteItem, moveItem, undoDelete } from '@/app/actions/items';
 import { InsetList, LargeTitle, Toast, type ToastProps } from '@/components/ui';
-import type { MovePatch } from '@/lib/actions/items';
 import { applyListOps, type ListOp } from '@/lib/actions/optimistic';
 import { settle, type ActionResult } from '@/lib/actions/result';
-import type { Item, ItemStatus, Person } from '@/lib/db/types';
+import type { Item, Person } from '@/lib/db/types';
+import { closedLabel, completionStatus } from '@/lib/items/itemTypes';
+import type { MovePatch } from '@/lib/actions/items';
 import { destinationLabel, formatDay } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
 import { madridDateTime } from '@/lib/time';
@@ -31,8 +32,6 @@ export type InboxScreenProps = {
 type ToastState = NonNullable<ToastProps['toast']>;
 
 const OFFLINE = 'No se ha podido guardar. Revisa la conexión e inténtalo de nuevo.';
-
-const STATUS_LABELS: Partial<Record<ItemStatus, string>> = { hecho: 'Hecho', archivado: 'Archivado' };
 
 /** "09:41" today, "Ayer 21:30" otherwise. */
 function createdLabel(item: Item, today: string): string {
@@ -88,14 +87,12 @@ export function InboxScreen({ today, personal, trabajo, people, photos = {}, not
 
   const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
 
-  /** Sets the status (idempotent, unlike a toggle) and offers to put the previous one back. */
-  function setStatus(item: Item, status: ItemStatus, message: string) {
+  /** Applies a patch (idempotent, unlike a toggle) and offers to put the previous values back. */
+  function applyPatch(item: Item, patch: MovePatch, back: MovePatch, message: string) {
     closeSheet();
     startTransition(async () => {
-      addOp({ kind: 'patch', id: item.id, patch: { status } });
-      if (await run(() => moveItem(item.id, { status }))) {
-        showToast(message, () => moveItem(item.id, { status: item.status }));
-      }
+      addOp({ kind: 'patch', id: item.id, patch });
+      if (await run(() => moveItem(item.id, patch))) showToast(message, () => moveItem(item.id, back));
     });
   }
 
@@ -118,7 +115,7 @@ export function InboxScreen({ today, personal, trabajo, people, photos = {}, not
 
   function subtitle(item: Item): string {
     const where = destinationLabel(item, item.personId ? names.get(item.personId) : undefined);
-    const status = STATUS_LABELS[item.status];
+    const status = closedLabel(item);
     return status ? `${where} · ${status}` : where;
   }
 
@@ -184,8 +181,10 @@ export function InboxScreen({ today, personal, trabajo, people, photos = {}, not
         onClose={closeSheet}
         onCreate={async () => ({ ok: false, error: OFFLINE })}
         onSave={save}
-        onComplete={(item) => setStatus(item, 'hecho', 'Marcado como hecho')}
-        onArchive={(item) => setStatus(item, 'archivado', 'Archivado')}
+        onComplete={(item) =>
+          applyPatch(item, { status: completionStatus(item.type) }, { status: item.status }, 'Marcado como hecho')
+        }
+        onArchive={(item) => applyPatch(item, { archived: true }, { archived: false }, 'Archivado')}
         onDelete={remove}
       />
       <Toast toast={toast} onDismiss={() => setToast(null)} />

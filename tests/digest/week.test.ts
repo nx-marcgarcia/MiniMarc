@@ -180,7 +180,7 @@ describe('buildWeekDigest', () => {
     await s.add({ type: 'tarea', title: 'Sin área', ...due('2026-10-24') });
     await s.add({ type: 'tarea', title: 'Informe', area: 'trabajo', ...due('2026-10-21') });
     await s.add({ type: 'tarea', title: 'Semana siguiente', area: 'personal', ...due('2026-10-26') });
-    await s.add({ type: 'tarea', title: 'Hecha', area: 'personal', status: 'hecho', ...due('2026-10-23') });
+    await s.add({ type: 'tarea', title: 'Hecha', area: 'personal', status: 'hecha', ...due('2026-10-23') });
     await s.add({ type: 'tarea', title: 'Sin fecha', area: 'personal' });
 
     const w = await buildWeekDigest(WEEK, s.deps);

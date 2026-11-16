@@ -284,7 +284,7 @@ describe('POST /api/capture con type (chips de la extensión)', () => {
     ['idea', undefined, 'Guardado en Ideas', { type: 'idea' }],
     ['compra', undefined, 'Guardado en Compras', { type: 'compra' }],
     ['regalo', undefined, 'Guardado en Regalos', { type: 'regalo', person_id: null }],
-    ['libro', undefined, 'Guardado en Libros', { type: 'libro', reading_state: 'por_leer' }],
+    ['libro', undefined, 'Guardado en Libros', { type: 'libro', status: 'por_leer' }],
   ])('type %s (area %s) guarda directamente sin IA', async (type, area, message, row: Record<string, unknown>) => {
     const { db, deps } = setup(aiForbidden);
     const res = await handleCapture(post({ text: '  Leche de avena  ', type, area, origin: 'extension' }), deps);
@@ -310,7 +310,7 @@ describe('POST /api/capture con type (chips de la extensión)', () => {
     const res = await handleCapture(post({ text: 'Sapiens', type: 'libro', author: 'Harari', origin: 'extension' }), deps);
     expect(res.status).toBe(200);
     expect((await res.json()).message).toBe('Guardado en Libros');
-    expect(db.tables.items[0]).toMatchObject({ type: 'libro', title: 'Sapiens', author: 'Harari', reading_state: 'por_leer' });
+    expect(db.tables.items[0]).toMatchObject({ type: 'libro', title: 'Sapiens', author: 'Harari', status: 'por_leer' });
   });
 
   it('un token de Trabajo con type tarea guarda en Tareas · Trabajo', async () => {
