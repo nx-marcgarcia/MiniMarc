@@ -5,7 +5,7 @@
  */
 import { createCita, EVENT_ERROR_MESSAGES, parseNewEvent } from '@/lib/actions/events';
 import { attempt, UserError, type ActionResult } from '@/lib/actions/result';
-import type { Item, ItemType } from '@/lib/db/types';
+import type { ItemType } from '@/lib/db/types';
 import { itemHref } from '@/lib/items/href';
 import { BANDEJA_HREF } from '@/lib/nav';
 import { madridDateTime } from '@/lib/time';

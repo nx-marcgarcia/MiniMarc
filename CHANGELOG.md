@@ -2,6 +2,18 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Fase 4: que el cerebro me recuerde las cosas
+
+- **Horario único:** de lunes a viernes, de 9:00 a 16:00 (Madrid, con el cambio de hora resuelto por el reloj de la zona, nunca con horas fijas en UTC). Fuera de ahí no se envía nada, salvo una tarea con hora exacta («llamar el sábado a las 11»), que avisa a su hora. Lo del fin de semana sale el lunes a las 9:00. Opción de saltar festivos (nacionales y de la Comunidad Valenciana).
+- **Cron cada 30 minutos** (`pg_cron`, migración `0013`): la ruta `/api/cron/morning` decide en el servidor si toca enviar algo, y es idempotente (la franja se marca antes de enviar; cada aviso queda en `resurfacing_events`; uno que no llegó por ningún canal se olvida para poder reintentarlo).
+- **Briefing diario a las 9:00** (también por Telegram): tareas y citas de hoy, fechas próximas con «sin regalo comprado», Bandeja y una cosa rescatada. Un día sin nada es una sola línea. El resumen semanal pasa al primer día laborable de la semana (la opción «Domingo 20:00» desaparece: salía fuera de horario).
+- **Tres recordatorios** (11:00, 13:30 y 15:30, configurables): uno por franja, lo urgente primero (tareas atrasadas o de hoy, cumpleaños y fechas a 10 días sin regalo comprado, garantías que caducan en un mes, compras urgentes que llevan semanas en «quiero») y después lo olvidado (ideas sin tocar en 30 días, enlaces sin ver de hace más de 2 meses, libros por leer). Mezcla tipos, no repite el mismo elemento en 7 días y a la tercera vez que se pospone pregunta si se archiva. Lo de Trabajo no sale nunca por Telegram.
+- **Telegram:** bot con botones **Hecho**, **Posponer 1 semana**, **Archivar** y **Abrir**; el webhook (`/api/telegram/webhook`) exige el secreto de Telegram y solo obedece a tu chat. Web Push y Telegram conviven y se activan o desactivan en **Ajustes → Avisos**, donde también están las tres horas y los festivos.
+- **«Para hoy»** arriba de Hoy, con los mismos botones.
+- **Posponer** una tarea con hora mueve también su evento de Google Calendar. `items.updated_at` (solo lo mueve el contenido, no la sincronización) permite saber qué idea lleva 30 días sin tocar.
+- **Tests:** la semana entera simulada con el cron real cada 30 minutos (martes: briefing y 3 recordatorios; sábado: nada; lunes 9:00: lo pendiente), y las reglas de ventana, franjas, candidatos y botones por separado.
+- **Pendiente de decidir (no bloquea):** las candidaturas llegarán con su tipo en la fase 9.
+
 ## Fase 3: secciones que funcionan de verdad
 
 - **Compras:** agrupadas por tienda (secciones plegables con logo, número y total estimado) o por urgencia; cantidad y precio en cada fila; modo «En la tienda» para ir tachando; lo comprado pasa a un historial.

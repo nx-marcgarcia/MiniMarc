@@ -15,7 +15,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
 1. Entra en https://supabase.com y crea una cuenta.
 2. Pulsa **New project**. Elige la organización, un nombre (por ejemplo `agente-personal`), una contraseña para la base de datos (guárdala) y una región UE: **West EU (Paris)** (`eu-west-3`) o **Central EU (Frankfurt)** (`eu-central-1`). Plan: **Free**.
 3. Espera a que el proyecto termine de crearse.
-4. Aplica el esquema: las doce migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
+4. Aplica el esquema: las trece migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
 
    | # | Archivo | Qué hace | Sección |
    |---|---|---|---|
@@ -31,6 +31,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | 10 | `0010_ubicacion_y_clasificacion_diferida.sql` | `items.location` (va al campo Ubicación de Calendar) y `items.ai_state` (ya sin uso: la captura es síncrona; la columna se puede dejar). Sin la migración, la app funciona: no escribe la ubicación mientras valga null | — |
    | 11 | `0011_segundo_cerebro.sql` | Tablas `stores`, `item_links` y `tags`; columnas nuevas en `items` y `people`; quita los CHECK de `type` y `status`. **Aplícala antes de desplegar el código de la fase 1.** Después, ver `docs/migracion.md` para migrar tus datos | — |
    | 12 | `0012_captura.sql` | `items.suggestion` (lo que la IA cree de un item dudoso) y la tabla `capture_log` (texto original, salida del modelo, items creados y tus correcciones). Solo añade; sin ella la app funciona (el registro falla en silencio y no hay sugerencias) | — |
+   | 13 | `0013_resurfacing.sql` | Fase 4: `items.updated_at` (con un trigger que solo mueve el contenido), `items.snoozed_until` y `snooze_count`, la tabla `resurfacing_events` (cada aviso enviado y qué hiciste), los ajustes de avisos en `settings` y el trabajo de `pg_cron`, que pasa a correr **cada 30 minutos**. Solo añade y se puede repetir. **Aplícala antes de desplegar el código de la fase 4**: hasta entonces el resurfacing y Telegram no envían nada | 7 y 14 |
 
    Hay dos formas de aplicarlas:
    - **Editor SQL (sin CLI):** abre **SQL Editor → New query**, pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**. Repite con cada archivo siguiente, en orden, cada uno en una consulta nueva.
@@ -108,6 +109,10 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | `VAPID_PRIVATE_KEY` | Clave privada de la misma pareja VAPID. Solo servidor. |
    | `CRON_SECRET` | Secreto que protege las rutas que llama el cron. Generar con `openssl rand -hex 32`. Solo servidor. |
    | `APP_TZ` | Valor fijo `Europe/Madrid`. Zona horaria de la app. |
+   | `TELEGRAM_BOT_TOKEN` | **Opcional** (sección 14). Token del bot que te da @BotFather. Solo servidor. Sin él (o sin `TELEGRAM_CHAT_ID`) Telegram queda apagado y los avisos salen solo por notificaciones del navegador. |
+   | `TELEGRAM_CHAT_ID` | **Opcional** (sección 14). El número de tu chat con el bot: es el único chat al que contesta y al que escribe. |
+   | `TELEGRAM_WEBHOOK_SECRET` | **Opcional** (sección 14). Texto largo y aleatorio (`openssl rand -hex 32`) que Telegram repite en cada llamada al webhook; sin él, el webhook rechaza todo. Solo servidor. |
+   | `APP_URL` | **Opcional.** Dirección pública de la app para los botones «Abrir» de Telegram. Si falta se usa el dominio de producción de Vercel. |
    | `GEMINI_MODEL` | **Opcional.** Modelo de Gemini. Si falta, `gemini-3.5-flash-lite`. Cámbialo solo si Google retira ese modelo del nivel gratuito. |
    | `GEMINI_DAILY_CAP` | **Opcional.** Tope de llamadas a Gemini al día (entero positivo). Si falta, 200. Al llegar al tope, las capturas se guardan como "Sin clasificar". |
 
@@ -159,7 +164,7 @@ Verificados el 2026-10-21 contra la documentación oficial. Los límites cambian
 
 ## 7. Resumen de la mañana
 
-Cada hora (minuto 0), Supabase llama a `POST /api/cron/morning` con `pg_cron` + `pg_net` (migración `0004_cron.sql`). La ruta envía el resumen una vez al día, a la hora elegida en **Ajustes → Resumen de la mañana**, y aprovecha cada llamada para reintentar la sincronización con Calendar y purgar la papelera (más de 30 días).
+Cada 30 minutos, Supabase llama a `POST /api/cron/morning` con `pg_cron` + `pg_net` (la migración `0004_cron.sql` lo creó cada hora; `0013_resurfacing.sql` lo pasa a cada 30 minutos). **El servidor decide con la hora de Madrid** si toca enviar algo; las horas no están fijadas en UTC, así que el cambio de hora no lo rompe. Envía el resumen una vez al día laborable, a la hora elegida en **Ajustes → Resumen de la mañana** (de 9:00 a 11:00), manda los recordatorios del día (sección 14) y aprovecha cada llamada para reintentar la sincronización con Calendar y purgar la papelera (más de 30 días). **De lunes a viernes, de 9:00 a 16:00 y nada más** (salvo una tarea con hora exacta): fin de semana, noches y, si lo dejas activado, festivos no se envía nada.
 
 1. Aplica las migraciones pendientes (`npx supabase db push`, o pega `0004_cron.sql` en el SQL Editor).
 2. Guarda la URL de la app y el secreto del cron en Supabase Vault. En **SQL Editor → New query** (el secreto, el mismo valor que `CRON_SECRET` en Vercel):
@@ -181,7 +186,7 @@ Cada hora (minuto 0), Supabase llama a `POST /api/cron/morning` con `pg_cron` + 
    `status_code` 200 es correcto; 401 indica que `cron_secret` no coincide con `CRON_SECRET`.
 4. Prueba manual (desde tu ordenador): `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://mini-marc-personal.vercel.app/api/cron/morning`. Devuelve solo recuentos, por ejemplo `{"digest":"not_due","pushed":0,...}`.
 
-**Si `pg_cron` o `pg_net` no están disponibles en el plan Free:** la migración se aplica igual, sin el trabajo, y muestra un aviso. Usa un cron externo gratuito, por ejemplo https://cron-job.org: crea un trabajo que llame cada hora (minuto 0) a `https://mini-marc-personal.vercel.app/api/cron/morning`, método `POST` (vale también `GET`), con la cabecera `Authorization: Bearer <CRON_SECRET>`.
+**Si `pg_cron` o `pg_net` no están disponibles en el plan Free:** la migración se aplica igual, sin el trabajo, y muestra un aviso. Usa un cron externo gratuito, por ejemplo https://cron-job.org: crea un trabajo que llame cada 30 minutos (minutos 0 y 30) a `https://mini-marc-personal.vercel.app/api/cron/morning`, método `POST` (vale también `GET`), con la cabecera `Authorization: Bearer <CRON_SECRET>`.
 
 ## 8. Fotos y "Compartir" en Android
 
@@ -198,9 +203,9 @@ Cada hora (minuto 0), Supabase llama a `POST /api/cron/morning` con `pg_cron` + 
 
 ## 10. Resumen semanal
 
-1. Aplica la migración `0007_weekly.sql` (`npx supabase db push`, o pégala en el SQL Editor). Añade a `settings` la opción del resumen semanal (por defecto **Lunes 08:00**), la última semana enviada y la frase de la IA de la semana; RLS como las demás. Se puede ejecutar otra vez sin problema. Hasta aplicarla, todo lo demás funciona y el aviso semanal queda desactivado.
+1. Aplica la migración `0007_weekly.sql` (`npx supabase db push`, o pégala en el SQL Editor). Añade a `settings` la opción del resumen semanal (por defecto **Lunes**), la última semana enviada y la frase de la IA de la semana; RLS como las demás. Se puede ejecutar otra vez sin problema. Hasta aplicarla, todo lo demás funciona y el aviso semanal queda desactivado.
 2. Compruébalo en el SQL Editor: `select weekly_digest, last_weekly_date from public.settings;` debe devolver `lunes` y vacío.
-3. Elige el momento en **Ajustes → Resumen semanal**: **Lunes 08:00** (la semana que empieza), **Domingo 20:00** (la semana siguiente) o **Desactivado**. Lo envía el mismo cron horario de la sección 7; no hace falta programar nada más. El lunes a las 08:00 llegan dos avisos: el de la mañana («Hoy») y el semanal («Tu semana»). Este abre **/semana**, también accesible desde **Hoy → Ver la semana**.
+3. Elige en **Ajustes → Resumen semanal**: **Lunes** (la semana que empieza) o **Desactivado**. El domingo por la noche queda fuera del horario de avisos (lunes a viernes, de 9:00 a 16:00), así que la antigua opción «Domingo 20:00» ya no existe: quien la tenía recibe el resumen el lunes. Sale el primer día laborable de la semana (el martes si el lunes es festivo), con el mismo cron de la sección 7; no hace falta programar nada más. Ese día llegan dos avisos: el de la mañana («Hoy») y el semanal («Tu semana»). Este abre **/semana**, también accesible desde **Hoy → Ver la semana**.
 
 ## 11. Libros
 
@@ -222,6 +227,40 @@ Cada hora (minuto 0), Supabase llama a `POST /api/cron/morning` con `pg_cron` + 
 
 - **JSON:** todo. Elementos (también los de la papelera, con `deletedAt`), personas, fechas especiales, fotos (solo la ruta en el bucket `photos`, no la imagen), ajustes (hora del resumen, zona, resumen semanal) y los tokens de API (solo nombre y fechas, nunca el hash).
 - **CSV:** solo los elementos, una fila cada uno, con las columnas siempre en el mismo orden. Se abre en Numbers o Excel.
+
+## 14. Avisos y Telegram (resurfacing)
+
+El cerebro te trae cosas olvidadas sin que las busques. **Siempre de lunes a viernes, de 9:00 a 16:00, hora de Madrid.** Fuera de ese horario no se envía nada, salvo una tarea con hora exacta que hayas puesto (por ejemplo «llamar el sábado a las 11»), que avisa a su hora. Lo que toque en fin de semana o festivo espera: el lunes a las 9:00 llega el resumen con lo pendiente.
+
+**Qué envía**
+- **9:00, resumen del día**, también por Telegram: tareas y citas de hoy, fechas próximas (con «sin regalo comprado» si falta), cuántas cosas hay en la Bandeja y una cosa rescatada. Un día sin nada es una sola línea.
+- **Tres recordatorios** a las 11:00, 13:30 y 15:30 (se cambian en **Ajustes → Avisos**; deben estar dentro del horario). Cada uno trae **una** cosa, la más urgente primero: tareas atrasadas o de hoy, cumpleaños y fechas de los próximos 10 días sin regalo «comprado», garantías que caducan en un mes, compras urgentes que llevan 2 semanas en «quiero», y después lo olvidado (ideas sin tocar en 30 días, enlaces sin ver de hace más de 2 meses, libros por leer de hace 2 meses). Mezcla tipos: no repite el tipo del aviso anterior si hay otra cosa.
+- **No repite el mismo elemento en 7 días.** Cada aviso queda en la tabla `resurfacing_events` (qué, cuándo, por qué canal y qué hiciste). Si pospones un elemento 3 veces, el aviso pregunta si lo archivas.
+- **Candidaturas de trabajo** llegarán con su tipo (fase 9). **Lo de Trabajo no sale nunca por Telegram**: ni tareas ni personas de Trabajo (solo aparece el recuento en el resumen).
+
+**Botones** (Telegram y el bloque **Para hoy** de Hoy): **Hecho**, **Posponer 1 semana** (una tarea con fecha pasa a dentro de 7 días a la misma hora; lo demás se esconde 7 días), **Archivar** y **Abrir**. Un cumpleaños sin regalo solo se puede posponer o abrir. Si el aviso llega por Telegram, el mensaje se actualiza con lo que hiciste.
+
+**Canales** (se activan o desactivan en **Ajustes → Avisos**; conviven): notificaciones del navegador (las de siempre) y Telegram. Hay además una opción para saltar festivos (nacionales y de la Comunidad Valenciana; no conoce los festivos de tu municipio).
+
+**Activar Telegram**
+1. En Telegram, abre **@BotFather** → `/newbot` → pon un nombre y un usuario que acabe en `bot`. Te da el **token**.
+2. Escríbele un mensaje cualquiera a tu bot (por ejemplo «hola») y abre en el navegador `https://api.telegram.org/bot<TOKEN>/getUpdates`. En el JSON, `message.chat.id` es tu **chat id** (un número).
+3. En Vercel añade `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` y `TELEGRAM_WEBHOOK_SECRET` (inventa un texto largo, `openssl rand -hex 32`), y vuelve a desplegar.
+4. Registra el webhook (una sola vez, desde tu ordenador; no dejes el token en el historial compartido):
+
+   ```bash
+   curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+     -d url="https://mini-marc-personal.vercel.app/api/telegram/webhook" \
+     -d secret_token="$TELEGRAM_WEBHOOK_SECRET" \
+     -d 'allowed_updates=["message","callback_query"]'
+   ```
+
+   Debe responder `{"ok":true,...}`. Para comprobarlo: `curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"` (sin errores y con `pending_update_count` en 0).
+5. **Ajustes → Avisos** debe mostrar Telegram activo. Prueba manual del cron (solo envía algo dentro del horario y si hay algo que avisar): `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://mini-marc-personal.vercel.app/api/cron/morning`. La respuesta incluye `resurfaced` con los avisos con hora enviados y qué pasó con el recordatorio de esa franja.
+
+**Seguridad.** El webhook rechaza (401) cualquier llamada sin `TELEGRAM_WEBHOOK_SECRET`, y solo obedece a **tu** chat y a tu cuenta: cualquier otro chat se ignora en silencio. Los botones solo pueden hacer Hecho, Posponer y Archivar sobre un aviso que la app envió. **Privacidad:** los títulos de tus elementos personales pasan por los servidores de Telegram (los mensajes no están cifrados de extremo a extremo con los bots); si no quieres eso, apaga Telegram en Ajustes y quédate con las notificaciones del navegador.
+
+**Si algo no llega:** el cron corre cada 30 minutos (`select jobname, schedule from cron.job;` debe mostrar `*/30 * * * *`); comprueba que has aplicado la migración 0013 (sin ella no se envía ningún recordatorio, porque no habría dónde apuntar lo enviado); mira `select kind, channel, sent_at, action from resurfacing_events order by sent_at desc limit 10;`.
 
 ## Verificación
 
