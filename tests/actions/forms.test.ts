@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { makeItem } from '../screens/setup';
 import {
+  dataFromForm,
   editPatchFromForm,
   newItemFormError,
   parseSizes,
@@ -136,5 +138,76 @@ describe('editPatchFromForm', () => {
       ok: true,
       value: { title: 'Libro', notes: null, type: 'regalo', personId: 'p1', needsReview: false },
     });
+  });
+});
+
+describe('dataFromForm: los campos propios de cada tipo', () => {
+  const base = { quantity: 1, currency: 'EUR' };
+
+  it('compra: cantidad, precio (con coma), variante y urgencia', () => {
+    const r = dataFromForm('compra', form({ quantity: '2', price: '12,50', variant: ' talla M ', urgency: 'alta' }), base);
+    expect(r).toEqual({ ok: true, value: { quantity: 2, currency: 'EUR', price: 12.5, variant: 'talla M', urgency: 'alta' } });
+  });
+
+  it('un campo vacío lo quita; uno que el formulario no trae no se toca', () => {
+    expect(dataFromForm('compra', form({ price: '' }), { ...base, price: 20, variant: 'azul' })).toEqual({
+      ok: true,
+      value: { quantity: 1, currency: 'EUR', variant: 'azul' },
+    });
+  });
+
+  it('precio y cantidad inválidos dan su mensaje', () => {
+    expect(dataFromForm('compra', form({ price: 'abc' }), base)).toEqual({ ok: false, error: 'El precio no es válido.' });
+    expect(dataFromForm('compra', form({ price: '-3' }), base)).toEqual({ ok: false, error: 'El precio no es válido.' });
+    expect(dataFromForm('compra', form({ quantity: '0' }), base)).toEqual({ ok: false, error: 'La cantidad no es válida.' });
+    expect(dataFromForm('compra', form({ quantity: '1,5' }), base)).toEqual({ ok: false, error: 'La cantidad no es válida.' });
+  });
+
+  it('regalo: precio aproximado y ocasión', () => {
+    expect(dataFromForm('regalo', form({ approxPrice: '30', occasion: ' Cumpleaños ' }), {})).toEqual({ ok: true, value: { approxPrice: 30, occasion: 'Cumpleaños' } });
+    expect(dataFromForm('regalo', form({ approxPrice: 'x' }), {})).toEqual({ ok: false, error: 'El precio no es válido.' });
+  });
+
+  it('idea: categoría, potencial de 1 a 5 y siguiente paso', () => {
+    expect(dataFromForm('idea', form({ category: 'app', potential: '4', nextStep: 'Hacer un prototipo' }), {})).toEqual({
+      ok: true,
+      value: { category: 'app', potential: 4, nextStep: 'Hacer un prototipo' },
+    });
+    expect(dataFromForm('idea', form({ potential: '6' }), {})).toEqual({ ok: false, error: 'El potencial va de 1 a 5.' });
+  });
+
+  it('los demás tipos devuelven lo que había', () => {
+    expect(dataFromForm('tarea', form({ price: '5' }), { context: 'casa' })).toEqual({ ok: true, value: { context: 'casa' } });
+    expect(dataFromForm('nota', form({}), {})).toEqual({ ok: true, value: {} });
+  });
+});
+
+describe('editPatchFromForm: estado y campos propios', () => {
+  const compra = makeItem({ id: 'c', type: 'compra', title: 'Reloj', status: 'quiero', area: null, data: { quantity: 1, currency: 'EUR' } });
+
+  it('con el tipo sin cambiar, lleva el estado y los campos propios', () => {
+    const r = editPatchFromForm(form({ title: 'Reloj', status: 'en_carrito', price: '25' }), { type: 'compra', area: 'personal', item: compra });
+    expect(r.ok && r.value).toMatchObject({ status: 'en_carrito', data: { quantity: 1, currency: 'EUR', price: 25 } });
+  });
+
+  it('no manda el estado si no ha cambiado', () => {
+    const r = editPatchFromForm(form({ title: 'Reloj', status: 'quiero' }), { type: 'compra', area: 'personal', item: compra });
+    expect(r.ok && r.value).not.toHaveProperty('status');
+  });
+
+  it('al cambiar de tipo no manda estado ni campos del tipo antiguo (el repositorio reinicia los suyos)', () => {
+    const r = editPatchFromForm(form({ title: 'Reloj', status: 'en_carrito', price: '25' }), { type: 'regalo', area: 'personal', item: compra });
+    expect(r.ok && r.value).not.toHaveProperty('status');
+    expect(r.ok && r.value).not.toHaveProperty('data');
+  });
+
+  it('un precio inválido es un error del formulario', () => {
+    expect(editPatchFromForm(form({ title: 'Reloj', price: 'abc' }), { type: 'compra', area: 'personal', item: compra })).toEqual({ ok: false, error: 'El precio no es válido.' });
+  });
+
+  it('sin item (llamadas antiguas) se comporta como antes', () => {
+    const r = editPatchFromForm(form({ title: 'X' }), { type: 'idea', area: 'personal' });
+    expect(r.ok && r.value).toMatchObject({ title: 'X', type: 'idea' });
+    expect(r.ok && r.value).not.toHaveProperty('data');
   });
 });

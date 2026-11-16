@@ -10,7 +10,7 @@ import { completionStatus, defaultStatus, ITEM_TYPE_IDS } from '@/lib/items/item
 import { READING_STATES } from '@/lib/libros';
 import { deriveLink } from '@/lib/links/linkify';
 import { isValidDate, toDue } from '@/lib/time';
-import { personProfileFromForm } from './forms';
+import { dataFromForm, personProfileFromForm } from './forms';
 import { UserError } from './result';
 
 /** Same shape as Tarea 7's `syncTaskEvent(item, gw)`. */
@@ -65,6 +65,9 @@ export function parseNewItem(fd: FormData): NewItem {
     ...due(field(fd, 'dueDate'), field(fd, 'dueTime')),
     origin: 'web',
   };
+  const own = dataFromForm(type, fd, {});
+  if (!own.ok) throw new UserError(own.error);
+  if (Object.keys(own.value).length > 0) item.data = own.value;
   if (type === 'libro') {
     item.author = field(fd, 'author').slice(0, AUTHOR_MAX) || null;
     item.link = field(fd, 'link') || null;

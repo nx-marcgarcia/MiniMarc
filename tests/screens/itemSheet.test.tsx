@@ -62,3 +62,89 @@ test('cerrar sin guardar no llama a ninguna acción', async () => {
   expect(itemsActions.toggleDone).not.toHaveBeenCalled();
   expect(itemsActions.deleteItem).not.toHaveBeenCalled();
 });
+
+const compra = makeItem({ id: 'c1', type: 'compra', title: 'Reloj Casio', status: 'quiero', area: null, data: { quantity: 1, currency: 'EUR', price: 25 } });
+const idea = makeItem({ id: 'i1', type: 'idea', title: 'Blog de viajes', status: 'semilla', area: null, data: {} });
+const regalo = makeItem({ id: 'r1', type: 'regalo', title: 'Caja', status: 'idea', area: null, data: { approxPrice: 30 } });
+
+async function open(user: ReturnType<typeof renderScreen>['user'], it: ReturnType<typeof makeItem>, title: string) {
+  await user.click(screen.getByRole('button', { name: `Abrir «${it.title}»` }));
+  await screen.findByRole('dialog', { name: 'Editar' });
+  void title;
+}
+
+test('una compra enseña su estado y sus campos propios con los valores que tiene', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  expect((screen.getByLabelText('Estado') as HTMLSelectElement).value).toBe('quiero');
+  expect(Array.from((screen.getByLabelText('Estado') as HTMLSelectElement).options).map((o) => o.value)).toEqual(['quiero', 'en_carrito', 'comprado', 'descartado']);
+  expect((screen.getByLabelText('Precio') as HTMLInputElement).value).toBe('25');
+  expect((screen.getByLabelText('Cantidad') as HTMLInputElement).value).toBe('1');
+});
+
+test('guardar una compra manda el estado y el precio nuevos', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  await user.selectOptions(screen.getByLabelText('Estado'), 'en_carrito');
+  const price = screen.getByLabelText('Precio');
+  await user.clear(price);
+  await user.type(price, '19,90');
+  await user.type(screen.getByLabelText('Variante'), 'Azul');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ status: 'en_carrito', data: { quantity: 1, currency: 'EUR', price: 19.9, variant: 'Azul' } });
+});
+
+test('un precio inválido se dice en la hoja y no se guarda', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  const price = screen.getByLabelText('Precio');
+  await user.clear(price);
+  await user.type(price, 'abc');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  expect(await screen.findByText('El precio no es válido.')).toBeTruthy();
+  expect(itemsActions.moveItem).not.toHaveBeenCalled();
+});
+
+test('una idea tiene estado (sin check de completar), categoría, potencial y siguiente paso', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Ideas" today="2026-10-22" sections={[{ key: 'a', items: [idea] }]} />);
+  await open(user, idea, 'Ideas');
+  expect(Array.from((screen.getByLabelText('Estado') as HTMLSelectElement).options).map((o) => o.value)).toEqual(['semilla', 'explorando', 'en_marcha', 'descartada']);
+  await user.type(screen.getByLabelText('Categoría'), 'viaje');
+  await user.selectOptions(screen.getByLabelText('Potencial'), '4');
+  await user.type(screen.getByLabelText('Siguiente paso'), 'Elegir plataforma');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ data: { category: 'viaje', potential: 4, nextStep: 'Elegir plataforma' } });
+});
+
+test('un regalo tiene su estado, precio aproximado y ocasión', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Regalos" today="2026-10-22" sections={[{ key: 'a', items: [regalo] }]} />);
+  await open(user, regalo, 'Regalos');
+  expect((screen.getByLabelText('Precio aproximado') as HTMLInputElement).value).toBe('30');
+  await user.selectOptions(screen.getByLabelText('Estado'), 'comprado');
+  await user.type(screen.getByLabelText('Ocasión'), 'Navidad');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ status: 'comprado', data: { approxPrice: 30, occasion: 'Navidad' } });
+});
+
+test('una tarea no enseña estado ni campos de compra', async () => {
+  const { user } = renderScreen(screenUi());
+  await openRow(user);
+  expect(screen.queryByLabelText('Estado')).toBeNull();
+  expect(screen.queryByLabelText('Precio')).toBeNull();
+});
+
+test('el formulario manual de una compra nueva pide también sus campos propios', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[]} newItem={{ type: 'compra', label: 'Nueva compra' }} />);
+  await user.click(screen.getByRole('button', { name: 'Nueva compra' }));
+  await screen.findByRole('dialog', { name: 'Nueva compra' });
+  await user.type(screen.getByLabelText('Título'), 'Pilas AAA');
+  await user.type(screen.getByLabelText('Precio'), '3,5');
+  await user.click(screen.getByRole('button', { name: 'Añadir' }));
+  await waitFor(() => expect(itemsActions.addItem).toHaveBeenCalledTimes(1));
+  const fd = itemsActions.addItem.mock.calls[0][0] as FormData;
+  expect(fd.get('price')).toBe('3,5');
+  expect(fd.get('type')).toBe('compra');
+});

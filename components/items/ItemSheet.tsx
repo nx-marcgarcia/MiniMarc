@@ -9,6 +9,7 @@ import type { MovePatch } from '@/lib/actions/items';
 import type { ActionResult } from '@/lib/actions/result';
 import type { Area, Item, ItemType, Person } from '@/lib/db/types';
 import { originalText } from '@/lib/format';
+import { ITEM_TYPES } from '@/lib/items/itemTypes';
 import type { PhotoView } from '@/lib/photos/view';
 import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
@@ -28,7 +29,15 @@ const TYPE_OPTIONS: { value: ItemType; label: string }[] = [
   { value: 'compra', label: 'Compras' },
   { value: 'regalo', label: 'Regalos' },
   { value: 'libro', label: 'Libros' },
+  { value: 'enlace', label: 'Enlaces' },
+  { value: 'nota', label: 'Notas' },
 ];
+
+/** An own field of the item as the input's default value ("" when it has none). */
+const own = (item: Item | null, key: string) => {
+  const v = item?.data[key];
+  return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
+};
 
 export type ItemSheetProps = {
   open: boolean;
@@ -101,7 +110,7 @@ function ItemForm(props: ItemFormProps) {
     const fd = new FormData(e.currentTarget);
     let call: () => Promise<ActionResult<unknown>>;
     if (item) {
-      const patch = editPatchFromForm(fd, { type, area, reviewMode });
+      const patch = editPatchFromForm(fd, { type, area, reviewMode, item });
       if (!patch.ok) return setError(patch.error);
       call = () => onSave(item, patch.value);
     } else {
@@ -180,6 +189,71 @@ function ItemForm(props: ItemFormProps) {
         </InsetList>
       )}
 
+      {item && type === item.type && type !== 'libro' && ITEM_TYPES[type].states.length > 2 && (
+        <InsetList>
+          <label className="app-field">
+            <span>Estado</span>
+            <select className="app-input" name="status" defaultValue={item.status}>
+              {ITEM_TYPES[type].states.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </InsetList>
+      )}
+
+      {type === 'compra' && (
+        <InsetList>
+          <label className="app-field">
+            <span>Cantidad</span>
+            <input className="app-input" type="number" name="quantity" min={1} step={1} inputMode="numeric" defaultValue={own(item, 'quantity')} />
+          </label>
+          <label className="app-field">
+            <span>Precio</span>
+            <input className="app-input" type="text" name="price" inputMode="decimal" placeholder="€" autoComplete="off" defaultValue={own(item, 'price')} />
+          </label>
+          <label className="app-field">
+            <span>Variante</span>
+            <input className="app-input" name="variant" placeholder="Talla, color, modelo…" autoComplete="off" defaultValue={own(item, 'variant')} />
+          </label>
+          <label className="app-field">
+            <span>Urgencia</span>
+            <select className="app-input" name="urgency" defaultValue={own(item, 'urgency')}>
+              <option value="">Sin indicar</option>
+              <option value="baja">Baja</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+            </select>
+          </label>
+        </InsetList>
+      )}
+
+      {type === 'idea' && (
+        <InsetList>
+          <label className="app-field">
+            <span>Categoría</span>
+            <input className="app-input" name="category" placeholder="Negocio, app, contenido, viaje…" autoComplete="off" defaultValue={own(item, 'category')} />
+          </label>
+          <label className="app-field">
+            <span>Potencial</span>
+            <select className="app-input" name="potential" defaultValue={own(item, 'potential')}>
+              <option value="">Sin valorar</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {'★'.repeat(n)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="app-field">
+            <span>Siguiente paso</span>
+            <input className="app-input" name="nextStep" autoComplete="off" defaultValue={own(item, 'nextStep')} />
+          </label>
+        </InsetList>
+      )}
+
       {type === 'tarea' && (
         <>
           <div className="app-form__segmented">
@@ -226,6 +300,14 @@ function ItemForm(props: ItemFormProps) {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="app-field">
+            <span>Precio aproximado</span>
+            <input className="app-input" type="text" name="approxPrice" inputMode="decimal" placeholder="€" autoComplete="off" defaultValue={own(item, 'approxPrice')} />
+          </label>
+          <label className="app-field">
+            <span>Ocasión</span>
+            <input className="app-input" name="occasion" placeholder="Cumpleaños, Navidad…" autoComplete="off" defaultValue={own(item, 'occasion')} />
           </label>
         </InsetList>
       )}
