@@ -17,7 +17,7 @@
 import { cacheLife } from 'next/cache';
 import { listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
 import { listPersonas, NEXT_DATE_WINDOW_DAYS } from '@/lib/actions/people';
-import { occasionsWithGifts } from '@/lib/regalos';
+import { giftHistory, occasionsWithGifts } from '@/lib/regalos';
 import { sessionDeps } from '@/lib/actions/server';
 import { parseWeekParam, weekRange } from '@/lib/agenda/week';
 import { madridToday } from '@/lib/actions/today';
@@ -203,10 +203,11 @@ export async function readPersona(id: string) {
   const { userId, deps } = await sessionDeps();
   tagUserData(userId, ['people', 'items']);
   const today = madridToday();
-  const [{ people }, dates, upcoming] = await Promise.all([
+  const [{ people }, dates, upcoming, given] = await Promise.all([
     listRegalos(deps),
     deps.people.listDates(id),
     deps.people.upcomingDates(today, NEXT_DATE_WINDOW_DAYS),
+    deps.items.listItems({ type: 'regalo', needsReview: false, archived: false }),
   ]);
   const group = people.find((g) => g.person.id === id);
   if (!group) return null;
@@ -215,6 +216,7 @@ export async function readPersona(id: string) {
     people: people.map((g) => g.person),
     dates,
     upcoming: upcoming.filter((u) => u.person.id === id),
+    history: giftHistory(given.filter((g) => g.personId === id)),
     photos: await loadPhotoMap(group.items),
     today,
   };

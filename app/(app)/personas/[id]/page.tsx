@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { ChevronLeftIcon } from '@/components/icons';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ScreenFallback } from '@/components/items/ScreenFallback';
+import { GiftHistory } from '@/components/people/GiftHistory';
 import { PersonDetail, type PersonDetailProps } from '@/components/people/PersonDetail';
 import { readPersona } from '@/lib/cache/reads';
 
@@ -32,7 +33,7 @@ async function Persona({ params }: { params: Params }) {
   const { id } = await params;
   const data = await readPersona(id);
   if (!data) notFound();
-  const { group, people, dates, upcoming, photos, today } = data;
+  const { group, people, dates, upcoming, history, photos, today } = data;
   const { person, items } = group;
   const next: PersonDetailProps['next'] = {};
   for (const u of upcoming) {
@@ -45,7 +46,12 @@ async function Persona({ params }: { params: Params }) {
       title={person.name}
       leading={back}
       today={today}
-      before={<PersonDetail person={person} dates={dates} next={next} />}
+      before={
+        <>
+          <PersonDetail person={person} dates={dates} next={next} />
+          <GiftHistory rows={history} />
+        </>
+      }
       sections={[{ key: 'regalos', header: 'Ideas de regalo', items }]}
       emptyText={`Sin ideas de regalo para ${person.name}.`}
       people={people}
