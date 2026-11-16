@@ -2,6 +2,13 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Fase 3: secciones que funcionan de verdad (en curso)
+
+- **Compras:** agrupadas por tienda (secciones plegables con logo, número y total estimado) o por urgencia; cantidad y precio en cada fila; modo «En la tienda» para ir tachando; lo comprado pasa a un historial.
+- **Estado por tipo y campos propios** en la hoja de edición y en el formulario manual (compra: cantidad, precio, variante, urgencia; idea: categoría, potencial, siguiente paso; regalo: precio aproximado, ocasión).
+- **Tareas y notas:** correos y teléfonos pulsables (`mailto:` y `tel:`).
+- **Enlaces** (nueva): por ver / vistos, con vista previa, filtros por tipo y dominio. Lo que se captura como enlace llega aquí.
+
 ## Fase 2: captura con IA que acierta
 
 - **Clasificador v2:** tipos `enlace` y `nota`; tienda, precio, cantidad, tags, prioridad, categoría, ocasión y tipo de enlace, validados con Zod. Recibe las tiendas, tags y personas (con sus alias) que ya existen para enlazar en vez de duplicar. Una captura puede crear varios items («Aliexpress: masaje, cajón» → 2 compras de la misma tienda).

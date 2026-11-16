@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { BagIcon, BookIcon, ClockIcon, GiftIcon, IdeaIcon, PersonIcon, TrayIcon } from '@/components/icons';
+import { BagIcon, BookIcon, ClockIcon, GiftIcon, GlobeIcon, IdeaIcon, PersonIcon, TrayIcon } from '@/components/icons';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
 import { readListCounts } from '@/lib/cache/reads';
 
 export const metadata: Metadata = { title: 'Listas' };
 
-type Counts = { ideas: number; compras: number; regalos: number; libros: number; sinClasificar: number };
+type Counts = { ideas: number; compras: number; regalos: number; libros: number; enlaces: number; sinClasificar: number };
 
 export default function ListasPage() {
   return (
@@ -32,6 +32,7 @@ function Hub({ counts }: { counts: Counts | null }) {
       <Row href="/compras" leading={tile(<BagIcon />)} title="Compras" detail={count(counts?.compras)} />
       <Row href="/regalos" leading={tile(<GiftIcon />)} title="Regalos" detail={count(counts?.regalos)} />
       <Row href="/libros" leading={tile(<BookIcon />)} title="Libros" detail={count(counts?.libros)} />
+      <Row href="/enlaces" leading={tile(<GlobeIcon />)} title="Enlaces" subtitle="Para ver o leer más tarde" detail={count(counts?.enlaces)} />
       <Row href="/personas" leading={tile(<PersonIcon />)} title="Personas" subtitle="Fechas especiales e ideas de regalo" />
       <Row
         href="/sin-clasificar"

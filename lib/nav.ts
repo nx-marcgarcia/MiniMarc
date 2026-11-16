@@ -8,6 +8,7 @@ export type Section =
   | 'compras'
   | 'regalos'
   | 'libros'
+  | 'enlaces'
   | 'personas'
   | 'sin-clasificar'
   | 'bandeja'
@@ -24,6 +25,7 @@ const SECTIONS: Section[] = [
   'compras',
   'regalos',
   'libros',
+  'enlaces',
   'personas',
   'sin-clasificar',
   'bandeja',
@@ -46,6 +48,7 @@ export function tabFor(section: Section | null): string {
     section === 'compras' ||
     section === 'regalos' ||
     section === 'libros' ||
+    section === 'enlaces' ||
     section === 'personas' ||
     section === 'sin-clasificar' ||
     section === 'bandeja'

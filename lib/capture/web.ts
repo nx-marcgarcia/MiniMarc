@@ -97,12 +97,12 @@ async function understand(result: CaptureResult, deps: CaptureDeps): Promise<Und
 /** `href` is where the toast's "Ver" goes. */
 export type QuickCapture = { message: string; href: string; understood?: UnderstoodCapture };
 
-/** Enlaces y notas aún no tienen pantalla propia (fase 3): hasta entonces, "Recién añadido". */
+/** Las notas aún no tienen pantalla propia: hasta entonces, "Recién añadido". */
 const ITEM_HREF: Record<Exclude<ItemType, 'tarea' | 'regalo'>, string> = {
   idea: '/ideas',
   compra: '/compras',
   libro: '/libros',
-  enlace: BANDEJA_HREF,
+  enlace: '/enlaces',
   nota: BANDEJA_HREF,
 };
 

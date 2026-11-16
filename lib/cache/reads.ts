@@ -26,7 +26,9 @@ import type { CalendarEvent } from '@/lib/calendar/client';
 import { calendarGatewayFor } from '@/lib/calendar/server';
 import { toSyncError, type SyncErrorCode } from '@/lib/calendar/taskSync';
 import { createSettingsRepo, loadSettingsOrDefaults } from '@/lib/db/settings';
+import { createSupabaseLinksRepo } from '@/lib/db/links';
 import { createSupabaseStoresRepo } from '@/lib/db/stores';
+import { toCards } from '@/lib/enlaces';
 import { isOpen } from '@/lib/items/itemTypes';
 import type { Area, ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
@@ -88,6 +90,19 @@ export async function readCompras() {
   };
 }
 
+/** Enlaces: every link item not archived (por ver and vistos), with its saved previews, as cards. */
+export async function readEnlaces() {
+  'use cache: private';
+  cacheLife('userData');
+  const [{ userId, deps }, client] = await Promise.all([sessionDeps(), createClient()]);
+  tagUserData(userId, ['items']);
+  const [items, links] = await Promise.all([
+    deps.items.listItems({ type: 'enlace', needsReview: false, archived: false }),
+    createSupabaseLinksRepo(client).listLinks(),
+  ]);
+  return { cards: toCards(items, links) };
+}
+
 export async function readLibros() {
   'use cache: private';
   cacheLife('userData');
@@ -130,15 +145,17 @@ export async function readListCounts() {
   cacheLife('userData');
   const { userId, deps } = await sessionDeps();
   tagUserData(userId, ['items']);
-  const [ideas, compras, regalos, libros, sinClasificar] = await Promise.all([
+  const [ideas, compras, regalos, libros, sinClasificar, enlaces] = await Promise.all([
     listByType(deps, 'idea'),
     listByType(deps, 'compra'),
     listByType(deps, 'regalo'),
     listLibros(deps),
     listSinClasificar(deps),
+    listByType(deps, 'enlace'),
   ]);
   return {
     ideas: ideas.length,
+    enlaces: enlaces.length,
     compras: compras.length,
     regalos: regalos.length,
     // Books still to read or being read; the read ones are a record, not a to-do.
