@@ -263,3 +263,28 @@ test('sin la migración 0014, una idea no ofrece convertirse en proyecto', async
   await waitFor(() => expect(projectsActions.listProjectOptions).toHaveBeenCalled());
   expect(screen.queryByRole('button', { name: 'Convertir en proyecto' })).toBeNull();
 });
+
+test('editar un elemento de un proyecto terminado no lo saca del proyecto', async () => {
+  projectsActions.listProjectOptions.mockResolvedValue(
+    ok({ available: true, projects: [makeProject({ id: 'done', name: 'Reforma baño', status: 'terminado' }), makeProject()] }),
+  );
+  const inDone = makeItem({ projectId: 'done' });
+  const { user } = renderScreen(<ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [inDone] }]} />);
+  await openRow(user);
+  const select = (await screen.findByLabelText('Proyecto')) as HTMLSelectElement;
+  expect(select.value).toBe('done');
+  expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Reforma baño', 'Viaje a Japón']);
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).not.toHaveProperty('projectId');
+});
+
+test('un proyecto terminado no se ofrece a lo que no está en él', async () => {
+  projectsActions.listProjectOptions.mockResolvedValue(
+    ok({ available: true, projects: [makeProject({ id: 'done', name: 'Reforma baño', status: 'terminado' }), makeProject()] }),
+  );
+  const { user } = renderScreen(screenUi());
+  await openRow(user);
+  const select = (await screen.findByLabelText('Proyecto')) as HTMLSelectElement;
+  expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Viaje a Japón']);
+});

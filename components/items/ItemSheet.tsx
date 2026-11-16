@@ -104,6 +104,10 @@ function ItemForm(props: ItemFormProps) {
   const projectOptions = useProjectOptions(open);
   const item = mode.kind === 'edit' ? mode.item : null;
   const defaults = mode.kind === 'new' ? mode.defaults : null;
+  // A finished project is not offered, except the one this item (or the new one) already belongs to:
+  // otherwise the select would fall to "Ninguno" and saving would take it out of its project.
+  const currentProjectId = item?.projectId ?? (mode.kind === 'new' ? mode.defaults.projectId : undefined) ?? null;
+  const selectable = (projectOptions?.projects ?? []).filter((p) => p.status !== 'terminado' || p.id === currentProjectId);
   const [type, setType] = useState<ItemType>(item?.type ?? defaults?.type ?? 'tarea');
   const [area, setArea] = useState<Area>(item?.area ?? defaults?.area ?? 'personal');
   const [error, setError] = useState<string | null>(null);
@@ -334,13 +338,13 @@ function ItemForm(props: ItemFormProps) {
         </InsetList>
       )}
 
-      {projectOptions && projectOptions.projects.length > 0 ? (
+      {selectable.length > 0 ? (
         <InsetList>
           <label className="app-field">
             <span>Proyecto</span>
             <select className="app-input" name="projectId" defaultValue={item?.projectId ?? defaults?.projectId ?? ''}>
               <option value="">Ninguno</option>
-              {projectOptions.projects.map((p) => (
+              {selectable.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

@@ -13,6 +13,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
+import { captureAreaParam } from '@/lib/area';
 import { listCapturePeople, quickCapture } from '@/app/actions/capture';
 import {
   AgendaIcon,
@@ -109,7 +110,9 @@ function useBarLayout(ref: React.RefObject<HTMLElement | null>) {
 /** The bar with the type of the current screen (/compras → Compra, /tareas?area=trabajo → Tarea + Trabajo…). */
 export function CaptureBar() {
   const pathname = usePathname();
-  const area = useSearchParams().get('area');
+  // The URL's ?area=, else the area filter's cookie (read after hydration: the server snapshot is empty).
+  const cookies = useSyncExternalStore(noSubscribe, () => document.cookie, () => '');
+  const area = captureAreaParam(useSearchParams().get('area'), cookies);
   return <CaptureBarView screen={captureDefaults(pathname, area)} screenKey={`${pathname}?${area ?? ''}`} />;
 }
 

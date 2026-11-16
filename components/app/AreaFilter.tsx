@@ -14,8 +14,7 @@ const OPTIONS: { value: Filter; label: string }[] = [
 
 /**
  * Personal | Trabajo | Todo, the same on every screen that has areas (Hoy, Tareas, Bandeja,
- * Proyectos). The choice is remembered (a cookie) for all of them; an old `?area=` in the URL
- * is dropped once Marc picks.
+ * Proyectos). The choice is remembered (a cookie) for all of them and written to `?area=`.
  */
 export function AreaFilter({ value }: { value: Filter }) {
   const router = useRouter();
@@ -31,10 +30,10 @@ export function AreaFilter({ value }: { value: Filter }) {
         onChange={(next) =>
           startTransition(async () => {
             await setAreaFilter(next);
+            // The choice also goes in the URL, so the capture bar and Back follow it at once.
             const rest = new URLSearchParams(params.toString());
-            rest.delete('area');
-            const query = rest.toString();
-            router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+            rest.set('area', next);
+            router.replace(`${pathname}?${rest.toString()}`, { scroll: false });
             router.refresh();
           })
         }

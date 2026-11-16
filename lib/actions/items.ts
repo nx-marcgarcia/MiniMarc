@@ -192,6 +192,11 @@ export async function moveItem(deps: ActionDeps, id: string, patch: MovePatch): 
   }
   const current = await findItem(deps, id);
   const type = clean.type ?? current.type;
+  // Into a Trabajo project: the item becomes Trabajo too (never to the AI or Telegram).
+  if (clean.projectId && deps.projects) {
+    const project = await deps.projects.getProject(clean.projectId);
+    if (project?.area === 'trabajo') clean.area = 'trabajo';
+  }
   // A task always belongs to one area, so it never shows up in both Tareas views.
   if (type === 'tarea' && (clean.area ?? current.area) == null) clean.area = 'personal';
   if (type !== 'regalo' && current.personId && clean.personId === undefined) clean.personId = null;

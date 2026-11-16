@@ -111,6 +111,17 @@ describe('captura con >proyecto', () => {
   });
 });
 
+describe('captura en la ficha cuando el proyecto no se puede leer', () => {
+  it('no se arriesga: no pasa por la IA y queda en la Bandeja', async () => {
+    const { ai, prompts } = aiReturning([{ kind: 'tarea', title: 'X', confidence: 0.9 }]);
+    const { deps, projects } = setup(ai);
+    const broken: ProjectsRepo = { ...projects, getProject: async () => { throw new Error('timeout'); } };
+    const res = await captureText({ text: 'propuesta cliente', origin: 'web', projectId: '00000000-0000-0000-0000-000000000001' }, { ...deps, projects: broken });
+    expect(prompts).toEqual([]);
+    expect(res.items[0]).toMatchObject({ needsReview: true, title: 'propuesta cliente' });
+  });
+});
+
 describe('captura con tipo elegido, en la ficha de un proyecto', () => {
   it('una tarea con el chip Tarea va al proyecto', async () => {
     const { saveTypedItem } = await import('@/lib/capture/typed');

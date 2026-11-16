@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AreaFilter } from '@/components/app/AreaFilter';
 import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
-import { matchesArea, type AreaFilter as Filter } from '@/lib/area';
+import type { AreaFilter as Filter } from '@/lib/area';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
 import type { Digest, DigestDate } from '@/lib/digest/build';
 import { formatDay } from '@/lib/format';
@@ -93,7 +93,7 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], 
       )}
 
       <DayTimeline
-        timeline={buildDayTimeline({ events: digest.events, tasks: digest.dayTasks.filter((t) => matchesArea(t.item.area, area)), tz, dayEndsAt: madridToUtc(today, '23:59', tz) })}
+        timeline={buildDayTimeline({ events: digest.events, tasks: digest.dayTasks, area, tz, dayEndsAt: madridToUtc(today, '23:59', tz) })}
         today={today}
         tz={tz}
       />

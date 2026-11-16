@@ -192,7 +192,14 @@ async function run(text: string, input: CaptureInput, rawDeps: CaptureDeps): Pro
   const body = shortcuts.text || text;
 
   // The project is settled before anything else: a Trabajo project keeps the text away from the AI.
-  const project = await resolveProject(input, shortcuts.project, rawDeps);
+  const resolved = await resolveProject(input, shortcuts.project, rawDeps);
+  // Captured in a project's page whose project could not be read: it may be a Trabajo one, so
+  // nothing goes to the AI; the text waits in the Bandeja.
+  if (resolved === 'failed') {
+    const item = await rawDeps.items.createItem({ ...textFields(text), type: 'tarea', area: null, needsReview: true, origin, sourceText: text });
+    return { items: [item], eventIds: [] };
+  }
+  const project = resolved;
   const deps = project ? intoProject(rawDeps, project) : rawDeps;
   const work = input.area === 'trabajo' || project?.area === 'trabajo';
 
@@ -312,9 +319,9 @@ async function run(text: string, input: CaptureInput, rawDeps: CaptureDeps): Pro
 /**
  * The project of this capture: the page's (`input.projectId`), else the one a `>nombre` names
  * (found without accents, or created when there is none and 0014 is applied). Never throws: a
- * capture never fails because of its project.
+ * capture never fails because of its project ('failed' when the page's project could not be read).
  */
-async function resolveProject(input: CaptureInput, name: string | undefined, deps: CaptureDeps): Promise<Project | null> {
+async function resolveProject(input: CaptureInput, name: string | undefined, deps: CaptureDeps): Promise<Project | null | 'failed'> {
   const repo = deps.projects;
   if (!repo) return null;
   try {
@@ -326,7 +333,8 @@ async function resolveProject(input: CaptureInput, name: string | undefined, dep
     return await repo.createProject({ name });
   } catch (err) {
     console.error('project lookup failed:', err instanceof Error ? err.name : 'unknown error');
-    return null;
+    // The page's project is unknown (maybe Trabajo): the caller keeps the text away from the AI.
+    return input.projectId ? 'failed' : null;
   }
 }
 

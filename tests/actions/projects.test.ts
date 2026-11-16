@@ -70,6 +70,13 @@ describe('proyectos: acciones', () => {
     expect(t).toMatchObject({ projectId: p.id, area: 'trabajo' });
   });
 
+  it('mover un elemento a un proyecto de Trabajo lo hace de Trabajo', async () => {
+    const p = await projects.createProject(deps, form({ name: 'Cliente X', area: 'trabajo' }));
+    const idea = await deps.items.createItem({ type: 'idea', title: 'Propuesta' });
+    const moved = await items.moveItem(deps, idea.id, { projectId: p.id });
+    expect(moved).toMatchObject({ projectId: p.id, area: 'trabajo' });
+  });
+
   it('updateProject cambia nombre, área y notas', async () => {
     const p = await projects.createProject(deps, form({ name: 'Viaje' }));
     const u = await projects.updateProject(deps, p.id, form({ name: 'Viaje a Japón', area: 'personal', notes: '', dueDate: '' }));

@@ -29,3 +29,13 @@ describe('matchesArea', () => {
     expect(matchesArea('personal', 'trabajo')).toBe(false);
   });
 });
+
+describe('captureAreaParam (la barra de captura sigue el filtro)', () => {
+  it('?area= manda; si no, la cookie del filtro', async () => {
+    const { captureAreaParam } = await import('@/lib/area');
+    expect(captureAreaParam('personal', 'area=trabajo')).toBe('personal');
+    expect(captureAreaParam(null, 'otra=1; area=trabajo')).toBe('trabajo');
+    expect(captureAreaParam(null, '')).toBeNull();
+    expect(captureAreaParam(null, 'area=xx')).toBeNull();
+  });
+});

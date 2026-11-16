@@ -24,3 +24,17 @@ export function parseAreaFilter(param: string | string[] | undefined, cookie: st
 export function matchesArea(area: Area | null | undefined, filter: AreaFilter): boolean {
   return filter === 'todo' || (area ?? 'personal') === filter;
 }
+
+/**
+ * The area the capture bar follows: `?area=` if the URL has one, else the filter's cookie (from
+ * `document.cookie`), so a work task typed under the Trabajo filter is saved as Trabajo (and never
+ * goes to the AI). Null when neither says anything.
+ */
+export function captureAreaParam(param: string | null, cookieHeader: string): string | null {
+  if (param) return param;
+  const value = cookieHeader
+    .split(';')
+    .map((c) => c.trim().split('='))
+    .find(([k]) => k === AREA_COOKIE)?.[1];
+  return isFilter(value) ? value : null;
+}

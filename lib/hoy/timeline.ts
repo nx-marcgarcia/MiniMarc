@@ -6,6 +6,7 @@
  */
 import type { DigestEvent, DigestTask } from '@/lib/digest/build';
 import { byOrder } from '@/lib/digest/build';
+import { matchesArea, type AreaFilter } from '@/lib/area';
 import { madridDateTime } from '@/lib/time';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -21,9 +22,12 @@ export function buildDayTimeline(input: {
   tasks: DigestTask[];
   tz: string;
   dayEndsAt: Date;
+  /** Which tasks show (default Todo). Copies are recognised from every task, so a hidden work task's copy does not reappear as an event. */
+  area?: AreaFilter;
 }): DayTimeline {
-  const { events, tasks, tz } = input;
-  const copies = new Set(tasks.map((t) => t.item.calendarEventId).filter((id): id is string => Boolean(id)));
+  const { events, tz } = input;
+  const tasks = input.tasks.filter((t) => matchesArea(t.item.area, input.area ?? 'todo'));
+  const copies = new Set(input.tasks.map((t) => t.item.calendarEventId).filter((id): id is string => Boolean(id)));
   const allDay: DigestEvent[] = [];
   const timed: (TimelineEntry & { at: number })[] = [];
   for (const event of events) {

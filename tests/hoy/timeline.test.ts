@@ -69,3 +69,12 @@ describe('buildDayTimeline', () => {
     expect(t.timed).toEqual([]);
   });
 });
+
+describe('buildDayTimeline con filtro de área', () => {
+  it('con Personal, la copia en Calendar de una tarea de Trabajo no sale como cita', () => {
+    const work = task('informe', { time: '10:00', calendarEventId: 'ev-work' });
+    work.item = { ...work.item, area: 'trabajo' } as Item;
+    const t = buildDayTimeline({ events: [event('ev-work', '10:00', '10:30')], tasks: [work], tz: TZ, dayEndsAt, area: 'personal' });
+    expect(t.timed).toEqual([]);
+  });
+});

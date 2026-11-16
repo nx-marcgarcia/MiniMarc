@@ -33,7 +33,8 @@ export async function listProjectOptions(): Promise<ActionResult<{ available: bo
       const { deps } = await sessionDeps();
       const repo = deps.projects!;
       const [available, projects] = await Promise.all([repo.available(), repo.listProjects()]);
-      return { available, projects: projects.filter((p) => p.status !== 'terminado') };
+      // All of them: the sheet hides finished ones, except the one an item already belongs to.
+      return { available, projects };
     },
     'No se han podido leer los proyectos.',
     unstable_rethrow,
