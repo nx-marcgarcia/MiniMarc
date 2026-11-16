@@ -1,13 +1,22 @@
 import { z } from 'zod';
 import { isValidDate } from '@/lib/time';
 
-export const CLASSIFICATION_KINDS = ['tarea', 'idea', 'compra', 'regalo', 'libro', 'cita', 'fecha'] as const;
+export const CLASSIFICATION_KINDS = ['tarea', 'idea', 'compra', 'regalo', 'libro', 'cita', 'fecha', 'enlace', 'nota'] as const;
 export type ClassificationKind = (typeof CLASSIFICATION_KINDS)[number];
 
 const optionalText = z
   .string()
   .nullish()
   .transform((s) => s?.trim() || undefined);
+
+/** The kinds of link an `enlace` can be (the registry's `enlace.kind`). */
+export const LINK_KINDS = ['articulo', 'video', 'short', 'hilo', 'herramienta'] as const;
+
+/** A store as the model names it; empty names are dropped and `domain` is optional. */
+const storeSchema = z
+  .object({ name: z.string(), domain: optionalText })
+  .nullish()
+  .transform((s) => (s && s.name.trim() ? { name: s.name.trim(), ...(s.domain && { domain: s.domain }) } : undefined));
 
 /** What the model must return. Unknown keys (e.g. an `area`) are stripped by zod. */
 export const modelItemSchema = z.object({
@@ -30,6 +39,21 @@ export const modelItemSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora no válida')
     .nullish(),
+  /** compra / regalo: the store, as said ("Aliexpress"), with its domain when it is known. */
+  store: storeSchema,
+  /** compra: the price of one unit; regalo: the approximate price. In `currency` (default EUR). */
+  price: z.number().nonnegative().nullish(),
+  currency: optionalText,
+  quantity: z.number().int().positive().nullish(),
+  /** Reuse the existing tags before inventing new ones. */
+  tags: z.array(z.string()).nullish(),
+  priority: z.enum(['baja', 'media', 'alta']).nullish(),
+  /** idea: negocio, app, contenido, viaje, personal… */
+  category: optionalText,
+  /** regalo: "Cumpleaños", "Navidad"… */
+  occasion: optionalText,
+  /** enlace: what the link is. */
+  linkKind: z.enum(LINK_KINDS).nullish(),
   confidence: z.number().min(0).max(1),
 });
 

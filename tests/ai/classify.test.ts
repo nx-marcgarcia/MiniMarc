@@ -241,3 +241,80 @@ describe('classify: libros', () => {
     expect(await classify('algo', ctx, ai)).toEqual([{ kind: 'idea', title: 'Algo', hasTime: false, confidence: 0.8 }]);
   });
 });
+
+describe('classify v2: tienda, precio, tags, enlaces y contexto', () => {
+  it('"Aliexpress: masaje de cabeza, cajón organizador de calcetines" → 2 compras con la tienda', async () => {
+    const { ai } = fakeAi({
+      items: [
+        { kind: 'compra', title: 'Masaje de cabeza', store: { name: 'Aliexpress', domain: 'aliexpress.com' }, confidence: 0.93 },
+        { kind: 'compra', title: 'Cajón organizador de calcetines', store: { name: 'Aliexpress' }, confidence: 0.93 },
+      ],
+    });
+    const out = await classify('Aliexpress: masaje de cabeza, cajón organizador de calcetines', ctx, ai);
+    expect(out).toEqual([
+      { kind: 'compra', title: 'Masaje de cabeza', store: { name: 'Aliexpress', domain: 'aliexpress.com' }, hasTime: false, confidence: 0.93 },
+      { kind: 'compra', title: 'Cajón organizador de calcetines', store: { name: 'Aliexpress' }, hasTime: false, confidence: 0.93 },
+    ]);
+  });
+
+  it('"regalo para Rosendo: caja para relojes, unos 30€" → regalo con persona y precio', async () => {
+    const { ai } = fakeAi({ items: [{ kind: 'regalo', title: 'Caja para relojes', personName: 'Rosendo', price: 30, currency: 'EUR', confidence: 0.96 }] });
+    const [r] = await classify('regalo para Rosendo: caja para relojes, unos 30€', ctx, ai);
+    expect(r).toMatchObject({ kind: 'regalo', personName: 'Rosendo', price: 30, currency: 'EUR' });
+  });
+
+  it('recoge tags, prioridad, categoría, ocasión, cantidad y tipo de enlace', async () => {
+    const { ai } = fakeAi({
+      items: [
+        { kind: 'idea', title: 'App para organizar shorts', category: 'app', tags: ['Shorts', ' app '], priority: 'media', confidence: 0.9 },
+        { kind: 'compra', title: 'Pilas AAA', quantity: 2, confidence: 0.9 },
+        { kind: 'regalo', title: 'Libro', personName: 'Aina', occasion: 'Navidad', confidence: 0.9 },
+        { kind: 'enlace', title: 'Vídeo de recetas', linkKind: 'video', confidence: 0.9 },
+      ],
+    });
+    const out = await classify('varias cosas', ctx, ai);
+    expect(out[0]).toMatchObject({ category: 'app', tags: ['shorts', 'app'], priority: 'media' });
+    expect(out[1]).toMatchObject({ quantity: 2 });
+    expect(out[2]).toMatchObject({ occasion: 'Navidad' });
+    expect(out[3]).toMatchObject({ kind: 'enlace', linkKind: 'video' });
+  });
+
+  it('admite los tipos enlace y nota', async () => {
+    const { ai } = fakeAi({ items: [{ kind: 'nota', title: 'Resumen de la reunión', confidence: 0.8 }] });
+    expect((await classify('texto largo', ctx, ai))[0].kind).toBe('nota');
+  });
+
+  it('un precio negativo o una prioridad rara rompen el esquema', async () => {
+    await expect(classify('x', ctx, fakeAi({ items: [{ kind: 'compra', title: 'x', price: -1, confidence: 1 }] }).ai)).rejects.toBeInstanceOf(ClassifyError);
+    await expect(classify('x', ctx, fakeAi({ items: [{ kind: 'compra', title: 'x', priority: 'ya', confidence: 1 }] }).ai)).rejects.toBeInstanceOf(ClassifyError);
+  });
+
+  it('el prompt lleva las tiendas, los tags y las personas existentes para enlazar en vez de duplicar', async () => {
+    const { ai, prompts } = fakeAi({ items: [] });
+    await classify('algo', { ...ctx, people: ['Rosendo (también: papá)', 'Aina'], stores: ['Aliexpress', 'Casio'], tags: ['regalo', 'viajes'] }, ai);
+    expect(prompts[0]).toContain('Rosendo (también: papá)');
+    expect(prompts[0]).toContain('Aliexpress, Casio');
+    expect(prompts[0]).toContain('regalo, viajes');
+  });
+
+  it('el prompt explica varios items por captura, tienda, precio y qué hacer ante la duda', async () => {
+    const { ai, prompts } = fakeAi({ items: [] });
+    await classify('algo', ctx, ai);
+    expect(prompts[0]).toMatch(/Aliexpress/);
+    expect(prompts[0]).toMatch(/store/);
+    expect(prompts[0]).toMatch(/price/);
+    expect(prompts[0]).toMatch(/ambigu|duda/i);
+  });
+
+  it('con una página (enlace pegado) la pone en el prompt, con su título y sitio', async () => {
+    const { ai, prompts } = fakeAi({ items: [] });
+    await classify('https://blog.example.com/post', { ...ctx, page: { url: 'https://blog.example.com/post', title: 'Cómo montar un blog', site: 'Example' } }, ai);
+    expect(prompts[0]).toContain('Cómo montar un blog');
+    expect(prompts[0]).toContain('Example');
+  });
+
+  it('una sugerencia ambigua ("Trabajar") conserva su confianza baja para que vaya a la Bandeja', async () => {
+    const { ai } = fakeAi({ items: [{ kind: 'idea', title: 'Trabajar', confidence: 0.2 }] });
+    expect((await classify('Trabajar', ctx, ai))[0]).toMatchObject({ kind: 'idea', title: 'Trabajar', confidence: 0.2 });
+  });
+});
