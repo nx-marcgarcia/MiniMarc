@@ -3,6 +3,7 @@ import type { ZodType } from 'zod';
 import type { AiProvider } from '@/lib/ai/provider';
 import type { CalendarGateway } from '@/lib/calendar/client';
 import { captureText, type CaptureDeps } from '@/lib/capture/pipeline';
+import { createCaptureLogRepo } from '@/lib/db/captureLog';
 import { createItemsRepo } from '@/lib/db/items';
 import { createLinksRepo } from '@/lib/db/links';
 import { createMemoryBackend } from '@/lib/db/memory';
@@ -324,5 +325,59 @@ describe('captureText v2 · lo que no cambia', () => {
     const { deps } = setup(failing);
     const res = await captureText({ text: 'algo #viajes', origin: 'web' }, deps);
     expect(res.items[0]).toMatchObject({ type: 'tarea', needsReview: true, title: 'algo #viajes', sourceText: 'algo #viajes' });
+  });
+});
+
+describe('captureText v2 · sugerencia y registro de clasificación', () => {
+  it('un item dudoso lleva la sugerencia de la IA para la Bandeja', async () => {
+    const { ai } = aiReturning([{ kind: 'idea', title: 'Trabajar', confidence: 0.2 }]);
+    const { deps } = setup(ai);
+    const res = await captureText({ text: 'Trabajar', origin: 'web' }, deps);
+    expect(res.items[0]).toMatchObject({ needsReview: true, suggestion: { type: 'idea', confidence: 0.2 } });
+  });
+
+  it('un item seguro no lleva sugerencia, y un tipo fijado con atajo tampoco', async () => {
+    const { ai } = aiReturning([{ kind: 'compra', title: 'Leche', confidence: 0.95 }]);
+    const { deps } = setup(ai);
+    expect((await captureText({ text: 'comprar leche', origin: 'web' }, deps)).items[0].suggestion).toBeNull();
+    const low = aiReturning([{ kind: 'idea', title: 'pilas', confidence: 0.3 }]);
+    const { deps: d2 } = setup(low.ai);
+    expect((await captureText({ text: '/compra pilas', origin: 'web' }, d2)).items[0].suggestion).toBeNull();
+  });
+
+  it('cada captura queda en el registro con su texto original, lo que dijo el modelo y los items', async () => {
+    const { ai } = aiReturning([{ kind: 'compra', title: 'Leche', confidence: 0.95 }]);
+    const { db, deps } = setup(ai, {});
+    const log = createCaptureLogRepo(db);
+    const res = await captureText({ text: 'comprar leche #casa', origin: 'siri' }, { ...deps, log });
+    const [entry] = await log.list();
+    expect(res.logId).toBe(entry.id);
+    expect(entry).toMatchObject({ rawInput: 'comprar leche #casa', source: 'siri', itemIds: res.items.map((i) => i.id), error: null });
+    expect(entry.modelOutput).toEqual([expect.objectContaining({ kind: 'compra', title: 'Leche' })]);
+  });
+
+  it('si la IA falla, el registro guarda el motivo y el item de Sin clasificar', async () => {
+    const failing: AiProvider = { generateJson: async () => { throw new Error('Tiempo de espera agotado'); }, generateText: async () => { throw new Error('x'); } };
+    const { db, deps } = setup(failing);
+    const log = createCaptureLogRepo(db);
+    const res = await captureText({ text: 'algo raro', origin: 'web' }, { ...deps, log });
+    expect((await log.list())[0]).toMatchObject({ rawInput: 'algo raro', error: 'timeout', modelOutput: null, itemIds: [res.items[0].id] });
+  });
+
+  it('lo de Trabajo no se registra', async () => {
+    const { ai } = aiForbidden();
+    const { db, deps } = setup(ai);
+    const log = createCaptureLogRepo(db);
+    await captureText({ text: 'informe del jueves', area: 'trabajo', origin: 'web' }, { ...deps, log });
+    expect(await log.list()).toEqual([]);
+  });
+
+  it('si el registro falla, la captura sigue', async () => {
+    const { ai } = aiReturning([{ kind: 'compra', title: 'Leche', confidence: 0.95 }]);
+    const { deps } = setup(ai);
+    const log = { record: async () => { throw new Error('db'); }, addCorrection: async () => {}, list: async () => [] };
+    const res = await captureText({ text: 'comprar leche', origin: 'web' }, { ...deps, log });
+    expect(res.items).toHaveLength(1);
+    expect(res.logId).toBeUndefined();
   });
 });

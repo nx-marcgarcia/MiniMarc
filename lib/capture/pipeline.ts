@@ -12,6 +12,7 @@ import { classify, type Classification } from '@/lib/ai/classify';
 import type { AiProvider } from '@/lib/ai/provider';
 import type { CalendarGateway } from '@/lib/calendar/client';
 import { taskSyncHook } from '@/lib/calendar/taskSync';
+import type { CaptureLogRepo } from '@/lib/db/captureLog';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { LinksRepo } from '@/lib/db/links';
 import type { PeopleRepo } from '@/lib/db/people';
@@ -37,6 +38,8 @@ export type CaptureResult = {
   dates?: CapturedDate[];
   /** Por qué no se clasificó (causeMessage). Solo cuando la IA falló: el aviso lo cuenta. */
   aiError?: string;
+  /** The entry of this capture in the classification log (the toast's chips write corrections to it). */
+  logId?: string;
 };
 
 export interface CaptureDeps {
@@ -49,6 +52,8 @@ export interface CaptureDeps {
   tags?: TagsRepo;
   /** Fetches a pasted link's page (title, image, site); never throws. Optional. */
   preview?: (url: string) => Promise<LinkPreview | null>;
+  /** Classification log (0012): the input, what the model said, what was created, later Marc's corrections. Optional; never stops a capture. */
+  log?: CaptureLogRepo;
   /**
    * Loads the Calendar gateway (calendarGatewayFor on the server). Lazy, so a capture that needs
    * no event reads no credentials, and a load failure (no refresh token) only becomes a syncError.
@@ -215,6 +220,23 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
     }
   }
 
+  /** Writes the capture to the log (never throws: the log is an extra) and puts its id in the result. */
+  const finish = async (res: CaptureResult): Promise<CaptureResult> => {
+    if (!deps.log) return res;
+    try {
+      const id = await deps.log.record({
+        rawInput: text,
+        source: origin,
+        modelOutput: classified.length > 0 ? classified : null,
+        error: aiError ?? null,
+        itemIds: res.items.map((i) => i.id),
+      });
+      return id ? { ...res, logId: id } : res;
+    } catch {
+      return res;
+    }
+  };
+
   const unclassified = (): NewItem => ({ ...textFields(text), type: 'tarea', area: null, needsReview: true, origin, sourceText: text });
   if (classified.length === 0) {
     // A pasted link that the AI could not read is still worth keeping as a link, to review.
@@ -230,9 +252,9 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
         (out) => out,
         () => null,
       );
-      if (fallback && fallback.items.length > 0) return { ...fallback, ...(aiError && { aiError }) };
+      if (fallback && fallback.items.length > 0) return finish({ ...fallback, ...(aiError && { aiError }) });
     }
-    return { items: [await deps.items.createItem(unclassified())], eventIds: [], ...(aiError && { aiError }) };
+    return finish({ items: [await deps.items.createItem(unclassified())], eventIds: [], ...(aiError && { aiError }) });
   }
 
   // Each element is saved on its own: one failure does not undo or block the others.
@@ -247,7 +269,7 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
       failure ??= err;
     }
   }
-  if (failure === null) return out;
+  if (failure === null) return finish(out);
 
   // Something was not saved: the whole text also goes to "Sin clasificar", so nothing is lost.
   try {
@@ -256,7 +278,7 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
     // Keep whatever was saved; only a capture that saved nothing at all fails.
   }
   if (out.items.length === 0 && out.eventIds.length === 0 && !out.dates?.length) throw failure;
-  return out;
+  return finish(out);
 }
 
 type SaveExtras = { shortcuts: Shortcuts; urls: string[]; page: LinkPreview | null };
@@ -305,6 +327,8 @@ async function saveClassified(
     fields.type = shortcuts.kind;
     fields.area = shortcuts.kind === 'tarea' ? 'personal' : null;
   }
+  // A doubtful one goes to the Bandeja with what the AI thinks it is, not forced into a category.
+  if (!confident && !shortcuts.kind) fields.suggestion = { type: fields.type as ItemType, confidence: c.confidence };
   if (shortcuts.priority) fields.priority = shortcuts.priority;
   const personName = c.personName ?? shortcuts.person;
   let person: Person | null = null;
