@@ -270,7 +270,7 @@ describe('quickCapture', () => {
     const res = await quickCapture(form({ text: 'comprar leche', kind: 'auto' }), { ...deps, capture });
     expect(capture).toHaveBeenCalledTimes(1);
     expect(capture.mock.calls[0][0]).toEqual({ text: 'comprar leche', origin: 'web' });
-    expect(res).toEqual({ ok: true, value: { message: 'Guardado en Compras', href: '/bandeja' } });
+    expect(res).toMatchObject({ ok: true, value: { message: 'Guardado en Compras', href: '/bandeja' } });
     expect((await items.listItems()).map((i) => i.type)).toEqual(['compra']);
   });
 

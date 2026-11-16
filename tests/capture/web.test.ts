@@ -65,7 +65,7 @@ describe('captureFromWeb', () => {
     const res = await captureFromWeb(form({ text: 'Revisar presupuesto Q4', area: 'trabajo' }), { ...deps, capture });
     expect(capture).toHaveBeenCalledTimes(1);
     expect(capture.mock.calls[0][0]).toEqual({ text: 'Revisar presupuesto Q4', area: 'trabajo', origin: 'web' });
-    expect(res).toEqual({ ok: true, value: { message: 'Guardado en Tareas · Trabajo' } });
+    expect(res).toMatchObject({ ok: true, value: { message: 'Guardado en Tareas · Trabajo' } });
   });
 
   it('Trabajo nunca llega a la IA y se guarda como tarea de Trabajo', async () => {
@@ -83,7 +83,7 @@ describe('captureFromWeb', () => {
     const capture = vi.fn(captureText);
     const res = await captureFromWeb(form({ text: 'comprar leche' }), { ...deps, capture });
     expect(capture.mock.calls[0][0]).toEqual({ text: 'comprar leche', origin: 'web' });
-    expect(res).toEqual({ ok: true, value: { message: 'Guardado en Compras' } });
+    expect(res).toMatchObject({ ok: true, value: { message: 'Guardado en Compras' } });
     expect((await items.listItems()).map((i) => i.type)).toEqual(['compra']);
   });
 
@@ -139,6 +139,6 @@ describe('captureFromWeb', () => {
     const res = await captureFromWeb(form({ text: 'dentista mañana a las 9' }), {
       captureDeps: async () => ({ ...base, calendar: async () => gw }),
     });
-    expect(res).toEqual({ ok: true, value: { message: 'Guardado en Calendar' } });
+    expect(res).toMatchObject({ ok: true, value: { message: 'Guardado en Calendar' } });
   });
 });

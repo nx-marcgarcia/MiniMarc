@@ -7,9 +7,11 @@ import { createCita, EVENT_ERROR_MESSAGES, parseNewEvent } from '@/lib/actions/e
 import { attempt, UserError, type ActionResult } from '@/lib/actions/result';
 import type { Item, ItemType } from '@/lib/db/types';
 import { BANDEJA_HREF } from '@/lib/nav';
+import { madridDateTime } from '@/lib/time';
+import { describeCapture, type Described } from './describe';
 import { captureMessage, MAX_CAPTURE_LENGTH } from './handler';
 import { QUICK_KINDS } from './kinds';
-import { captureText, EmptyCaptureError, textFields, type CaptureDeps, type CaptureInput } from './pipeline';
+import { captureText, EmptyCaptureError, textFields, type CaptureDeps, type CaptureInput, type CaptureResult } from './pipeline';
 import { saveTypedItem } from './typed';
 
 export interface WebCaptureDeps {
@@ -21,7 +23,14 @@ export interface WebCaptureDeps {
   rethrow?: (e: unknown) => void;
 }
 
-export type WebCapture = { message: string };
+/** What the capture understood, for the toast: lines, one entry per item for the chips, and what to undo. */
+export interface UnderstoodCapture extends Described {
+  eventIds: string[];
+  /** The capture's entry in the classification log; the chips write their corrections to it. */
+  logId?: string;
+}
+
+export type WebCapture = { message: string; understood?: UnderstoodCapture };
 
 const SAVE_FAILED = 'No se ha podido guardar. Revisa la conexión e inténtalo de nuevo.';
 const EMPTY = 'El texto está vacío';
@@ -53,7 +62,9 @@ export async function captureFromWeb(fd: FormData, deps: WebCaptureDeps): Promis
       const input: CaptureInput = { text, origin: 'web' };
       if (fd.get('area') === 'trabajo') input.area = 'trabajo';
       try {
-        return { message: captureMessage(await capture(input, captureDeps)) };
+        const result = await capture(input, captureDeps);
+        const understood = await understand(result, captureDeps);
+        return { message: captureMessage(result), ...(understood && { understood }) };
       } catch (err) {
         if (err instanceof EmptyCaptureError) throw new UserError(EMPTY);
         deps.rethrow?.(err);
@@ -66,10 +77,25 @@ export async function captureFromWeb(fd: FormData, deps: WebCaptureDeps): Promis
   );
 }
 
+/**
+ * The words and chips of the toast. An extra: if the names cannot be read the capture is already
+ * saved and the toast simply has no explanation (the plain message still says where it went).
+ */
+async function understand(result: CaptureResult, deps: CaptureDeps): Promise<UnderstoodCapture | undefined> {
+  if (result.items.length === 0 && result.eventIds.length === 0 && !result.dates?.length) return undefined;
+  try {
+    const [people, stores] = await Promise.all([deps.people.listPeople(), deps.stores?.listStores() ?? []]);
+    const described = describeCapture(result, { people, stores, today: madridDateTime(deps.now).date });
+    return { ...described, eventIds: result.eventIds, ...(result.logId && { logId: result.logId }) };
+  } catch {
+    return undefined;
+  }
+}
+
 // ---------- Quick capture (type chips) ----------
 
 /** `href` is where the toast's "Ver" goes. */
-export type QuickCapture = { message: string; href: string };
+export type QuickCapture = { message: string; href: string; understood?: UnderstoodCapture };
 
 /** Enlaces y notas aún no tienen pantalla propia (fase 3): hasta entonces, "Recién añadido". */
 const ITEM_HREF: Record<Exclude<ItemType, 'tarea' | 'regalo'>, string> = {
