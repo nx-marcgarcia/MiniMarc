@@ -23,6 +23,8 @@ export interface PeopleRepo {
   deleteDate(id: string): Promise<void>;
   /** Lanza si no existe o si el nombre queda vacío. */
   updatePerson(id: string, patch: PersonPatch): Promise<Person>;
+  /** Pasa todas las fechas especiales de una persona a otra (al fusionar duplicados). */
+  movePersonDates(fromId: string, toId: string): Promise<void>;
   /** Borra la persona y sus fechas. Lanza si no existe. Sus items los trata quien llama. */
   deletePerson(id: string): Promise<void>;
 }
@@ -177,6 +179,11 @@ export function createPeopleRepo(backend: DbBackend): PeopleRepo {
     async getPerson(id) {
       const [row] = await backend.select('people', { eq: { id } });
       return row ? rowToPerson(row) : null;
+    },
+
+    async movePersonDates(fromId, toId) {
+      const rows = await backend.select('person_dates', { eq: { person_id: fromId } });
+      for (const r of rows) await backend.update('person_dates', String(r.id), { person_id: toId });
     },
 
     async deletePerson(id) {

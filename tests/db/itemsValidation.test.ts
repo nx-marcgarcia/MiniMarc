@@ -161,3 +161,27 @@ describe('filas anteriores a la fase 1 se leen con el estado nuevo', () => {
     expect(open.map((i) => i.title).sort()).toEqual(['abierta', 'nueva abierta']);
   });
 });
+
+describe('createItem con id y fecha propios (importar y migrar)', () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+
+  it('usa el id y la fecha de creación que se le dan', async () => {
+    const item = await items.createItem({ type: 'compra', title: 'Masaje de cabeza' }, { id, createdAt: '2026-09-01T10:00:00.000Z' });
+    expect(item.id).toBe(id);
+    expect(item.createdAt).toBe('2026-09-01T10:00:00.000Z');
+  });
+
+  it('es idempotente: con un id que ya existe devuelve el item sin escribir otro', async () => {
+    await items.createItem({ type: 'compra', title: 'A' }, { id });
+    writes = [];
+    const again = await items.createItem({ type: 'compra', title: 'B (otro intento)' }, { id });
+    expect(again.title).toBe('A');
+    expect(writes).toEqual([]);
+    expect(await items.listItems()).toHaveLength(1);
+  });
+
+  it('también valida con el registro', async () => {
+    await expect(items.createItem({ type: 'compra', title: 'X', status: 'hecha' }, { id })).rejects.toThrow(/estado/i);
+    expect(writes).toEqual([]);
+  });
+});

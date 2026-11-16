@@ -92,3 +92,15 @@ describe('ficha ampliada de la persona', () => {
     expect(up.alias).toEqual(['Ai', 'Ainita']);
   });
 });
+
+describe('movePersonDates', () => {
+  it('pasa las fechas de una persona a otra', async () => {
+    const { people } = setup();
+    const a = await people.upsertPersonByName('Ana');
+    const b = await people.upsertPersonByName('Ana María');
+    await people.addDate({ personId: b.id, label: 'Santo', date: '1604-07-26' });
+    await people.movePersonDates(b.id, a.id);
+    expect((await people.listDates(a.id)).map((d) => d.label)).toEqual(['Santo']);
+    expect(await people.listDates(b.id)).toEqual([]);
+  });
+});

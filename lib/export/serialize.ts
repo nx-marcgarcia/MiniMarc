@@ -28,10 +28,13 @@ export interface ExportToken {
   revokedAt: string | null;
 }
 
+/** An item plus the status as the database holds it (rows from before phase 1 still say 'hecho'): what the migration reads. */
+export type ExportItem = Item & { rawStatus?: string | null };
+
 export interface ExportData {
   exportedAt: string;
   /** All of them, deleted ones (Papelera) included with their deletedAt. */
-  items: Item[];
+  items: ExportItem[];
   people: Person[];
   personDates: PersonDate[];
   /** Storage paths in the private `photos` bucket, not signed URLs. */
@@ -96,7 +99,9 @@ function csvCell(v: unknown): string {
 function clean(data: ExportData): ExportData {
   return {
     exportedAt: data.exportedAt,
-    items: data.items.map((i) => Object.fromEntries(CSV_COLUMNS.map((c) => [c, i[c] ?? null])) as unknown as Item),
+    items: data.items.map(
+      (i) => ({ ...Object.fromEntries(CSV_COLUMNS.map((c) => [c, i[c] ?? null])), rawStatus: i.rawStatus ?? null }) as unknown as ExportItem,
+    ),
     people: data.people.map(({ id, name, birthday, notes, alias, relation, likes, dislikes, sizes, contact }) => ({
       id,
       name,
@@ -161,7 +166,13 @@ async function orEmpty<T>(what: string, read: () => Promise<T>, empty: T): Promi
 export async function collectExport(deps: CollectDeps): Promise<ExportData> {
   const { backend } = deps;
   const [items, people, personDates, photos, stores, itemLinks, tags, settings, tokens] = await Promise.all([
-    backend.select('items').then((rows) => rows.map(rowToItem).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+    backend
+      .select('items')
+      .then((rows) =>
+        rows
+          .map((row): ExportItem => ({ ...rowToItem(row), rawStatus: row.status == null ? null : String(row.status) }))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      ),
     backend.select('people').then((rows) => rows.map(rowToPerson).sort((a, b) => a.name.localeCompare(b.name, 'es'))),
     orEmpty('person_dates', async () => (await backend.select('person_dates')).map(rowToPersonDate), [] as PersonDate[]),
     orEmpty('item_photos', async () => (await backend.select('item_photos')).map(rowToPhoto), [] as ItemPhoto[]),

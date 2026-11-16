@@ -57,6 +57,9 @@ function forModel(node: unknown): unknown {
   return out;
 }
 
-export const modelOutputJsonSchema = forModel(
-  z.toJSONSchema(modelOutputSchema, { io: 'input', unrepresentable: 'any' }),
-);
+/** The JSON Schema of any zod schema, in the dialect the model accepts (see `forModel`). */
+export function jsonSchemaForModel(schema: z.ZodType): unknown {
+  return forModel(z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }));
+}
+
+export const modelOutputJsonSchema = jsonSchemaForModel(modelOutputSchema);

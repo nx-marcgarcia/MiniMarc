@@ -15,7 +15,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
 1. Entra en https://supabase.com y crea una cuenta.
 2. Pulsa **New project**. Elige la organización, un nombre (por ejemplo `agente-personal`), una contraseña para la base de datos (guárdala) y una región UE: **West EU (Paris)** (`eu-west-3`) o **Central EU (Frankfurt)** (`eu-central-1`). Plan: **Free**.
 3. Espera a que el proyecto termine de crearse.
-4. Aplica el esquema: las diez migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
+4. Aplica el esquema: las once migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
 
    | # | Archivo | Qué hace | Sección |
    |---|---|---|---|
@@ -29,6 +29,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | 8 | `0008_libros.sql` | Tipo `libro` y columnas `author`, `reading_state`, `link` | 11 |
    | 9 | `0009_link_preview.sql` | Vista previa de enlaces y columnas de búsqueda sin acentos | 12 |
    | 10 | `0010_ubicacion_y_clasificacion_diferida.sql` | `items.location` (va al campo Ubicación de Calendar) y `items.ai_state`. Sin la migración, la app funciona: no escribe esas columnas mientras valgan null | — |
+   | 11 | `0011_segundo_cerebro.sql` | Tablas `stores`, `item_links` y `tags`; columnas nuevas en `items` y `people`; quita los CHECK de `type` y `status`. **Aplícala antes de desplegar el código de la fase 1.** Después, ver `docs/migracion.md` para migrar tus datos | — |
 
    Hay dos formas de aplicarlas:
    - **Editor SQL (sin CLI):** abre **SQL Editor → New query**, pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**. Repite con cada archivo siguiente, en orden, cada uno en una consulta nueva.

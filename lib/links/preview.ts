@@ -66,8 +66,8 @@ export function withLinkPreviews(repo: ItemsRepo, schedule: PreviewScheduler): I
   };
   return {
     ...repo,
-    async createItem(input) {
-      const item = await repo.createItem(input);
+    async createItem(input, opts) {
+      const item = await repo.createItem(input, opts);
       if (item.link) safe(item);
       return item;
     },

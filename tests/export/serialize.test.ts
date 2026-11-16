@@ -85,7 +85,7 @@ describe('serializeExport json', () => {
     );
     expect(out.items).toHaveLength(3);
     expect(out.items[1].deletedAt).toBe('2026-10-20T09:00:00.000Z');
-    expect(Object.keys(out.items[0]).sort()).toEqual(Object.keys(item()).sort());
+    expect(Object.keys(out.items[0]).filter((k) => k !== 'rawStatus').sort()).toEqual(Object.keys(item()).sort());
     expect(out.items[2]).toMatchObject({ author: 'Ursula K. Le Guin', readingState: 'leyendo', linkSite: 'x.es', sourceText: 'leer X' });
     expect(out.people[0].name).toBe('Ana');
     expect(out.personDates[0].label).toBe('Santo');
@@ -194,6 +194,17 @@ describe('collectExport', () => {
     expect(out.settings).toEqual({ digestHour: 9, tz: 'Europe/Madrid', weeklyDigest: 'off' });
     expect(out.apiTokens).toEqual([{ name: 'Siri', createdAt: 'c', revokedAt: 'r' }]);
     expect(out.exportedAt).toBe('2026-10-22T08:00:00.000Z');
+  });
+
+  it('cada item lleva el estado tal como está en la base de datos (rawStatus), para migrar', async () => {
+    const backend = createMemoryBackend();
+    await backend.insert('items', { type: 'idea', title: 'Antigua hecha', status: 'hecho' });
+    await createItemsRepo(backend).createItem({ type: 'idea', title: 'Nueva' });
+    const out = await collectExport({ backend, settings: async () => ({ digestHour: 8, tz: 'Europe/Madrid', weeklyDigest: 'off' }), tokens: async () => [] });
+    const byTitle = Object.fromEntries(out.items.map((i) => [i.title, i]));
+    expect(byTitle['Antigua hecha']).toMatchObject({ status: 'en_marcha', rawStatus: 'hecho' });
+    expect(byTitle.Nueva).toMatchObject({ status: 'semilla', rawStatus: 'semilla' });
+    expect(JSON.parse(serializeExport(out, 'json')).items.map((i: { rawStatus: string }) => i.rawStatus).sort()).toEqual(['hecho', 'semilla']);
   });
 
   it('reúne tiendas, enlaces y tags, y la ficha ampliada de las personas', async () => {

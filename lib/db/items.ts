@@ -13,7 +13,11 @@ import { deriveLink } from '@/lib/links/linkify';
 import type { Item, ItemFilter, ItemPatch, NewItem, ReadingState } from './types';
 
 export interface ItemsRepo {
-  createItem(input: NewItem): Promise<Item>;
+  /**
+   * With `opts.id` the item is created under that id, or returned as it is if it already exists
+   * (so an import or a migration can be run twice); `opts.createdAt` keeps an original date.
+   */
+  createItem(input: NewItem, opts?: { id?: string; createdAt?: string }): Promise<Item>;
   listItems(f?: ItemFilter): Promise<Item[]>;
   updateItem(id: string, patch: ItemPatch): Promise<Item>;
   softDeleteItem(id: string): Promise<void>;
@@ -164,7 +168,11 @@ export function createItemsRepo(
   const now = opts.now ?? (() => new Date());
 
   return {
-    async createItem(input) {
+    async createItem(input, opts = {}) {
+      if (opts.id) {
+        const [existing] = await backend.select('items', { eq: { id: opts.id } });
+        if (existing) return rowToItem(existing);
+      }
       const full: Omit<Item, 'id' | 'createdAt' | 'deletedAt'> = {
         notes: null,
         area: null,
@@ -206,7 +214,10 @@ export function createItemsRepo(
       full.data = validated(full.type, full.status, full.data).data;
       if (isItemType(full.type) && isDoneStatus(full.type, full.status)) full.completedAt ??= now().toISOString();
       full.readingState = null;
-      return rowToItem(await backend.insert('items', itemToRow(withoutEmptyOptionalFields(full))));
+      const row = itemToRow(withoutEmptyOptionalFields(full));
+      if (opts.id) row.id = opts.id;
+      if (opts.createdAt) row.created_at = opts.createdAt;
+      return rowToItem(await backend.insert('items', row));
     },
 
     async listItems(f = {}) {
