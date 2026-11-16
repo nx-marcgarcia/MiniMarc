@@ -1,0 +1,74 @@
+// @vitest-environment jsdom
+import { screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
+import { RevisionScreen } from '@/components/revision/RevisionScreen';
+import { REVIEW_KEY, type Review } from '@/lib/revision';
+import { makeProject, projectsActions } from '../projectsDoubles';
+import { itemsActions, makeItem, renderScreen } from './setup';
+
+vi.mock('@/app/actions/items', () => import('./setup').then((m) => m.itemsActionsModule));
+vi.mock('next/navigation', () => import('./setup').then((m) => m.navigationModule));
+
+beforeEach(() => localStorage.clear());
+
+const review = (over: Partial<Review> = {}): Review => ({
+  inbox: 2,
+  projects: [{ project: makeProject({ id: 'p1', name: 'Viaje a Japón' }), nextTask: null }],
+  overdue: [makeItem({ id: 't1', title: 'Pagar seguro', dueAt: '2026-11-10T10:00:00.000Z', hasTime: true })],
+  rescue: [makeItem({ id: 'e1', type: 'enlace', status: 'por_ver', title: 'Artículo viejo' })],
+  nextWeekStart: '2026-11-23',
+  ...over,
+});
+
+const ui = (r = review()) => <RevisionScreen review={r} today="2026-11-16" tz="Europe/Madrid" />;
+
+test('cinco pasos, con la Bandeja y la semana que viene enlazadas', () => {
+  renderScreen(ui());
+  expect(screen.getByRole('link', { name: /Procesar/ }).getAttribute('href')).toBe('/sin-clasificar');
+  expect(screen.getByRole('link', { name: /Ver la semana que viene/ }).getAttribute('href')).toBe('/semana?w=2026-11-23');
+  expect(screen.getByText('Sin siguiente paso')).toBeTruthy();
+});
+
+test('Hecho en una atrasada llama a toggleDone y la quita', async () => {
+  const { user } = renderScreen(ui());
+  await user.click(screen.getByRole('button', { name: 'Hecho: Pagar seguro' }));
+  await waitFor(() => expect(itemsActions.toggleDone).toHaveBeenCalledWith('t1'));
+  await waitFor(() => expect(screen.queryByText('Pagar seguro')).toBeNull());
+});
+
+test('Mañana mueve la fecha al día siguiente a la misma hora', async () => {
+  const { user } = renderScreen(ui());
+  await user.click(screen.getByRole('button', { name: 'Mañana: Pagar seguro' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0]).toEqual(['t1', { dueAt: '2026-11-17T10:00:00.000Z', hasTime: true }]);
+});
+
+test('Archivar algo olvidado lo archiva', async () => {
+  const { user } = renderScreen(ui());
+  await user.click(screen.getByRole('button', { name: 'Archivar: Artículo viejo' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('e1', { archived: true }));
+});
+
+test('Pausar un proyecto', async () => {
+  const { user } = renderScreen(ui());
+  await user.click(screen.getByRole('button', { name: 'Pausar: Viaje a Japón' }));
+  await waitFor(() => expect(projectsActions.setProjectStatus).toHaveBeenCalledWith('p1', 'en_pausa'));
+});
+
+test('Terminar revisión la apunta en este dispositivo', async () => {
+  const { user } = renderScreen(ui());
+  await user.click(screen.getByRole('button', { name: 'Terminar revisión' }));
+  expect(localStorage.getItem(REVIEW_KEY)).toBeTruthy();
+});
+
+test('Hoy recuerda la revisión un lunes sin revisión reciente, y no si ya se hizo', async () => {
+  const { ReviewReminder } = await import('@/components/revision/ReviewReminder');
+  const monday = new Date('2026-11-16T09:00:00Z');
+  const { unmount } = renderScreen(<ReviewReminder tz="Europe/Madrid" now={monday} />);
+  expect((await screen.findByRole('link', { name: /Toca revisión semanal/ })).getAttribute('href')).toBe('/revision');
+  unmount();
+  localStorage.setItem(REVIEW_KEY, '2026-11-15T20:00:00Z');
+  renderScreen(<ReviewReminder tz="Europe/Madrid" now={monday} />);
+  await new Promise((r) => setTimeout(r, 0));
+  expect(screen.queryByRole('link', { name: /Toca revisión semanal/ })).toBeNull();
+});

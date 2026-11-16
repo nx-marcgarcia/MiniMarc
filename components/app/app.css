@@ -2770,3 +2770,21 @@ a.app-enlace__title:focus-visible {
 .app-palette__empty {
   padding: 10px 12px;
 }
+
+/* Revisión semanal --------------------------------------------------------------------------- */
+
+.app-review__intro {
+  padding: 0 calc(var(--gutter) + var(--safe-right)) 8px calc(var(--gutter) + var(--safe-left));
+}
+
+.app-review__actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.app-review__finish {
+  padding: 8px calc(var(--gutter) + var(--safe-right)) 28px calc(var(--gutter) + var(--safe-left));
+}

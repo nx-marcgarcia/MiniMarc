@@ -16,6 +16,7 @@
  */
 import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { Project } from '@/lib/db/projects';
+import { buildReview } from '@/lib/revision';
 import { PROJECT_TYPE_ORDER, projectSummary, type ProjectSummary } from '@/lib/projects';
 import { cacheLife } from 'next/cache';
 import { listArchivo, listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
@@ -42,7 +43,7 @@ import { isOpen } from '@/lib/items/itemTypes';
 import type { ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
-import { toMadrid } from '@/lib/time';
+import { DEFAULT_TZ, toMadrid } from '@/lib/time';
 import { tagUserData } from './server';
 
 // ---------- Item lists ----------
@@ -237,6 +238,18 @@ export async function readArchivo() {
   const { userId, deps } = await sessionDeps();
   tagUserData(userId, ['items']);
   return listArchivo(deps);
+}
+
+/** Revisión semanal: everything the five steps need, read once. */
+export async function readRevision() {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items']);
+  const now = new Date();
+  const tz = DEFAULT_TZ;
+  const [items, projects] = await Promise.all([deps.items.listItems(), deps.projects!.listProjects()]);
+  return { review: buildReview({ items, projects, now, tz }), today: madridToday(), tz };
 }
 
 // ---------- Proyectos ----------

@@ -12,6 +12,7 @@ import { formatLongDate, madridToUtc } from '@/lib/time';
 import type { Candidate } from '@/lib/resurfacing/candidates';
 import { buildDayTimeline } from '@/lib/hoy/timeline';
 import { DayTimeline } from './DayTimeline';
+import { ReviewReminder } from '@/components/revision/ReviewReminder';
 import { ParaHoy } from './ParaHoy';
 import { PushButton } from './PushButton';
 
@@ -73,6 +74,7 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], 
         <p className="app-hoy__headline">{headline ?? digest.headline}</p>
       </div>
 
+      <ReviewReminder tz={tz} />
       <ParaHoy candidates={paraHoy} />
 
       {digest.calendarError && (
