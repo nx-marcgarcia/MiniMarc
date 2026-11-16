@@ -79,6 +79,7 @@ export const CSV_COLUMNS = [
   'archived',
   'completedAt',
   'tags',
+  'suggestion',
   'createdAt',
   'deletedAt',
 ] as const satisfies readonly (keyof Item)[];

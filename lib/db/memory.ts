@@ -34,6 +34,7 @@ export function createMemoryBackend(opts: { now?: () => Date } = {}): DbBackend 
     stores: [],
     item_links: [],
     tags: [],
+    capture_log: [],
   };
 
   return {

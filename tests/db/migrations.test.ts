@@ -250,3 +250,32 @@ describe('0011_segundo_cerebro.sql', () => {
     expect(s).not.toMatch(/add column (?!if not exists)/);
   });
 });
+
+describe('0012_captura.sql', () => {
+  const s = sql('0012_captura.sql');
+
+  it('items gana la sugerencia de la Bandeja, repetible', () => {
+    expect(s).toMatch(/alter table public\.items\s+add column if not exists suggestion jsonb;/);
+  });
+
+  it('crea capture_log con el texto original, la salida del modelo, los items y las correcciones', () => {
+    expect(s).toMatch(/create table if not exists public\.capture_log \(/);
+    for (const col of ['raw_input text not null', 'source text', 'model_output jsonb', 'error text', "item_ids uuid\\[\\] not null default '\\{\\}'", "corrections jsonb not null default '\\[\\]'::jsonb"]) {
+      expect(s).toMatch(new RegExp(col.replace(/ /g, '\\s+')));
+    }
+  });
+
+  it('capture_log tiene RLS de propietario y usuario permitido', () => {
+    expect(s).toMatch(/alter table public\.capture_log\s+enable row level security;/);
+    expect(s).toMatch(/drop policy if exists capture_log_owner on public\.capture_log;/);
+    expect(s).toMatch(
+      /create policy capture_log_owner on public\.capture_log\s+for all to authenticated\s+using \(user_id = \(select auth\.uid\(\)\) and \(select private\.is_allowed_user\(\)\)\)\s+with check \(user_id = \(select auth\.uid\(\)\) and \(select private\.is_allowed_user\(\)\)\);/,
+    );
+  });
+
+  it('solo añade: no toca datos y todo es repetible', () => {
+    expect(s).not.toMatch(/\bupdate public\.|\bdelete from\b|\bdrop table\b|\bdrop column\b|\btruncate\b/i);
+    expect(s).not.toMatch(/create (table|index) (?!if not exists)/);
+    expect(s).not.toMatch(/add column (?!if not exists)/);
+  });
+});

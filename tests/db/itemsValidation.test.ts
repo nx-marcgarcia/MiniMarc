@@ -185,3 +185,27 @@ describe('createItem con id y fecha propios (importar y migrar)', () => {
     expect(writes).toEqual([]);
   });
 });
+
+describe('sugerencia de la Bandeja', () => {
+  it('se guarda con el item y por defecto no hay', async () => {
+    const plain = await items.createItem({ type: 'idea', title: 'x' });
+    expect(plain.suggestion).toBeNull();
+    const doubtful = await items.createItem({
+      type: 'idea',
+      title: 'Trabajar',
+      needsReview: true,
+      suggestion: { type: 'tarea', confidence: 0.3 },
+    });
+    expect(doubtful.suggestion).toEqual({ type: 'tarea', confidence: 0.3 });
+    expect(memory.tables.items[0]).not.toHaveProperty('suggestion');
+  });
+
+  it('una sugerencia de un tipo que no existe se rechaza', async () => {
+    await expect(items.createItem({ type: 'idea', title: 'x', suggestion: { type: 'viaje' as never, confidence: 0.5 } })).rejects.toThrow();
+  });
+
+  it('se puede quitar al aceptar la clasificación', async () => {
+    const i = await items.createItem({ type: 'idea', title: 'x', suggestion: { type: 'tarea', confidence: 0.3 } });
+    expect((await items.updateItem(i.id, { suggestion: null })).suggestion).toBeNull();
+  });
+});

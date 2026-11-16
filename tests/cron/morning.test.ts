@@ -50,6 +50,7 @@ function item(over: Partial<Item>): Item {
     archived: false,
     completedAt: null,
     tags: [],
+    suggestion: null,
     createdAt: '2026-10-01T00:00:00Z',
     deletedAt: null,
     ...over,

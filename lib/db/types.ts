@@ -60,6 +60,8 @@ export interface Item {
   /** Set by the repo when the status enters a closing state of the type. */
   completedAt: string | null;
   tags: string[];
+  /** What the AI thinks a doubtful item (needsReview) is; the Bandeja offers to accept it. */
+  suggestion: { type: ItemType; confidence: number } | null;
   createdAt: string;
   deletedAt: string | null;
 }

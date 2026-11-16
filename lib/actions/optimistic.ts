@@ -78,6 +78,7 @@ export function draftItem(fd: FormData, n: number, now: Date): Item | null {
     archived: false,
     completedAt: null,
     tags: [],
+    suggestion: null,
     createdAt: now.toISOString(),
     deletedAt: null,
     ...fields,

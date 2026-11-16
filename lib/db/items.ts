@@ -71,6 +71,7 @@ const COLUMNS = {
   archived: 'archived',
   completedAt: 'completed_at',
   tags: 'tags',
+  suggestion: 'suggestion',
   createdAt: 'created_at',
   deletedAt: 'deleted_at',
 } as const satisfies Record<keyof Item, string>;
@@ -92,6 +93,7 @@ export function rowToItem(row: Row): Item {
   out.pinned = Boolean(row.pinned);
   out.data = row.data && typeof row.data === 'object' ? row.data : {};
   out.tags = Array.isArray(row.tags) ? row.tags : [];
+  out.suggestion = row.suggestion && typeof row.suggestion === 'object' ? row.suggestion : null;
   const rawStatus = String(row.status ?? 'pendiente');
   if (isItemType(row.type)) {
     const { status, archived } = normalizeLegacyStatus(row.type, rawStatus, (row.reading_state as string | null) ?? null);
@@ -135,6 +137,7 @@ const OPTIONAL_FIELDS = [
   'priority',
   'remindAt',
   'completedAt',
+  'suggestion',
 ] as const;
 
 function withoutEmptyOptionalFields(item: Partial<Item>): Partial<Item> {
@@ -153,8 +156,9 @@ function withoutEmptyOptionalFields(item: Partial<Item>): Partial<Item> {
  * Throws otherwise, before anything is written. Since 0011 the CHECK constraints are gone, so
  * this is the guard (tests/db/itemsValidation.test.ts).
  */
-function validated(type: string, status: string, data: unknown): { data: Record<string, unknown> } {
+function validated(type: string, status: string, data: unknown, suggestion?: Item['suggestion']): { data: Record<string, unknown> } {
   if (!isItemType(type)) throw new Error(`Tipo de item desconocido: ${type}`);
+  if (suggestion && !isItemType(suggestion.type)) throw new Error(`Sugerencia de un tipo desconocido: ${suggestion.type}`);
   if (!isValidStatus(type, status)) throw new Error(`Estado «${status}» no válido para ${type}`);
   return { data: parseItemData(type, data ?? {}) };
 }
@@ -195,6 +199,7 @@ export function createItemsRepo(
         storeId: null,
         priority: null,
         remindAt: null,
+        suggestion: null,
         pinned: false,
         archived: false,
         completedAt: null,
@@ -208,7 +213,7 @@ export function createItemsRepo(
         input.status ??
         (full.type === 'libro' ? input.readingState : null) ??
         (isItemType(full.type) ? defaultStatus(full.type) : '');
-      full.data = validated(full.type, full.status, full.data).data;
+      full.data = validated(full.type, full.status, full.data, full.suggestion).data;
       if (isItemType(full.type) && isDoneStatus(full.type, full.status)) full.completedAt ??= now().toISOString();
       full.readingState = null;
       const row = itemToRow(withoutEmptyOptionalFields(full));
@@ -241,7 +246,7 @@ export function createItemsRepo(
       if (full.readingState && full.status === undefined) full.status = full.readingState;
       delete full.readingState;
       // Only a patch that can change what the registry checks needs the stored item.
-      if (full.type !== undefined || full.status !== undefined || full.data !== undefined) {
+      if (full.type !== undefined || full.status !== undefined || full.data !== undefined || full.suggestion) {
         const [row] = await backend.select('items', { eq: { id } });
         if (!row) throw new Error(`update items ${id}: not found`);
         const current = rowToItem(row);
@@ -252,7 +257,7 @@ export function createItemsRepo(
           if (full.data === undefined) full.data = {};
         }
         const status = full.status ?? current.status;
-        full.data = validated(type, status, full.data ?? current.data).data;
+        full.data = validated(type, status, full.data ?? current.data, full.suggestion).data;
         if (full.status !== undefined && full.status !== current.status && isItemType(type)) {
           full.completedAt = isDoneStatus(type, full.status) ? now().toISOString() : null;
         }

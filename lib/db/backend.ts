@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type TableName = 'items' | 'people' | 'item_photos' | 'person_dates' | 'stores' | 'item_links' | 'tags';
+export type TableName = 'items' | 'people' | 'item_photos' | 'person_dates' | 'stores' | 'item_links' | 'tags' | 'capture_log';
 export type Row = Record<string, unknown>;
 
 /** Filtros combinados con AND. */
