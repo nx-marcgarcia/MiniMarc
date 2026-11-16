@@ -119,7 +119,7 @@ describe('every Server Action that writes invalidates', () => {
    * Read-only actions (search, the Regalo picker), sign-out, which ends the session, and the area
    * filter, which only sets a cookie (the cached reads never depend on it: pages filter after).
    */
-  const READS = new Set(['search', 'listCapturePeople', 'listProjectOptions', 'signOut', 'setAreaFilter']);
+  const READS = new Set(['search', 'paletteSearch', 'listCapturePeople', 'listProjectOptions', 'signOut', 'setAreaFilter']);
 
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
     const src = readFileSync(path.join(dir, file), 'utf8');

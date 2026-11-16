@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { AreaFilter } from '@/components/app/AreaFilter';
 import { PlusIcon } from '@/components/icons';
@@ -62,7 +63,9 @@ function Cards({ cards }: { cards: ProjectCard[] }) {
  * "Sin siguiente paso"); paused and finished ones folded below.
  */
 export function ProyectosScreen({ area, available, active, paused, done }: ProyectosScreenProps) {
-  const [open, setOpen] = useState(false);
+  // ⌘K «Nuevo proyecto» lands here with ?nuevo=1.
+  const params = useSearchParams();
+  const [open, setOpen] = useState(() => params.get('nuevo') === '1');
   return (
     <LargeTitle
       title="Proyectos"
