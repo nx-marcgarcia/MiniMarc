@@ -199,6 +199,7 @@ describe('tareas con hora exacta', () => {
 
 describe('deliverBriefing', () => {
   const digest = (over: Partial<Digest> = {}): Digest => ({
+    dayTasks: [],
     date: '2026-11-17', events: [], calendarError: null,
     tasks: { personal: { items: [{ item: { id: 'x', title: 't' } as never, overdue: false }], more: 0 }, trabajo: { items: [], more: 0 } },
     unclassified: 2, dates: [], headline: 'Buenos días', ...over,
