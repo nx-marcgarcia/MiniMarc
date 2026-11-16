@@ -13,6 +13,7 @@
 import type { UpcomingDate } from '@/lib/db/people';
 import type { ResurfacingEvent } from '@/lib/db/resurfacing';
 import type { Item } from '@/lib/db/types';
+import { itemHref } from '@/lib/items/href';
 import { isOpen } from '@/lib/items/itemTypes';
 import { countdown } from '@/lib/people/format';
 import { occasionsWithGifts } from '@/lib/regalos';
@@ -40,6 +41,8 @@ export interface Candidate {
   /** Lower first. */
   rank: number;
   title: string;
+  /** Where "Abrir" goes inside the app. */
+  href: string;
   /** One short line: why it came up. */
   detail: string;
   /** Postponed 3 times already: ask whether to archive it. */
@@ -90,9 +93,9 @@ export function findCandidates(input: CandidateInput): Candidate[] {
   const recent = new Set(input.sent.filter((e) => now.getTime() - Date.parse(e.sentAt) < REPEAT_AFTER_DAYS * DAY).map((e) => e.subject));
   const out: (Candidate & { since: string })[] = [];
 
-  const add = (kind: CandidateKind, subject: string, itemId: string | null, title: string, detail: string, since: string, snoozeCount = 0) => {
+  const add = (kind: CandidateKind, subject: string, itemId: string | null, title: string, detail: string, since: string, href: string, snoozeCount = 0) => {
     if (recent.has(subject)) return;
-    out.push({ subject, itemId, kind, urgent: RANK[kind] <= URGENT_UP_TO, rank: RANK[kind], title, detail, since, askArchive: snoozeCount >= SNOOZES_BEFORE_ASKING });
+    out.push({ subject, itemId, kind, urgent: RANK[kind] <= URGENT_UP_TO, rank: RANK[kind], title, href, detail, since, askArchive: snoozeCount >= SNOOZES_BEFORE_ASKING });
   };
 
   for (const item of input.items) {
@@ -103,16 +106,16 @@ export function findCandidates(input: CandidateInput): Candidate[] {
 
     if (item.type === 'tarea' && item.dueAt) {
       const days = daysBetween(today, madridDateTime(new Date(item.dueAt), tz).date);
-      if (days < 0) add('atrasada', subject, item.id, item.title, `Venció ${hace(-days)}`, item.dueAt, item.snoozeCount);
-      else if (days === 0 && !item.hasTime) add('vence_hoy', subject, item.id, item.title, 'Vence hoy', item.dueAt, item.snoozeCount);
+      if (days < 0) add('atrasada', subject, item.id, item.title, `Venció ${hace(-days)}`, item.dueAt, itemHref(item), item.snoozeCount);
+      else if (days === 0 && !item.hasTime) add('vence_hoy', subject, item.id, item.title, 'Vence hoy', item.dueAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'idea' && (item.status === 'semilla' || item.status === 'explorando') && ageDays(item.updatedAt, now) >= IDEA_STALE_DAYS) {
-      add('idea_olvidada', subject, item.id, item.title, `Sin tocar ${hace(ageDays(item.updatedAt, now))}`, item.updatedAt, item.snoozeCount);
+      add('idea_olvidada', subject, item.id, item.title, `Sin tocar ${hace(ageDays(item.updatedAt, now))}`, item.updatedAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'enlace' && item.status === 'por_ver' && ageDays(item.createdAt, now) > LINK_STALE_DAYS) {
-      add('enlace_olvidado', subject, item.id, item.title, `Guardado ${hace(ageDays(item.createdAt, now))} y sin ver`, item.createdAt, item.snoozeCount);
+      add('enlace_olvidado', subject, item.id, item.title, `Guardado ${hace(ageDays(item.createdAt, now))} y sin ver`, item.createdAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'libro' && item.status === 'por_leer' && ageDays(item.createdAt, now) >= BOOK_STALE_DAYS) {
-      add('libro_pendiente', subject, item.id, item.title, `Por leer desde ${hace(ageDays(item.createdAt, now))}`, item.createdAt, item.snoozeCount);
+      add('libro_pendiente', subject, item.id, item.title, `Por leer desde ${hace(ageDays(item.createdAt, now))}`, item.createdAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'compra' && (item.status === 'quiero' || item.status === 'en_carrito') && data.urgency === 'alta' && ageDays(item.createdAt, now) >= URGENT_PURCHASE_DAYS) {
-      add('compra_urgente', subject, item.id, item.title, `Urgente, en tu lista ${hace(ageDays(item.createdAt, now))}`, item.createdAt, item.snoozeCount);
+      add('compra_urgente', subject, item.id, item.title, `Urgente, en tu lista ${hace(ageDays(item.createdAt, now))}`, item.createdAt, itemHref(item), item.snoozeCount);
     }
   }
 
@@ -124,7 +127,7 @@ export function findCandidates(input: CandidateInput): Candidate[] {
     const days = daysBetween(today, ends);
     if (days < 0 || days > WARRANTY_WINDOW_DAYS) continue;
     if (item.snoozedUntil && Date.parse(item.snoozedUntil) > now.getTime()) continue;
-    add('garantia', `item:${item.id}`, item.id, item.title, `La garantía termina ${days === 0 ? 'hoy' : `en ${plural(days, 'día', 'días')}`}`, ends, item.snoozeCount);
+    add('garantia', `item:${item.id}`, item.id, item.title, `La garantía termina ${days === 0 ? 'hoy' : `en ${plural(days, 'día', 'días')}`}`, ends, itemHref(item), item.snoozeCount);
   }
 
   // Dates close by with no gift bought.
@@ -132,7 +135,7 @@ export function findCandidates(input: CandidateInput): Candidate[] {
   for (const o of occasionsWithGifts(close, input.items.filter((i) => i.type === 'regalo' && isOpen(i)), { warnWithinDays: DATE_WINDOW_DAYS })) {
     if (!o.needsGift) continue;
     const u = o.upcoming;
-    add('regalo_sin_comprar', `date:${u.person.id}:${u.date}`, null, `Regalo para ${u.person.name}`, `${u.label} ${countdown(u.daysUntil)} · sin regalo comprado`, u.date);
+    add('regalo_sin_comprar', `date:${u.person.id}:${u.date}`, null, `Regalo para ${u.person.name}`, `${u.label} ${countdown(u.daysUntil)} · sin regalo comprado`, u.date, `/personas/${u.person.id}`);
   }
 
   out.sort((a, b) => a.rank - b.rank || Date.parse(a.since) - Date.parse(b.since));
@@ -143,6 +146,7 @@ export function findCandidates(input: CandidateInput): Candidate[] {
     urgent: c.urgent,
     rank: c.rank,
     title: c.title,
+    href: c.href,
     detail: c.detail,
     askArchive: c.askArchive,
   }));

@@ -15,7 +15,7 @@ const digest = (over: Partial<Digest> = {}): Digest => ({
   ...over,
 });
 const task = (id: string, overdue: boolean) => ({ item: makeItem({ id, title: id }), overdue });
-const cand = (over: Partial<Candidate> = {}): Candidate => ({ subject: 'item:a', itemId: 'a', kind: 'atrasada', urgent: true, rank: 1, title: 'Llamar al seguro', detail: 'Venció hace 3 días', askArchive: false, ...over });
+const cand = (over: Partial<Candidate> = {}): Candidate => ({ subject: 'item:a', itemId: 'a', kind: 'atrasada', urgent: true, rank: 1, title: 'Llamar al seguro', href: '/tareas', detail: 'Venció hace 3 días', askArchive: false, ...over });
 
 describe('briefingLines', () => {
   it('un día vacío es una sola línea, no un informe vacío', () => {

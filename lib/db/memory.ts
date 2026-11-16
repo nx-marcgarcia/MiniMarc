@@ -43,7 +43,7 @@ export function createMemoryBackend(opts: { now?: () => Date } = {}): DbBackend 
     tables,
     async insert(table, row) {
       const created = now().toISOString();
-      const full: Row = { id: randomUUID(), created_at: created, ...(table === 'items' ? { updated_at: created } : {}), ...row };
+      const full: Row = { id: randomUUID(), created_at: created, ...(table === 'items' ? { updated_at: row.created_at ?? created } : {}), ...row };
       tables[table].push(full);
       return { ...full };
     },

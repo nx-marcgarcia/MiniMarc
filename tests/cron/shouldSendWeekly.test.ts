@@ -1,63 +1,66 @@
 import { describe, expect, it } from 'vitest';
-import { shouldSendWeekly, WEEKLY_SCHEDULE } from '@/lib/cron/shouldSendWeekly';
+import { shouldSendWeekly } from '@/lib/cron/shouldSendWeekly';
 import type { WeeklyDigest } from '@/lib/db/settings';
+import { madridToUtc } from '@/lib/time';
 
 const TZ = 'Europe/Madrid';
-const s = (weeklyDigest: WeeklyDigest, lastWeeklyDate: string | null = null, tz = TZ) => ({ weeklyDigest, tz, lastWeeklyDate });
+const s = (weeklyDigest: WeeklyDigest, lastWeeklyDate: string | null = null, extra: { digestHour?: number; skipHolidays?: boolean } = {}) => ({
+  weeklyDigest,
+  tz: TZ,
+  lastWeeklyDate,
+  digestHour: 9,
+  skipHolidays: true,
+  ...extra,
+});
+const at = (date: string, time: string) => madridToUtc(date, time);
 
-describe('shouldSendWeekly', () => {
-  it('horarios: lunes 08:00 y domingo 20:00', () => {
-    expect(WEEKLY_SCHEDULE).toEqual({ lunes: { weekday: 1, hour: 8 }, domingo: { weekday: 0, hour: 20 } });
+describe('shouldSendWeekly: el resumen de la semana sale dentro de la ventana L-V 9-16', () => {
+  it('el lunes desde las 9:00 resume esa semana', () => {
+    expect(shouldSendWeekly(at('2026-11-16', '09:00'), s('lunes', '2026-11-09'))).toBe('2026-11-16');
+    expect(shouldSendWeekly(at('2026-11-16', '09:00'), s('lunes'))).toBe('2026-11-16');
   });
 
-  it('lunes 08:00 de Madrid → resume la semana que empieza ese lunes', () => {
-    // 26 oct 2026: ya en CET (UTC+1) → 08:00 Madrid = 07:00 UTC.
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('lunes', '2026-10-19'))).toBe('2026-10-26');
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('lunes'))).toBe('2026-10-26');
+  it('el lunes antes de las 9:00 no; si la pasada de las 9:00 falló, una posterior del lunes lo recupera', () => {
+    expect(shouldSendWeekly(at('2026-11-16', '08:30'), s('lunes'))).toBeNull();
+    expect(shouldSendWeekly(at('2026-11-16', '12:00'), s('lunes'))).toBe('2026-11-16');
+    expect(shouldSendWeekly(at('2026-11-16', '16:00'), s('lunes'))).toBeNull();
   });
 
-  it('lunes antes de las 08:00 → nada; si la de las 08:00 falló, la de las 09:00 lo recupera', () => {
-    expect(shouldSendWeekly(new Date('2026-10-26T06:00:00Z'), s('lunes'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-10-25T23:30:00Z'), s('lunes'))).toBeNull(); // lunes 00:30
+  it('esa semana ya enviada → nada, ni el resto del lunes', () => {
+    expect(shouldSendWeekly(at('2026-11-16', '09:00'), s('lunes', '2026-11-16'))).toBeNull();
+    expect(shouldSendWeekly(at('2026-11-16', '15:00'), s('lunes', '2026-11-16'))).toBeNull();
+  });
+
+  it('otro día de la semana → nada (no se recupera el miércoles)', () => {
+    expect(shouldSendWeekly(at('2026-11-17', '09:00'), s('lunes'))).toBeNull();
+    expect(shouldSendWeekly(at('2026-11-18', '10:00'), s('lunes'))).toBeNull();
+  });
+
+  it('un lunes festivo pasa al primer día hábil de esa semana (martes)', () => {
+    // Lunes 12 oct 2026 es la Fiesta Nacional.
+    expect(shouldSendWeekly(at('2026-10-12', '09:00'), s('lunes'))).toBeNull();
+    expect(shouldSendWeekly(at('2026-10-13', '09:00'), s('lunes'))).toBe('2026-10-12');
+    expect(shouldSendWeekly(at('2026-10-14', '09:00'), s('lunes'))).toBeNull();
+  });
+
+  it('el domingo a las 20:00 queda fuera de la ventana: la opción «domingo» sale el lunes', () => {
+    expect(shouldSendWeekly(at('2026-11-15', '20:00'), s('domingo'))).toBeNull();
+    expect(shouldSendWeekly(at('2026-11-16', '09:00'), s('domingo'))).toBe('2026-11-16');
+  });
+
+  it('el lunes del cambio de hora (26 oct) y el del cambio a verano (30 mar) salen a las 9:00 locales', () => {
+    expect(shouldSendWeekly(new Date('2026-10-26T07:30:00Z'), s('lunes'))).toBeNull();
     expect(shouldSendWeekly(new Date('2026-10-26T08:00:00Z'), s('lunes'))).toBe('2026-10-26');
+    expect(shouldSendWeekly(new Date('2026-03-30T06:30:00Z'), s('lunes'))).toBeNull();
+    expect(shouldSendWeekly(new Date('2026-03-30T07:00:00Z'), s('lunes'))).toBe('2026-03-30');
   });
 
-  it('esa semana ya enviada → nada (no se repite el resto del lunes)', () => {
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('lunes', '2026-10-26'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-10-26T20:00:00Z'), s('lunes', '2026-10-26'))).toBeNull();
-  });
-
-  it('otro día de la semana → nada (no se recupera el martes)', () => {
-    expect(shouldSendWeekly(new Date('2026-10-27T07:00:00Z'), s('lunes'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-10-25T19:00:00Z'), s('lunes'))).toBeNull(); // domingo 20:00
-  });
-
-  it('domingo 20:00 → resume la semana siguiente; el día del cambio a horario de invierno (25 oct) a las 19:00 UTC', () => {
-    expect(shouldSendWeekly(new Date('2026-10-25T18:00:00Z'), s('domingo'))).toBeNull(); // 19:00 local
-    expect(shouldSendWeekly(new Date('2026-10-25T19:00:00Z'), s('domingo', '2026-10-19'))).toBe('2026-10-26');
-    expect(shouldSendWeekly(new Date('2026-10-25T22:00:00Z'), s('domingo'))).toBe('2026-10-26'); // 23:00, reintento
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('domingo'))).toBeNull(); // el lunes ya no
-  });
-
-  it('el día del cambio a horario de verano (29 mar): domingo 20:00 = 18:00 UTC; lunes 08:00 = 06:00 UTC', () => {
-    expect(shouldSendWeekly(new Date('2026-03-29T17:00:00Z'), s('domingo'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-03-29T18:00:00Z'), s('domingo'))).toBe('2026-03-30');
-    expect(shouldSendWeekly(new Date('2026-03-30T05:00:00Z'), s('lunes'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-03-30T06:00:00Z'), s('lunes'))).toBe('2026-03-30');
-  });
-
-  it('pasar de domingo a lunes no repite la semana ya enviada el domingo', () => {
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('lunes', '2026-10-26'))).toBeNull();
+  it('con la hora del briefing más tarde, espera a esa hora', () => {
+    expect(shouldSendWeekly(at('2026-11-16', '10:00'), s('lunes', null, { digestHour: 11 }))).toBeNull();
+    expect(shouldSendWeekly(at('2026-11-16', '11:00'), s('lunes', null, { digestHour: 11 }))).toBe('2026-11-16');
   });
 
   it('desactivado → nunca', () => {
-    expect(shouldSendWeekly(new Date('2026-10-26T07:00:00Z'), s('off'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-10-25T19:00:00Z'), s('off'))).toBeNull();
-  });
-
-  it('usa la zona de los ajustes', () => {
-    // Lunes 26 oct, 08:00 en Nueva York (EDT, UTC-4) = 12:00 UTC.
-    expect(shouldSendWeekly(new Date('2026-10-26T11:00:00Z'), s('lunes', null, 'America/New_York'))).toBeNull();
-    expect(shouldSendWeekly(new Date('2026-10-26T12:00:00Z'), s('lunes', null, 'America/New_York'))).toBe('2026-10-26');
+    expect(shouldSendWeekly(at('2026-11-16', '09:00'), s('off'))).toBeNull();
   });
 });

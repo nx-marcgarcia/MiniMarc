@@ -1,8 +1,12 @@
 /**
  * The hourly cron (/api/cron/morning), testable. Every run:
- *   1. Morning digest, once a day from the chosen hour (shouldSendDigest): build it, push it to
- *      every subscription, save last_digest_date (also with no subscriptions). If building fails
- *      the date is not saved, so the next hourly run retries.
+ *   1. Morning briefing, once a day on Monday to Friday between 9:00 and 16:00 Madrid time, from
+ *      the chosen hour (shouldSendDigest): build it, push it to every subscription (when Web Push is
+ *      on in Ajustes), send its Telegram message with one rescued item, save last_digest_date (also
+ *      with no subscriptions). If building fails the date is not saved, so the next run retries.
+ *      The cron runs every 30 minutes; the server decides with the Madrid clock whether it is time.
+ *   1b. Resurfacing (lib/resurfacing/run.ts): exact-time notices, and the reminder slot that is due
+ *      (11:00, 13:30 and 15:30 by default), recorded in resurfacing_events so nothing repeats.
  *   2. Maintenance, capped per run and never blocking the digest:
  *      a. Calendar sync retry for items with a syncError, and removal of events left on done,
  *         archived or deleted items (orphaned reminders, review I-3). Deleted items included.
@@ -10,10 +14,11 @@
  *         storage objects first (the item_photos rows go with the item, on delete cascade). If
  *         either fails, the item stays and the next hourly run retries.
  *      c. Link previews never stored (the save's `after` failed or 0009 came later), capped.
- *   3. Weekly summary, Monday 08:00 or Sunday 20:00 (shouldSendWeekly), after the daily one and
+ *   3. Weekly summary, on the first working day of the week (shouldSendWeekly), after the daily one and
  *      apart from it: its own settings read, its own tag, and a failure never touches the daily
  *      result. last_weekly_date is saved before sending, so a week is never pushed twice.
- * The response holds counts only: no titles, no headline.
+ * The response holds counts only: no titles, no headline. Nothing here is sent outside Mon-Fri 9:00-16:00
+ * except an exact-time notice.
  */
 import { WRITES, type DataScope } from '@/lib/cache/tags';
 import { timingSafeEqual, createHash } from 'node:crypto';
@@ -27,6 +32,7 @@ import type { Item } from '@/lib/db/types';
 import type { Digest } from '@/lib/digest/build';
 import { weekSummaryLine, type WeekDigest } from '@/lib/digest/week';
 import type { PhotoStorage } from '@/lib/photos/storage';
+import type { ResurfaceResult } from '@/lib/resurfacing/run';
 import { dateWithPerson } from '@/lib/people/format';
 import type { PushPayload } from '@/lib/push/send';
 import { toMadrid } from '@/lib/time';
@@ -51,6 +57,10 @@ export interface MorningDeps {
   storage: Pick<PhotoStorage, 'remove'>;
   /** Fetches link previews that were never stored (fallback for `after`); returns how many. */
   refreshPreviews?: () => Promise<number>;
+  /** The resurfacing run (exact-time notices and the due reminder slot); absent = none. */
+  resurface?: () => Promise<ResurfaceResult>;
+  /** The briefing's Telegram message (with a rescued item); never throws. */
+  briefing?: (digest: Digest) => Promise<unknown>;
   /** Expires the user's cached data after the run (revalidateTag on the server). */
   invalidate: (scopes: readonly DataScope[]) => void;
 }
@@ -61,6 +71,8 @@ export interface MorningResult {
   pushFailed: number;
   weekly: 'sent' | 'not_due' | 'failed';
   weeklyPushed: number;
+  /** Resurfacing: exact-time notices sent, and what became of the due reminder slot. */
+  resurfaced: ResurfaceResult | null;
   synced: number;
   syncFailed: number;
   purged: number;
@@ -118,7 +130,7 @@ async function sendWeekly(deps: MorningDeps, r: MorningResult): Promise<void> {
       return;
     }
     const payload = weeklyPayload(await deps.buildWeekDigest(week, settings));
-    const subs = await deps.subscriptions();
+    const subs = settings.notifyPush ? await deps.subscriptions() : [];
     // Saved first: if it cannot be saved, nothing goes out (the next hour retries) rather than
     // a push every hour.
     await deps.settings.update({ lastWeeklyDate: week });
@@ -143,11 +155,14 @@ async function sendDigest(deps: MorningDeps, r: MorningResult): Promise<void> {
     return;
   }
   const date = toMadrid(deps.now, settings.tz).date;
+  let digest: Digest;
   let payload: PushPayload;
   let subs: PushSub[];
   try {
-    payload = digestPayload(await deps.buildDigest(date, settings));
-    subs = await deps.subscriptions();
+    digest = await deps.buildDigest(date, settings);
+    payload = digestPayload(digest);
+    // Web Push may be off in Ajustes: then the briefing only goes by Telegram.
+    subs = settings.notifyPush ? await deps.subscriptions() : [];
   } catch {
     r.digest = 'failed';
     return;
@@ -160,7 +175,10 @@ async function sendDigest(deps: MorningDeps, r: MorningResult): Promise<void> {
     r.digest = 'sent';
   } catch {
     r.digest = 'failed';
+    return;
   }
+  // Saved first, then Telegram: a failure there can never make the push go out again.
+  await deps.briefing?.(digest).catch(() => undefined);
 }
 
 function memo<T>(load: () => Promise<T>): () => Promise<T> {
@@ -231,6 +249,7 @@ export async function runMorning(deps: MorningDeps): Promise<MorningResult> {
     pushFailed: 0,
     weekly: 'not_due',
     weeklyPushed: 0,
+    resurfaced: null,
     synced: 0,
     syncFailed: 0,
     purged: 0,
@@ -239,6 +258,11 @@ export async function runMorning(deps: MorningDeps): Promise<MorningResult> {
   };
   try {
     await sendDigest(deps, r);
+    try {
+      r.resurfaced = (await deps.resurface?.()) ?? null;
+    } catch {
+      // Resurfacing never stops the weekly summary or the maintenance.
+    }
     await sendWeekly(deps, r);
     await maintain(deps, r);
   } finally {

@@ -9,6 +9,7 @@
 import { madridDateTime } from '@/lib/time';
 import type { ResurfacingEvent } from '@/lib/db/resurfacing';
 import type { Item } from '@/lib/db/types';
+import { itemHref } from '@/lib/items/href';
 import { isOpen } from '@/lib/items/itemTypes';
 import type { Candidate } from './candidates';
 
@@ -55,6 +56,7 @@ export function timedDue(input: TimedInput): Candidate[] {
       urgent: true,
       rank: 0,
       title: item.title,
+      href: itemHref(item),
       detail: `${when.label}, a las ${time}`,
       askArchive: false,
     });

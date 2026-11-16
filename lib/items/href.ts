@@ -1,0 +1,18 @@
+/** Where an item lives in the app (the toast's "Ver", the notices' "Abrir"). No server imports. */
+import type { Item, ItemType } from '@/lib/db/types';
+import { BANDEJA_HREF } from '@/lib/nav';
+
+/** Las notas aún no tienen pantalla propia: hasta entonces, "Recién añadido". */
+const ITEM_HREF: Record<Exclude<ItemType, 'tarea' | 'regalo'>, string> = {
+  idea: '/ideas',
+  compra: '/compras',
+  libro: '/libros',
+  enlace: '/enlaces',
+  nota: BANDEJA_HREF,
+};
+
+export function itemHref(item: Pick<Item, 'type' | 'area' | 'personId'>): string {
+  if (item.type === 'tarea') return `/tareas?area=${item.area ?? 'personal'}`;
+  if (item.type === 'regalo') return item.personId ? `/personas/${item.personId}` : '/regalos';
+  return ITEM_HREF[item.type];
+}

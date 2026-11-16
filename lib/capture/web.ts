@@ -6,6 +6,7 @@
 import { createCita, EVENT_ERROR_MESSAGES, parseNewEvent } from '@/lib/actions/events';
 import { attempt, UserError, type ActionResult } from '@/lib/actions/result';
 import type { Item, ItemType } from '@/lib/db/types';
+import { itemHref } from '@/lib/items/href';
 import { BANDEJA_HREF } from '@/lib/nav';
 import { madridDateTime } from '@/lib/time';
 import { describeCapture, type Described } from './describe';
@@ -96,21 +97,6 @@ async function understand(result: CaptureResult, deps: CaptureDeps): Promise<Und
 
 /** `href` is where the toast's "Ver" goes. */
 export type QuickCapture = { message: string; href: string; understood?: UnderstoodCapture };
-
-/** Las notas aún no tienen pantalla propia: hasta entonces, "Recién añadido". */
-const ITEM_HREF: Record<Exclude<ItemType, 'tarea' | 'regalo'>, string> = {
-  idea: '/ideas',
-  compra: '/compras',
-  libro: '/libros',
-  enlace: '/enlaces',
-  nota: BANDEJA_HREF,
-};
-
-function itemHref(item: Item): string {
-  if (item.type === 'tarea') return `/tareas?area=${item.area ?? 'personal'}`;
-  if (item.type === 'regalo') return item.personId ? `/personas/${item.personId}` : '/regalos';
-  return ITEM_HREF[item.type];
-}
 
 /**
  * The CaptureBar with a chip chosen. Fields: `text`, `kind` (QUICK_KINDS, default 'auto'),

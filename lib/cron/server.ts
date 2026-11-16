@@ -4,6 +4,8 @@ import { isAllowedEmail } from '@/lib/auth/allowlist';
 import { revalidateUser } from '@/lib/cache/server';
 import { calendarGatewayFor } from '@/lib/calendar/server';
 import { createSupabaseItemsRepo } from '@/lib/db/items';
+import { createSupabasePeopleRepo } from '@/lib/db/people';
+import { createSupabaseResurfacingRepo } from '@/lib/db/resurfacing';
 import { createSupabasePhotosRepo } from '@/lib/db/photos';
 import { refreshMissingPreviews } from '@/lib/links/preview';
 import { serverPreviewFetcher } from '@/lib/links/server';
@@ -12,6 +14,9 @@ import { createSettingsRepo } from '@/lib/db/settings';
 import { buildDigestFor, buildWeekDigestFor } from '@/lib/digest/server';
 import { createSupabasePhotoStorage } from '@/lib/photos/storage';
 import { sendPush } from '@/lib/push/send';
+import { deliverBriefing, runResurfacing, type ResurfaceDeps } from '@/lib/resurfacing/run';
+import { createTelegramClient } from '@/lib/telegram/client';
+import { appUrlFromEnv, telegramFromEnv } from '@/lib/telegram/env';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { runMorning, type MorningResult } from './morning';
 
@@ -32,6 +37,19 @@ export async function morningRun(now = new Date()): Promise<MorningResult | { sk
   if (!userId) return { skipped: 'no_user' };
   const settingsRepo = createSettingsRepo(admin, userId);
   const items = createSupabaseItemsRepo(admin, { userId });
+  const subscriptions = () => createPushSubscriptionsRepo(admin, { userId }).list();
+  const tg = telegramFromEnv(process.env);
+  const resurfaceDeps = (): ResurfaceDeps => ({
+    now,
+    settings: settingsRepo,
+    items,
+    people: createSupabasePeopleRepo(admin, { userId }),
+    resurfacing: createSupabaseResurfacingRepo(admin, { userId }),
+    telegram: tg ? { client: createTelegramClient(tg.token), chatId: tg.chatId } : null,
+    appUrl: appUrlFromEnv(process.env),
+    subscriptions,
+    sendPush: (sub, payload) => sendPush(sub, payload),
+  });
   return runMorning({
     now,
     settings: settingsRepo,
@@ -39,8 +57,10 @@ export async function morningRun(now = new Date()): Promise<MorningResult | { sk
     calendar: () => calendarGatewayFor(userId),
     buildDigest: (date, settings) => buildDigestFor({ client: admin, userId, date, now, settings, settingsRepo }),
     buildWeekDigest: (weekStart, settings) => buildWeekDigestFor({ client: admin, userId, weekStart, now, settings, settingsRepo }),
-    subscriptions: () => createPushSubscriptionsRepo(admin, { userId }).list(),
+    subscriptions,
     sendPush: (sub, payload) => sendPush(sub, payload),
+    resurface: () => runResurfacing(resurfaceDeps()),
+    briefing: (digest) => deliverBriefing(resurfaceDeps(), digest),
     // Service role, scoped: rows by user_id, objects only under '{userId}/'.
     photos: createSupabasePhotosRepo(admin, { userId }),
     storage: createSupabasePhotoStorage(admin, { userId }),

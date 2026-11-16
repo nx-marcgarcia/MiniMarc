@@ -15,8 +15,10 @@ import { madridToUtc } from '@/lib/time';
 
 const TZ = 'Europe/Madrid';
 const DAY = 24 * 60 * 60 * 1000;
-const AT_8 = madridToUtc('2026-10-22', '08:00', TZ);
-const AT_7 = madridToUtc('2026-10-22', '07:00', TZ);
+/** Thursday 22 Oct 2026, 09:00 in Madrid: the briefing is due. */
+const AT_DUE = madridToUtc('2026-10-22', '09:00', TZ);
+/** The same day at 08:00: before the Mon-Fri 9:00-16:00 window, nothing goes out. */
+const AT_EARLY = madridToUtc('2026-10-22', '08:00', TZ);
 
 function item(over: Partial<Item>): Item {
   return {
@@ -64,8 +66,8 @@ function digest(over: Partial<Digest> = {}): Digest {
   return {
     date: '2026-10-22',
     events: [
-      { id: 'e1', title: 'SENTINELA_CITA reunión', startsAt: AT_8.toISOString(), endsAt: AT_8.toISOString() },
-      { id: 'e2', title: 'Dentista', startsAt: AT_8.toISOString(), endsAt: AT_8.toISOString() },
+      { id: 'e1', title: 'SENTINELA_CITA reunión', startsAt: AT_DUE.toISOString(), endsAt: AT_DUE.toISOString() },
+      { id: 'e2', title: 'Dentista', startsAt: AT_DUE.toISOString(), endsAt: AT_DUE.toISOString() },
     ],
     calendarError: null,
     tasks: {
@@ -85,7 +87,7 @@ function week(over: Partial<WeekDigest> = {}): WeekDigest {
     events: [] as WeekDigest['days'][number]['events'],
     tasks: [] as WeekDigest['days'][number]['tasks'],
   }));
-  days[0].events = [{ id: 'e1', title: 'SENTINELA_CITA', startsAt: AT_8.toISOString(), endsAt: AT_8.toISOString() }];
+  days[0].events = [{ id: 'e1', title: 'SENTINELA_CITA', startsAt: AT_DUE.toISOString(), endsAt: AT_DUE.toISOString() }];
   days[1].tasks = [{ item: item({ id: 't1', title: 'SENTINELA_TRABAJO', area: 'trabajo' }), overdue: false }];
   return {
     weekStart: '2026-10-26',
@@ -105,7 +107,7 @@ function week(over: Partial<WeekDigest> = {}): WeekDigest {
 
 function fakeSettings(initial: Partial<Settings> = {}, fail = false) {
   const state: Settings = {
-    digestHour: 8,
+    digestHour: 9,
     tz: TZ,
     lastDigestDate: '2026-10-21',
     headline: null,
@@ -173,7 +175,7 @@ function setup(opts: {
   calendarFail?: Error;
   storageFail?: boolean;
 } = {}) {
-  let now = opts.now ?? AT_8;
+  let now = opts.now ?? AT_DUE;
   const clock = () => now;
   const db = createMemoryBackend({ now: clock });
   const items = createItemsRepo(db, { now: clock });
@@ -199,7 +201,7 @@ function setup(opts: {
   };
   const invalidated: (readonly string[])[] = [];
   const deps: MorningDeps = {
-    now: opts.now ?? AT_8,
+    now: opts.now ?? AT_DUE,
     settings: settings.repo,
     items,
     calendar: async () => cal.gw,
@@ -233,7 +235,7 @@ function setup(opts: {
 
 describe('runMorning · resumen', () => {
   it('antes de la hora: no genera ni envía nada', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const r = await runMorning(t.deps);
     expect(r.digest).toBe('not_due');
     expect(t.built).toEqual([]);
@@ -297,8 +299,8 @@ describe('runMorning · resumen', () => {
 });
 
 describe('runMorning · resumen semanal', () => {
-  /** Monday 26 Oct 2026, 08:00 in Madrid (CET). */
-  const MON_8 = madridToUtc('2026-10-26', '08:00', TZ);
+  /** Monday 26 Oct 2026, 09:00 in Madrid (CET). */
+  const MON_9 = madridToUtc('2026-10-26', '09:00', TZ);
   /** Sunday 25 Oct 2026, 20:00 in Madrid (the day clocks go back). */
   const SUN_20 = madridToUtc('2026-10-25', '20:00', TZ);
 
@@ -309,8 +311,8 @@ describe('runMorning · resumen semanal', () => {
     expect(t.builtWeeks).toEqual([]);
   });
 
-  it('lunes 08:00: sale el diario y el semanal, cada uno con su etiqueta; guarda last_weekly_date', async () => {
-    const t = setup({ now: MON_8, settings: { lastDigestDate: '2026-10-25' } });
+  it('lunes 09:00: sale el diario y el semanal, cada uno con su etiqueta; guarda last_weekly_date', async () => {
+    const t = setup({ now: MON_9, settings: { lastDigestDate: '2026-10-25' } });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ digest: 'sent', pushed: 1, weekly: 'sent', weeklyPushed: 1 });
     expect(t.built).toEqual(['2026-10-26']);
@@ -318,36 +320,39 @@ describe('runMorning · resumen semanal', () => {
     expect(t.sent.map((s) => s.payload.tag)).toEqual(['digest-2026-10-22', 'weekly-2026-10-26']);
     expect(t.settings.state).toMatchObject({ lastDigestDate: '2026-10-26', lastWeeklyDate: '2026-10-26' });
 
-    // The 09:00 run sends neither again.
-    t.deps.now = new Date(MON_8.getTime() + 60 * 60 * 1000);
+    // The next run (half an hour later) sends neither again.
+    t.deps.now = new Date(MON_9.getTime() + 30 * 60 * 1000);
     const again = await runMorning(t.deps);
     expect(again).toMatchObject({ digest: 'not_due', weekly: 'not_due' });
     expect(t.sent).toHaveLength(2);
   });
 
-  it('domingo 20:00 con «Domingo»: resume la semana siguiente', async () => {
+  it('«Domingo» ya no manda nada el domingo por la tarde (fuera de la ventana): sale el lunes a las 9:00', async () => {
     const t = setup({ now: SUN_20, settings: { weeklyDigest: 'domingo', lastDigestDate: '2026-10-25' } });
-    const r = await runMorning(t.deps);
-    expect(r).toMatchObject({ digest: 'not_due', weekly: 'sent' });
+    expect((await runMorning(t.deps)).weekly).toBe('not_due');
+    expect(t.sent).toEqual([]);
+    t.deps.now = MON_9;
+    const monday = await runMorning(t.deps);
+    expect(monday).toMatchObject({ weekly: 'sent' });
     expect(t.builtWeeks).toEqual(['2026-10-26']);
-    expect(t.sent[0].payload.url).toBe('/semana?w=2026-10-26');
+    expect(t.sent.find((x) => x.payload.tag === 'weekly-2026-10-26')?.payload.url).toBe('/semana?w=2026-10-26');
   });
 
   it('desactivado: nada', async () => {
-    const t = setup({ now: MON_8, settings: { weeklyDigest: 'off' } });
+    const t = setup({ now: MON_9, settings: { weeklyDigest: 'off' } });
     expect((await runMorning(t.deps)).weekly).toBe('not_due');
     expect(t.builtWeeks).toEqual([]);
   });
 
-  it('si el semanal falla, el diario sale igual y la semana se reintenta la hora siguiente', async () => {
-    const t = setup({ now: MON_8, week: new Error('calendar down') });
+  it('si el semanal falla, el diario sale igual y la semana se reintenta en la pasada siguiente', async () => {
+    const t = setup({ now: MON_9, week: new Error('calendar down') });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ digest: 'sent', pushed: 1, weekly: 'failed', weeklyPushed: 0 });
     expect(t.settings.state.lastWeeklyDate).toBe('2026-10-19');
   });
 
   it('si no se puede guardar last_weekly_date, no envía (nunca un aviso por hora)', async () => {
-    const t = setup({ now: MON_8, settingsUpdateFail: ['lastWeeklyDate'] });
+    const t = setup({ now: MON_9, settingsUpdateFail: ['lastWeeklyDate'] });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ digest: 'sent', weekly: 'failed', weeklyPushed: 0 });
     expect(t.sent.map((s) => s.payload.title)).toEqual(['Hoy']);
@@ -438,7 +443,7 @@ describe('digestPayload', () => {
 
 describe('runMorning · mantenimiento', () => {
   it('reintenta la sincronización de una tarea pendiente con syncError', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const task = await t.create({ type: 'tarea', title: 'Llamar', dueAt: '2026-10-23T10:00:00Z', hasTime: true, syncError: 'calendar_unavailable' });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ synced: 1, syncFailed: 0 });
@@ -447,7 +452,7 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('borra el evento de una tarea hecha, archivada o eliminada (avisos huérfanos, I-3)', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const done = await t.create({ type: 'tarea', title: 'a', dueAt: '2026-10-23T10:00:00Z', hasTime: true, status: 'hecha', calendarEventId: 'ev-done' });
     const arch = await t.create({ type: 'tarea', title: 'b', dueAt: '2026-10-23T10:00:00Z', hasTime: true, archived: true, calendarEventId: 'ev-arch', syncError: 'calendar_unavailable' });
     const del = await t.create({ type: 'tarea', title: 'c', dueAt: '2026-10-23T10:00:00Z', hasTime: true, calendarEventId: 'ev-del', syncError: 'calendar_auth' });
@@ -464,7 +469,7 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('no borra el aviso de Calendar de un elemento de Sin clasificar sin evento (M-2)', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const cita = await t.create({ type: 'tarea', title: 'Dentista', dueAt: '2026-10-23T10:00:00Z', hasTime: true, needsReview: true, syncError: 'calendar_unavailable' });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ synced: 0, syncFailed: 0 });
@@ -472,7 +477,7 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('un elemento de Sin clasificar con evento sí se limpia (el evento se borra)', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const it = await t.create({ type: 'tarea', title: 'x', dueAt: '2026-10-23T10:00:00Z', hasTime: true, needsReview: true, calendarEventId: 'ev-r' });
     await runMorning(t.deps);
     expect(t.cal.deleted).toEqual(['ev-r']);
@@ -480,7 +485,7 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('si Calendar sigue fallando, deja el error guardado y lo cuenta', async () => {
-    const t = setup({ now: AT_7, calendarFail: new CalendarError('unavailable', '503') });
+    const t = setup({ now: AT_EARLY, calendarFail: new CalendarError('unavailable', '503') });
     await t.create({ type: 'tarea', title: 'a', dueAt: '2026-10-23T10:00:00Z', hasTime: true, syncError: 'calendar_auth' });
     const r = await runMorning(t.deps);
     expect(r).toMatchObject({ synced: 0, syncFailed: 1 });
@@ -488,7 +493,7 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it(`procesa como mucho ${MAINTENANCE_CAP} elementos por ejecución`, async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     for (let i = 0; i < MAINTENANCE_CAP + 5; i++) {
       await t.create({ type: 'tarea', title: `t${i}`, dueAt: '2026-10-23T10:00:00Z', hasTime: true, syncError: 'calendar_unavailable' });
     }
@@ -498,16 +503,16 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('purga lo eliminado hace más de 30 días, borrando antes su evento', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const old = await t.create({ type: 'idea', title: 'vieja' });
     const oldWithEvent = await t.create({ type: 'tarea', title: 'vieja con evento', dueAt: '2026-09-01T10:00:00Z', hasTime: true, calendarEventId: 'ev-old' });
     const recent = await t.create({ type: 'idea', title: 'reciente' });
-    t.setNow(new Date(AT_7.getTime() - 31 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 31 * DAY));
     await t.items.softDeleteItem(old.id);
     await t.items.softDeleteItem(oldWithEvent.id);
-    t.setNow(new Date(AT_7.getTime() - 29 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 29 * DAY));
     await t.items.softDeleteItem(recent.id);
-    t.setNow(AT_7);
+    t.setNow(AT_EARLY);
     const r = await runMorning(t.deps);
     expect(r.purged).toBe(2);
     expect(t.cal.deleted).toContain('ev-old');
@@ -515,17 +520,17 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('al purgar borra también las fotos del almacenamiento; el borrado suave las conserva', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const old = await t.create({ type: 'idea', title: 'vieja con fotos' });
     const recent = await t.create({ type: 'idea', title: 'reciente con foto' });
     await t.photos.addPhoto({ itemId: old.id, path: `u/${old.id}/a.webp`, width: 10, height: 10 });
     await t.photos.addPhoto({ itemId: old.id, path: `u/${old.id}/b.webp`, width: 10, height: 10 });
     await t.photos.addPhoto({ itemId: recent.id, path: `u/${recent.id}/c.webp`, width: 10, height: 10 });
-    t.setNow(new Date(AT_7.getTime() - 31 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 31 * DAY));
     await t.items.softDeleteItem(old.id);
-    t.setNow(new Date(AT_7.getTime() - 29 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 29 * DAY));
     await t.items.softDeleteItem(recent.id);
-    t.setNow(AT_7);
+    t.setNow(AT_EARLY);
     const r = await runMorning(t.deps);
     expect(r.purged).toBe(1);
     expect(t.removedObjects.sort()).toEqual([`u/${old.id}/a.webp`, `u/${old.id}/b.webp`]);
@@ -533,14 +538,14 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('si no se pueden borrar las fotos, no purga el elemento (se reintenta la próxima hora)', async () => {
-    const t = setup({ now: AT_7, storageFail: true });
+    const t = setup({ now: AT_EARLY, storageFail: true });
     const old = await t.create({ type: 'idea', title: 'vieja con foto' });
     const plain = await t.create({ type: 'idea', title: 'vieja sin foto' });
     await t.photos.addPhoto({ itemId: old.id, path: `u/${old.id}/a.webp`, width: 10, height: 10 });
-    t.setNow(new Date(AT_7.getTime() - 31 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 31 * DAY));
     await t.items.softDeleteItem(old.id);
     await t.items.softDeleteItem(plain.id);
-    t.setNow(AT_7);
+    t.setNow(AT_EARLY);
     const r = await runMorning(t.deps);
     expect(r.purged).toBe(1);
     expect(r.maintenanceFailed).toBe(true);
@@ -548,11 +553,11 @@ describe('runMorning · mantenimiento', () => {
   });
 
   it('no purga un elemento cuyo evento no se pudo borrar (se reintenta la próxima hora)', async () => {
-    const t = setup({ now: AT_7, calendarFail: new CalendarError('unavailable', '503') });
+    const t = setup({ now: AT_EARLY, calendarFail: new CalendarError('unavailable', '503') });
     const it_ = await t.create({ type: 'tarea', title: 'vieja', dueAt: '2026-09-01T10:00:00Z', hasTime: true, calendarEventId: 'ev-old' });
-    t.setNow(new Date(AT_7.getTime() - 31 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 31 * DAY));
     await t.items.softDeleteItem(it_.id);
-    t.setNow(AT_7);
+    t.setNow(AT_EARLY);
     const r = await runMorning(t.deps);
     expect(r.purged).toBe(0);
     expect(t.db.tables.items).toHaveLength(1);
@@ -619,11 +624,11 @@ describe('handleMorningRequest', () => {
 
 describe('runMorning invalida la caché del usuario', () => {
   it('tras el mantenimiento (sync, purga, previews) invalida items, calendario y ajustes', async () => {
-    const t = setup({ now: AT_7 });
+    const t = setup({ now: AT_EARLY });
     const old = await t.create({ type: 'idea', title: 'vieja' });
-    t.setNow(new Date(AT_7.getTime() - 31 * DAY));
+    t.setNow(new Date(AT_EARLY.getTime() - 31 * DAY));
     await t.items.softDeleteItem(old.id);
-    t.setNow(AT_7);
+    t.setNow(AT_EARLY);
     const r = await runMorning({ ...t.deps, refreshPreviews: async () => 1 });
     expect(r.purged).toBe(1);
     expect(r.previews).toBe(1);
@@ -634,5 +639,74 @@ describe('runMorning invalida la caché del usuario', () => {
     const t = setup({ digest: new Error('ai down'), storageFail: true });
     await runMorning(t.deps);
     expect(t.invalidated).toHaveLength(1);
+  });
+});
+
+describe('runMorning · resurfacing y Telegram', () => {
+  it('ejecuta el resurfacing en cada pasada y devuelve su resultado', async () => {
+    const t = setup();
+    let calls = 0;
+    t.deps.resurface = async () => (calls++, { timed: 1, reminder: 'sent' });
+    const r = await runMorning(t.deps);
+    expect(calls).toBe(1);
+    expect(r.resurfaced).toEqual({ timed: 1, reminder: 'sent' });
+  });
+
+  it('si el resurfacing falla, el resumen, el semanal y el mantenimiento siguen', async () => {
+    const t = setup({ now: madridToUtc('2026-10-26', '09:00', TZ), settings: { lastDigestDate: '2026-10-25' } });
+    const task = await t.create({ type: 'tarea', title: 'Llamar', dueAt: '2026-10-27T10:00:00Z', hasTime: true, syncError: 'calendar_unavailable' });
+    t.deps.resurface = async () => {
+      throw new Error('telegram down');
+    };
+    const r = await runMorning(t.deps);
+    expect(r).toMatchObject({ digest: 'sent', weekly: 'sent', synced: 1, resurfaced: null });
+    expect((await t.items.listItems()).find((i) => i.id === task.id)?.calendarEventId).toBe('ev-1');
+  });
+
+  it('el briefing sale también por Telegram, después de guardar la fecha', async () => {
+    const t = setup();
+    const order: string[] = [];
+    const update = t.settings.repo.update;
+    t.settings.repo.update = async (patch) => {
+      if ('lastDigestDate' in patch) order.push('guarda fecha');
+      return update(patch);
+    };
+    t.deps.briefing = async () => void order.push('telegram');
+    await runMorning(t.deps);
+    expect(order).toEqual(['guarda fecha', 'telegram']);
+  });
+
+  it('un fallo de Telegram no hace que el push se repita (la fecha ya está guardada)', async () => {
+    const t = setup();
+    t.deps.briefing = async () => {
+      throw new Error('telegram down');
+    };
+    expect((await runMorning(t.deps)).digest).toBe('sent');
+    t.deps.now = new Date(AT_DUE.getTime() + 30 * 60 * 1000);
+    expect((await runMorning(t.deps)).digest).toBe('not_due');
+    expect(t.sent.filter((x) => x.payload.tag?.startsWith('digest-'))).toHaveLength(1);
+  });
+
+  it('sin briefing por Telegram si el resumen no se pudo generar', async () => {
+    const t = setup({ digest: new Error('db down') });
+    let called = false;
+    t.deps.briefing = async () => void (called = true);
+    await runMorning(t.deps);
+    expect(called).toBe(false);
+  });
+
+  it('con Web Push apagado en Ajustes el resumen no sale por push pero se da por enviado', async () => {
+    const t = setup({ settings: { notifyPush: false } });
+    const r = await runMorning(t.deps);
+    expect(r).toMatchObject({ digest: 'sent', pushed: 0 });
+    expect(t.sent).toEqual([]);
+    expect(t.settings.state.lastDigestDate).toBe('2026-10-22');
+  });
+
+  it('un sábado no se envía ni el resumen ni nada: lo del fin de semana sale el lunes', async () => {
+    const t = setup({ now: madridToUtc('2026-10-24', '10:00', TZ) });
+    const r = await runMorning(t.deps);
+    expect(r).toMatchObject({ digest: 'not_due', weekly: 'not_due' });
+    expect(t.sent).toEqual([]);
   });
 });

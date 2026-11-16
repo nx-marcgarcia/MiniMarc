@@ -53,6 +53,15 @@ describe('resurfacing_events', () => {
     expect((await repo.sentSince(since.toISOString())).map((e) => e.subject)).toEqual(['item:new']);
   });
 
+  it('forget borra un aviso que no llegó a entregarse, para no bloquear ese item 7 días', async () => {
+    const { repo } = setup();
+    const e = await repo.record({ itemId: 'i1', subject: 'item:i1', kind: 'x', channel: 'telegram' });
+    await repo.forget(e.id);
+    expect(await repo.get(e.id)).toBeNull();
+    expect(await repo.sentSince('2026-01-01T00:00:00.000Z')).toEqual([]);
+    await expect(repo.forget(e.id)).resolves.toBeUndefined();
+  });
+
   it('countActions: cuántas veces se pospuso un subject', async () => {
     const { repo } = setup();
     for (let i = 0; i < 3; i++) {

@@ -1,46 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import { shouldSendDigest } from '@/lib/cron/shouldSendDigest';
+import { madridToUtc } from '@/lib/time';
 
 const TZ = 'Europe/Madrid';
-const s = (lastDigestDate: string | null, digestHour = 8) => ({ digestHour, tz: TZ, lastDigestDate });
+const s = (lastDigestDate: string | null, digestHour = 9, skipHolidays = true) => ({ digestHour, tz: TZ, lastDigestDate, skipHolidays });
+const at = (date: string, time: string) => madridToUtc(date, time);
 
-describe('shouldSendDigest', () => {
-  it('a las 08:00 de Madrid con digestHour=8 y sin enviar hoy → true', () => {
-    // 22 oct 2026: CEST (UTC+2) → 08:00 Madrid = 06:00 UTC.
-    expect(shouldSendDigest(new Date('2026-10-22T06:00:00Z'), s('2026-10-21'))).toBe(true);
-    expect(shouldSendDigest(new Date('2026-10-22T06:00:00Z'), s(null))).toBe(true);
+describe('shouldSendDigest: el briefing, de lunes a viernes desde las 9:00', () => {
+  it('un martes a las 9:00 de Madrid, sin enviar hoy → true', () => {
+    expect(shouldSendDigest(at('2026-11-17', '09:00'), s('2026-11-16'))).toBe(true);
+    expect(shouldSendDigest(at('2026-11-17', '09:00'), s(null))).toBe(true);
   });
 
   it('mismo día ya enviado → false', () => {
-    expect(shouldSendDigest(new Date('2026-10-22T06:00:00Z'), s('2026-10-22'))).toBe(false);
-    expect(shouldSendDigest(new Date('2026-10-22T09:00:00Z'), s('2026-10-22'))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-17', '09:00'), s('2026-11-17'))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-17', '12:00'), s('2026-11-17'))).toBe(false);
   });
 
-  it('a las 07:00 (y 07:59) → false', () => {
-    expect(shouldSendDigest(new Date('2026-10-22T05:00:00Z'), s('2026-10-21'))).toBe(false);
-    expect(shouldSendDigest(new Date('2026-10-22T05:59:00Z'), s('2026-10-21'))).toBe(false);
+  it('antes de las 9:00 no, aunque el ajuste antiguo dijera las 8', () => {
+    expect(shouldSendDigest(at('2026-11-17', '08:30'), s('2026-11-16', 8))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-17', '09:00'), s('2026-11-16', 8))).toBe(true);
   });
 
-  it('si la ejecución de las 08:00 falló, la de las 09:00 lo recupera', () => {
-    expect(shouldSendDigest(new Date('2026-10-22T07:00:00Z'), s('2026-10-21'))).toBe(true);
+  it('respeta una hora de briefing más tarde (11:00)', () => {
+    expect(shouldSendDigest(at('2026-11-17', '10:30'), s(null, 11))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-17', '11:00'), s(null, 11))).toBe(true);
   });
 
-  it('el día del cambio a horario de invierno (25 oct) dispara a las 08:00 locales (07:00 UTC)', () => {
-    expect(shouldSendDigest(new Date('2026-10-25T06:00:00Z'), s('2026-10-24'))).toBe(false);
-    expect(shouldSendDigest(new Date('2026-10-25T07:00:00Z'), s('2026-10-24'))).toBe(true);
+  it('si la pasada de las 9:00 falló, una posterior dentro de la ventana lo recupera; pasadas las 16:00 ya no', () => {
+    expect(shouldSendDigest(at('2026-11-17', '12:30'), s('2026-11-16'))).toBe(true);
+    expect(shouldSendDigest(at('2026-11-17', '16:00'), s('2026-11-16'))).toBe(false);
   });
 
-  it('el día del cambio a horario de verano (29 mar) dispara a las 08:00 locales (06:00 UTC)', () => {
-    expect(shouldSendDigest(new Date('2026-03-29T05:00:00Z'), s('2026-03-28'))).toBe(false);
-    expect(shouldSendDigest(new Date('2026-03-29T06:00:00Z'), s('2026-03-28'))).toBe(true);
+  it('un sábado o un domingo no se envía nada; lo del fin de semana sale el lunes', () => {
+    expect(shouldSendDigest(at('2026-11-21', '09:00'), s('2026-11-20'))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-22', '10:00'), s('2026-11-20'))).toBe(false);
+    expect(shouldSendDigest(at('2026-11-23', '09:00'), s('2026-11-20'))).toBe(true);
   });
 
-  it('usa la fecha local: a las 00:30 de Madrid (22:30 UTC del día anterior) es otro día', () => {
-    expect(shouldSendDigest(new Date('2026-10-21T22:30:00Z'), s('2026-10-21', 0))).toBe(true);
+  it('un festivo entre semana no se envía (o sí, si se apagó la opción)', () => {
+    expect(shouldSendDigest(at('2026-12-08', '09:00'), s('2026-12-07'))).toBe(false); // Inmaculada
+    expect(shouldSendDigest(at('2026-12-08', '09:00'), s('2026-12-07', 9, false))).toBe(true);
   });
 
-  it('respeta otra hora y otra zona', () => {
-    expect(shouldSendDigest(new Date('2026-10-22T10:00:00Z'), { digestHour: 6, tz: 'America/New_York', lastDigestDate: null })).toBe(true);
-    expect(shouldSendDigest(new Date('2026-10-22T09:00:00Z'), { digestHour: 6, tz: 'America/New_York', lastDigestDate: null })).toBe(false);
+  it('el lunes siguiente al cambio de hora (26 oct) y el del cambio a verano (30 mar) salen a las 9:00 locales', () => {
+    expect(shouldSendDigest(new Date('2026-10-26T07:30:00Z'), s('2026-10-23'))).toBe(false); // 08:30 CET
+    expect(shouldSendDigest(new Date('2026-10-26T08:00:00Z'), s('2026-10-23'))).toBe(true); // 09:00 CET
+    expect(shouldSendDigest(new Date('2026-03-30T06:30:00Z'), s('2026-03-27'))).toBe(false); // 08:30 CEST
+    expect(shouldSendDigest(new Date('2026-03-30T07:00:00Z'), s('2026-03-27'))).toBe(true); // 09:00 CEST
   });
 });

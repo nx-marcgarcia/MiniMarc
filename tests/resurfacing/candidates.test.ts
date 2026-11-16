@@ -90,6 +90,17 @@ describe('qué puede volver a salir', () => {
   });
 });
 
+describe('Abrir lleva a su pantalla', () => {
+  it('una tarea a Tareas, una idea a Ideas y la fecha de una persona a su ficha', () => {
+    const cs = find({ items: [tarea('t', { dueAt: ago(2) }), idea('i', { updatedAt: ago(50) })], upcoming: [upcoming(person('p1', 'Ana'), 3)] });
+    expect(Object.fromEntries(cs.map((c) => [c.kind, c.href]))).toEqual({
+      atrasada: '/tareas?area=personal',
+      regalo_sin_comprar: '/personas/p1',
+      idea_olvidada: '/ideas',
+    });
+  });
+});
+
 describe('qué nunca sale', () => {
   it('lo de Trabajo (tareas y personas): no viaja a Telegram', () => {
     const cs = find({
@@ -140,7 +151,7 @@ describe('orden: lo urgente primero, luego lo olvidado', () => {
 });
 
 describe('pickCandidate: mezcla tipos', () => {
-  const c = (kind: Candidate['kind'], subject: string, urgent = false): Candidate => ({ kind, subject, itemId: subject, urgent, rank: urgent ? 1 : 6, title: subject, detail: '', askArchive: false });
+  const c = (kind: Candidate['kind'], subject: string, urgent = false): Candidate => ({ kind, subject, itemId: subject, urgent, rank: urgent ? 1 : 6, title: subject, href: '/x', detail: '', askArchive: false });
 
   it('lo urgente va primero aunque se repita el tipo', () => {
     expect(pickCandidate([c('atrasada', 'a', true), c('idea_olvidada', 'b')], ['atrasada'])?.subject).toBe('a');

@@ -33,6 +33,8 @@ export interface ResurfacingRepo {
   setTelegramMessage(id: string, messageId: number): Promise<ResurfacingEvent>;
   /** Notices sent at or after this ISO instant, newest first. */
   sentSince(iso: string): Promise<ResurfacingEvent[]>;
+  /** Removes a notice that never got delivered (so the item can come up again). Never throws if it is already gone. */
+  forget(id: string): Promise<void>;
   /** How many times this subject got this action (3 postponements → ask to archive). */
   countActions(subject: string, action: ResurfaceAction): Promise<number>;
 }
@@ -85,6 +87,10 @@ export function createResurfacingRepo(backend: DbBackend, opts: { now?: () => Da
     async sentSince(iso) {
       const rows = await backend.select('resurfacing_events', { gte: { sent_at: iso } });
       return rows.map(rowToEvent).sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt));
+    },
+
+    async forget(id) {
+      await backend.remove('resurfacing_events', { eq: { id } });
     },
 
     async countActions(subject, action) {
