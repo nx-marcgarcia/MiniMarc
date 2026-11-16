@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DbBackend, Row, TableName, Where } from './backend';
+import { CONTENT_COLUMNS } from './contentColumns';
 
 function matches(row: Row, where: Where = {}): boolean {
   for (const [k, v] of Object.entries(where.eq ?? {})) if (row[k] !== v) return false;
@@ -35,12 +36,14 @@ export function createMemoryBackend(opts: { now?: () => Date } = {}): DbBackend 
     item_links: [],
     tags: [],
     capture_log: [],
+    resurfacing_events: [],
   };
 
   return {
     tables,
     async insert(table, row) {
-      const full: Row = { id: randomUUID(), created_at: now().toISOString(), ...row };
+      const created = now().toISOString();
+      const full: Row = { id: randomUUID(), created_at: created, ...(table === 'items' ? { updated_at: created } : {}), ...row };
       tables[table].push(full);
       return { ...full };
     },
@@ -50,7 +53,11 @@ export function createMemoryBackend(opts: { now?: () => Date } = {}): DbBackend 
     async update(table, id, patch) {
       const row = tables[table].find((r) => r.id === id);
       if (!row) throw new Error(`update ${table} ${id}: not found`);
+      // Mirrors the items_touch_updated_at trigger (0013): only content moves updated_at.
+      const touched =
+        table === 'items' && CONTENT_COLUMNS.some((c) => c in patch && JSON.stringify(patch[c]) !== JSON.stringify(row[c]));
       Object.assign(row, patch);
+      if (touched) row.updated_at = now().toISOString();
       return { ...row };
     },
     async remove(table, where) {

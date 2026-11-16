@@ -128,7 +128,10 @@ export function makeItem(over: Partial<Item> = {}): Item {
     completedAt: null,
     tags: [],
     suggestion: null,
+    snoozedUntil: null,
+    snoozeCount: 0,
     createdAt: '2026-10-01T10:00:00.000Z',
+    updatedAt: '2026-10-01T10:00:00.000Z',
     deletedAt: null,
     ...over,
   };

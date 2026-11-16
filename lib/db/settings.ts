@@ -10,6 +10,23 @@ export const WEEKLY_OPTIONS = ['lunes', 'domingo', 'off'] as const;
 export type WeeklyDigest = (typeof WEEKLY_OPTIONS)[number];
 export const DEFAULT_WEEKLY: WeeklyDigest = 'lunes';
 
+/** The three reminders inside the Mon-Fri 9:00-16:00 window (Ajustes lets Marc change them). */
+export const DEFAULT_REMINDER_TIMES = ['11:00', '13:30', '15:30'] as const;
+
+const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
+/** "9:5" is not a time, "9:05" is: valid ones as "HH:mm", sorted and unique; none valid = the defaults. */
+export function cleanTimes(raw: unknown): string[] {
+  const times = Array.isArray(raw)
+    ? raw.flatMap((t) => {
+        const m = typeof t === 'string' ? HHMM.exec(t.trim()) : null;
+        return m ? [`${m[1].padStart(2, '0')}:${m[2]}`] : [];
+      })
+    : [];
+  const unique = [...new Set(times)].sort();
+  return unique.length ? unique : [...DEFAULT_REMINDER_TIMES];
+}
+
 export interface Settings {
   digestHour: number;
   tz: string;
@@ -24,6 +41,15 @@ export interface Settings {
   /** Cached weekly AI line (one call per week) and the Monday it belongs to. */
   weekHeadline: string | null;
   weekHeadlineWeek: string | null;
+  /** Avisos (0013): by Web Push, by Telegram (only when the bot is configured). */
+  notifyPush: boolean;
+  notifyTelegram: boolean;
+  /** "HH:mm" in `tz`, sorted. Empty = no reminders (0013 not applied: nowhere to record what was sent). */
+  reminderTimes: string[];
+  /** No avisos on national and Comunidad Valenciana holidays. */
+  skipHolidays: boolean;
+  /** "YYYY-MM-DD HH:mm" of the last reminder slot sent, so a repeated cron run sends nothing twice. */
+  lastSlot: string | null;
 }
 
 export type SettingsPatch = Partial<Settings>;
@@ -44,9 +70,16 @@ const COLUMNS = {
   lastWeeklyDate: 'last_weekly_date',
   weekHeadline: 'last_week_headline',
   weekHeadlineWeek: 'last_week_headline_week',
+  notifyPush: 'notify_push',
+  notifyTelegram: 'notify_telegram',
+  reminderTimes: 'reminder_times',
+  skipHolidays: 'skip_holidays',
+  lastSlot: 'last_slot',
 } as const satisfies Record<keyof Settings, string>;
 
 const SELECT = Object.values(COLUMNS).join(', ');
+/** Columns before 0013_resurfacing.sql. */
+const SELECT_BEFORE_0013 = Object.values(COLUMNS).filter((c) => !c.startsWith('notify_') && !['reminder_times', 'skip_holidays', 'last_slot'].includes(c)).join(', ');
 /** Columns before 0007_weekly.sql: read when that migration is not applied yet. */
 const SELECT_BEFORE_0007 = ['digest_hour', 'tz', 'last_digest_date', 'last_digest_headline', 'last_digest_headline_date'].join(', ');
 
@@ -70,6 +103,12 @@ function rowToSettings(row: Record<string, unknown>): Settings {
     lastWeeklyDate: (row.last_weekly_date as string | null) ?? null,
     weekHeadline: (row.last_week_headline as string | null) ?? null,
     weekHeadlineWeek: (row.last_week_headline_week as string | null) ?? null,
+    // Without 0013 (no last_slot column) nothing may be sent: it could not be recorded.
+    notifyPush: row.notify_push === undefined ? true : Boolean(row.notify_push),
+    notifyTelegram: row.last_slot === undefined ? false : row.notify_telegram === undefined ? true : Boolean(row.notify_telegram),
+    reminderTimes: row.last_slot === undefined ? [] : cleanTimes(row.reminder_times),
+    skipHolidays: row.skip_holidays === undefined ? true : Boolean(row.skip_holidays),
+    lastSlot: (row.last_slot as string | null) ?? null,
   };
 }
 
@@ -84,7 +123,8 @@ export function defaultTz(): string {
 export function createSettingsRepo(client: SupabaseClient, userId: string): SettingsRepo {
   async function read(): Promise<Settings | null> {
     let res = await client.from('settings').select(SELECT).eq('user_id', userId).maybeSingle();
-    // 42703 = undefined column (0007_weekly.sql not applied yet).
+    // 42703 = undefined column: 0013 not applied yet, and then maybe 0007 neither.
+    if (res.error?.code === '42703') res = await client.from('settings').select(SELECT_BEFORE_0013).eq('user_id', userId).maybeSingle();
     if (res.error?.code === '42703') res = await client.from('settings').select(SELECT_BEFORE_0007).eq('user_id', userId).maybeSingle();
     if (res.error) throw new Error(`select settings: ${res.error.message}`);
     return res.data ? rowToSettings(res.data as unknown as Record<string, unknown>) : null;
@@ -103,7 +143,7 @@ export function createSettingsRepo(client: SupabaseClient, userId: string): Sett
     },
     async update(patch) {
       const row: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(patch)) if (v !== undefined) row[COLUMNS[k as keyof Settings]] = v;
+      for (const [k, v] of Object.entries(patch)) if (v !== undefined) row[COLUMNS[k as keyof Settings]] = k === 'reminderTimes' ? cleanTimes(v) : v;
       const res = await client.from('settings').update(row).eq('user_id', userId);
       if (res.error) throw new Error(`update settings: ${res.error.message}`);
     },
@@ -128,6 +168,11 @@ export async function loadSettingsOrDefaults(repo: SettingsRepo): Promise<{ sett
       lastWeeklyDate: null,
       weekHeadline: null,
       weekHeadlineWeek: null,
+      notifyPush: true,
+      notifyTelegram: false,
+      reminderTimes: [],
+      skipHolidays: true,
+      lastSlot: null,
     };
     return { settings, repo: { get: async () => settings, update: async () => {} } };
   }

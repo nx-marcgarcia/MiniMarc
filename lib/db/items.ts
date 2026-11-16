@@ -72,7 +72,10 @@ const COLUMNS = {
   completedAt: 'completed_at',
   tags: 'tags',
   suggestion: 'suggestion',
+  snoozedUntil: 'snoozed_until',
+  snoozeCount: 'snooze_count',
   createdAt: 'created_at',
+  updatedAt: 'updated_at',
   deletedAt: 'deleted_at',
 } as const satisfies Record<keyof Item, string>;
 
@@ -91,6 +94,9 @@ export function rowToItem(row: Row): Item {
   out.needsReview = Boolean(row.needs_review);
   out.confidence = row.confidence == null ? null : Number(row.confidence);
   out.pinned = Boolean(row.pinned);
+  // 0013: before it, an item was last touched when it was created; nothing was snoozed.
+  out.updatedAt = row.updated_at ?? row.created_at;
+  out.snoozeCount = Number(row.snooze_count ?? 0);
   out.data = row.data && typeof row.data === 'object' ? row.data : {};
   out.tags = Array.isArray(row.tags) ? row.tags : [];
   out.suggestion = row.suggestion && typeof row.suggestion === 'object' ? row.suggestion : null;
@@ -138,6 +144,7 @@ const OPTIONAL_FIELDS = [
   'remindAt',
   'completedAt',
   'suggestion',
+  'snoozedUntil',
 ] as const;
 
 function withoutEmptyOptionalFields(item: Partial<Item>): Partial<Item> {
@@ -146,6 +153,7 @@ function withoutEmptyOptionalFields(item: Partial<Item>): Partial<Item> {
   if (out.data && Object.keys(out.data).length === 0) delete out.data;
   if (out.tags?.length === 0) delete out.tags;
   if (out.pinned === false) delete out.pinned;
+  if (out.snoozeCount === 0) delete out.snoozeCount;
   if (out.archived === false) delete out.archived;
   return out;
 }
@@ -175,7 +183,7 @@ export function createItemsRepo(
         const [existing] = await backend.select('items', { eq: { id: opts.id } });
         if (existing) return rowToItem(existing);
       }
-      const full: Omit<Item, 'id' | 'createdAt' | 'deletedAt'> = {
+      const full: Omit<Item, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'> = {
         notes: null,
         area: null,
         dueAt: null,
@@ -204,6 +212,8 @@ export function createItemsRepo(
         archived: false,
         completedAt: null,
         tags: [],
+        snoozedUntil: null,
+        snoozeCount: 0,
         ...input,
       };
       // No link of its own but a URL in the title or notes: that URL is the link.

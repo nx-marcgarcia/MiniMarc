@@ -4,7 +4,7 @@ import type { Settings, SettingsRepo } from '@/lib/db/settings';
 import { cachedHeadlineOnly, noHeadline, weekHeadlineMode, withHeadlineCache } from '@/lib/digest/headlineCache';
 
 function setup(initial: Partial<Settings> = {}, reply: string | Error = 'Día de pan.') {
-  const state: Settings = { digestHour: 8, tz: 'Europe/Madrid', lastDigestDate: null, headline: null, headlineDate: null, weeklyDigest: 'lunes', lastWeeklyDate: null, weekHeadline: null, weekHeadlineWeek: null, ...initial };
+  const state: Settings = { digestHour: 8, tz: 'Europe/Madrid', lastDigestDate: null, headline: null, headlineDate: null, weeklyDigest: 'lunes', lastWeeklyDate: null, weekHeadline: null, weekHeadlineWeek: null, notifyPush: true, notifyTelegram: false, reminderTimes: [], skipHolidays: true, lastSlot: null, ...initial };
   const repo: SettingsRepo = {
     async get() {
       return { ...state };
@@ -75,7 +75,7 @@ describe('withHeadlineCache · semana', () => {
 });
 
 describe('cachedHeadlineOnly (GET /api/hoy, nunca gasta una llamada a la IA)', () => {
-  const base: Settings = { digestHour: 8, tz: 'Europe/Madrid', lastDigestDate: null, headline: null, headlineDate: null, weeklyDigest: 'lunes', lastWeeklyDate: null, weekHeadline: null, weekHeadlineWeek: null };
+  const base: Settings = { digestHour: 8, tz: 'Europe/Madrid', lastDigestDate: null, headline: null, headlineDate: null, weeklyDigest: 'lunes', lastWeeklyDate: null, weekHeadline: null, weekHeadlineWeek: null, notifyPush: true, notifyTelegram: false, reminderTimes: [], skipHolidays: true, lastSlot: null };
 
   it('devuelve el titular guardado de hoy', async () => {
     const ai = cachedHeadlineOnly('2026-10-22', { ...base, headline: 'Ya está', headlineDate: '2026-10-22' });

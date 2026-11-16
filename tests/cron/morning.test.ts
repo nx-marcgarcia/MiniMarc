@@ -51,7 +51,10 @@ function item(over: Partial<Item>): Item {
     completedAt: null,
     tags: [],
     suggestion: null,
+    snoozedUntil: null,
+    snoozeCount: 0,
     createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
     deletedAt: null,
     ...over,
   };
@@ -111,6 +114,11 @@ function fakeSettings(initial: Partial<Settings> = {}, fail = false) {
     lastWeeklyDate: '2026-10-19',
     weekHeadline: null,
     weekHeadlineWeek: null,
+    notifyPush: true,
+    notifyTelegram: false,
+    reminderTimes: [],
+    skipHolidays: true,
+    lastSlot: null,
     ...initial,
   };
   const repo: SettingsRepo = {

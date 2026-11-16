@@ -47,7 +47,10 @@ const item = (over: Partial<Item> = {}): Item => ({
   completedAt: null,
   tags: [],
   suggestion: null,
+  snoozedUntil: null,
+  snoozeCount: 0,
   createdAt: '2026-10-21T10:00:00.000Z',
+  updatedAt: '2026-10-21T10:00:00.000Z',
   deletedAt: null,
   ...over,
 });

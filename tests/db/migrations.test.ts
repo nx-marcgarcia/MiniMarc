@@ -279,3 +279,63 @@ describe('0012_captura.sql', () => {
     expect(s).not.toMatch(/add column (?!if not exists)/);
   });
 });
+
+describe('0013_resurfacing.sql', () => {
+  const s = sql('0013_resurfacing.sql');
+
+  it('items gana updated_at (con las filas existentes en created_at), snoozed_until y snooze_count', () => {
+    expect(s).toMatch(/alter table public\.items add column if not exists updated_at timestamptz;/);
+    expect(s).toMatch(/update public\.items set updated_at = created_at where updated_at is null;/);
+    expect(s).toMatch(/alter column updated_at set default now\(\);/);
+    expect(s).toMatch(/alter column updated_at set not null;/);
+    expect(s).toMatch(/add column if not exists snoozed_until timestamptz/);
+    expect(s).toMatch(/add column if not exists snooze_count int not null default 0/);
+  });
+
+  it('el trigger de updated_at solo mira las columnas de contenido (las mismas que el backend en memoria)', async () => {
+    const { CONTENT_COLUMNS } = await import('@/lib/db/contentColumns');
+    const fn = s.slice(s.indexOf('create or replace function private.items_touch_updated_at'), s.indexOf('drop trigger if exists items_touch_updated_at'));
+    const named = [...fn.matchAll(/new\.(\w+) is distinct from old\.\1/g)].map((m) => m[1]).sort();
+    expect(named).toEqual([...CONTENT_COLUMNS].sort());
+    // Lo técnico no mueve updated_at.
+    for (const col of ['calendar_event_id', 'sync_error', 'link_title', 'link_image', 'link_site', 'snoozed_until', 'snooze_count', 'deleted_at']) {
+      expect(fn).not.toContain(`new.${col}`);
+    }
+    expect(s).toMatch(/create trigger items_touch_updated_at\s+before update on public\.items\s+for each row execute function private\.items_touch_updated_at\(\);/);
+  });
+
+  it('crea resurfacing_events con los canales y las acciones permitidos y RLS de propietario', () => {
+    expect(s).toMatch(/create table if not exists public\.resurfacing_events \(/);
+    expect(s).toMatch(/channel\s+text not null check \(channel in \('telegram', 'push', 'web'\)\)/);
+    expect(s).toMatch(/action\s+text check \(action is null or action in \('hecho', 'posponer', 'archivar', 'abrir'\)\)/);
+    expect(s).toMatch(/item_id\s+uuid references public\.items\(id\) on delete cascade/);
+    expect(s).toMatch(/alter table public\.resurfacing_events enable row level security;/);
+    expect(s).toMatch(
+      /create policy resurfacing_events_owner on public\.resurfacing_events\s+for all to authenticated\s+using \(user_id = \(select auth\.uid\(\)\) and \(select private\.is_allowed_user\(\)\)\)\s+with check \(user_id = \(select auth\.uid\(\)\) and \(select private\.is_allowed_user\(\)\)\);/,
+    );
+  });
+
+  it('settings gana canales, horas de recordatorio (11:00, 13:30, 15:30), festivos y la última franja', () => {
+    expect(s).toMatch(/add column if not exists notify_push boolean not null default true/);
+    expect(s).toMatch(/add column if not exists notify_telegram boolean not null default true/);
+    expect(s).toMatch(/add column if not exists reminder_times text\[\] not null default '\{11:00,13:30,15:30\}'/);
+    expect(s).toMatch(/add column if not exists skip_holidays boolean not null default true/);
+    expect(s).toMatch(/add column if not exists last_slot text/);
+  });
+
+  it('pg_cron cada 30 minutos sobre el mismo trabajo y la misma ruta, sin horas fijas en UTC', () => {
+    expect(s).toMatch(/perform cron\.unschedule\('agente-resumen-manana'\)/);
+    expect(s).toMatch(/'agente-resumen-manana',\s+'\*\/30 \* \* \* \*'/);
+    expect(s).toContain("|| '/api/cron/morning'");
+    expect(s).toMatch(/decrypted_secrets where name = 'app_url'/);
+    expect(s).toMatch(/decrypted_secrets where name = 'cron_secret'/);
+  });
+
+  it('solo añade: nada se borra y todo es repetible', () => {
+    expect(s).not.toMatch(/\bdelete from\b|\bdrop table\b|\bdrop column\b|\btruncate\b/i);
+    expect(s).not.toMatch(/create (table|index) (?!if not exists)/);
+    expect(s).not.toMatch(/add column (?!if not exists)/);
+    expect(s).toMatch(/drop trigger if exists items_touch_updated_at/);
+    expect(s).toMatch(/drop policy if exists resurfacing_events_owner/);
+  });
+});

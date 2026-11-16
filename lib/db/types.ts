@@ -62,15 +62,21 @@ export interface Item {
   tags: string[];
   /** What the AI thinks a doubtful item (needsReview) is; the Bandeja offers to accept it. */
   suggestion: { type: ItemType; confidence: number } | null;
+  /** Posponer (0013): hasta esta fecha (ISO) el resurfacing no vuelve a sacar el item. */
+  snoozedUntil: string | null;
+  /** Cuántas veces se ha pospuesto; a la tercera la app pregunta si se archiva. */
+  snoozeCount: number;
   createdAt: string;
+  /** Last time the item's CONTENT changed (0013 trigger); calendar sync, previews and snoozing do not count. */
+  updatedAt: string;
   deletedAt: string | null;
 }
 
 /** Campos obligatorios: type y title; el resto toma valores por defecto. */
 export type NewItem = Pick<Item, 'type' | 'title'> &
-  Partial<Omit<Item, 'id' | 'type' | 'title' | 'createdAt' | 'deletedAt'>>;
+  Partial<Omit<Item, 'id' | 'type' | 'title' | 'createdAt' | 'updatedAt' | 'deletedAt'>>;
 
-export type ItemPatch = Partial<Omit<Item, 'id' | 'createdAt' | 'deletedAt'>>;
+export type ItemPatch = Partial<Omit<Item, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>>;
 
 export interface ItemFilter {
   type?: ItemType;
