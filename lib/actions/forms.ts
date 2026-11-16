@@ -77,6 +77,8 @@ export function dateFormError(fd: FormData): string | null {
 type FieldSpec = { key: string; kind: 'int' | 'money' | 'text'; error?: string };
 
 const PRICE_ERROR = 'El precio no es válido.';
+/** A repeating task counts its next date from its own: without one there is nothing to count from. */
+export const REPEAT_NEEDS_DATE = 'Para repetirla, la tarea necesita fecha.';
 
 /** The fields of each type the forms edit (the registry's schema is the real validator). */
 const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
@@ -90,6 +92,7 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
     { key: 'approxPrice', kind: 'money', error: PRICE_ERROR },
     { key: 'occasion', kind: 'text' },
   ],
+  tarea: [{ key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' }],
   libro: [
     { key: 'rating', kind: 'int', error: 'La valoración va de 1 a 5.' },
     { key: 'pages', kind: 'int', error: 'Las páginas no son válidas.' },
@@ -163,6 +166,7 @@ export function editPatchFromForm(
     if (!data.ok) return fail(data.error);
     if (JSON.stringify(data.value) !== JSON.stringify(opts.item.data)) patch.data = data.value;
   }
+  if (opts.type === 'tarea' && text(fd, 'recurrence') && !patch.dueAt) return fail(REPEAT_NEEDS_DATE);
   if (opts.reviewMode) patch.needsReview = false;
   return ok(patch);
 }

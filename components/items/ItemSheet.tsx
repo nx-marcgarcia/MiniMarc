@@ -11,6 +11,7 @@ import type { Area, Item, ItemType, Person } from '@/lib/db/types';
 import { originalText } from '@/lib/format';
 import { ITEM_TYPES } from '@/lib/items/itemTypes';
 import type { PhotoView } from '@/lib/photos/view';
+import { REPEAT_LABELS, REPEATS } from '@/lib/recurrence';
 import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
 
@@ -267,6 +268,17 @@ function ItemForm(props: ItemFormProps) {
             <label className="app-field">
               <span>Hora</span>
               <input className="app-input" type="time" name="dueTime" defaultValue={item?.hasTime ? due?.time : undefined} />
+            </label>
+            <label className="app-field">
+              <span>Repetir</span>
+              <select className="app-input" name="recurrence" defaultValue={own(item, 'recurrence')}>
+                <option value="">No se repite</option>
+                {REPEATS.map((r) => (
+                  <option key={r} value={r}>
+                    {REPEAT_LABELS[r]}
+                  </option>
+                ))}
+              </select>
             </label>
           </InsetList>
         </>

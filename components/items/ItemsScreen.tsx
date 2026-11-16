@@ -11,6 +11,7 @@ import type { Item, Person } from '@/lib/db/types';
 import { priceText } from '@/lib/compras';
 import { formatDue, TYPE_LABELS } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
+import { nextOccurrence } from '@/lib/tareas';
 import { ItemRow } from './ItemRow';
 import { ItemSheet, type NewItemDefaults, type SheetMode } from './ItemSheet';
 import { SwipeRow } from './SwipeRow';
@@ -129,8 +130,23 @@ export function ItemsScreen({
     });
   }
 
-  const complete = (item: Item) =>
+  /** A repeating task does not leave: its date moves on, and Deshacer puts the old date back. */
+  function repeatWith(item: Item, next: string) {
+    startTransition(async () => {
+      addOp({ kind: 'patch', id: item.id, patch: { dueAt: next } });
+      if (!(await run(() => toggleDone(item.id)))) return;
+      const { day, time } = formatDue({ dueAt: next, hasTime: item.hasTime }, today);
+      showToast(`Hecha. Próxima: ${[day, time].filter(Boolean).join(' a las ')}`, () =>
+        moveItem(item.id, { dueAt: item.dueAt, hasTime: item.hasTime }),
+      );
+    });
+  }
+
+  function complete(item: Item) {
+    const next = nextOccurrence(item, new Date());
+    if (next) return repeatWith(item, next);
     removeWith(item, () => toggleDone(item.id), 'Marcado como hecho', () => toggleDone(item.id));
+  }
   const archive = (item: Item) =>
     removeWith(item, () => moveItem(item.id, { archived: true }), 'Archivado', () =>
       moveItem(item.id, { archived: false }),

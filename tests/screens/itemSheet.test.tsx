@@ -148,3 +148,30 @@ test('el formulario manual de una compra nueva pide también sus campos propios'
   expect(fd.get('price')).toBe('3,5');
   expect(fd.get('type')).toBe('compra');
 });
+
+test('una tarea se puede repetir desde su hoja', async () => {
+  const { user } = renderScreen(screenUi());
+  await openRow(user);
+  await user.selectOptions(screen.getByLabelText('Repetir'), 'semanal');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ data: { recurrence: 'semanal' } });
+});
+
+test('repetir sin fecha avisa y no guarda', async () => {
+  const { user } = renderScreen(
+    <ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [makeItem({ dueAt: null })] }]} />,
+  );
+  await openRow(user);
+  await user.selectOptions(screen.getByLabelText('Repetir'), 'diaria');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  expect((await screen.findByRole('alert')).textContent).toMatch(/necesita fecha/);
+  expect(itemsActions.moveItem).not.toHaveBeenCalled();
+});
+
+test('una compra no enseña «Repetir»', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[]} newItem={{ type: 'compra', label: 'Nueva compra' }} />);
+  await user.click(screen.getByRole('button', { name: 'Nueva compra' }));
+  await screen.findByRole('dialog', { name: 'Nueva compra' });
+  expect(screen.queryByLabelText('Repetir')).toBeNull();
+});

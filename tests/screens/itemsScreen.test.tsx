@@ -90,3 +90,15 @@ test('una tarea nueva aparece en la sección que acepta nuevas, no en la primera
   expect(row.closest('section')?.textContent).toContain('Sin fecha');
   expect(screen.getByText('Llamar al médico').closest('section')?.textContent).not.toContain('Comprar pan');
 });
+
+test('completar una tarea que se repite no la quita: dice la próxima fecha y deshacer la devuelve a la anterior', async () => {
+  const repeating = makeItem({ id: 'r1', title: 'Regar las plantas', dueAt: '2099-10-25T10:00:00.000Z', data: { recurrence: 'semanal' } });
+  const { user } = renderScreen(<ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [repeating] }]} />);
+  await user.click(screen.getByRole('checkbox', { name: /Regar las plantas/ }));
+  expect(await screen.findByText(/^Hecha\. Próxima:/)).toBeTruthy();
+  expect(itemsActions.toggleDone).toHaveBeenCalledWith('r1');
+  expect(screen.getByRole('checkbox', { name: /Regar las plantas/ })).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Deshacer' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('r1', { dueAt: '2099-10-25T10:00:00.000Z', hasTime: false }));
+  expect(itemsActions.toggleDone).toHaveBeenCalledTimes(1);
+});

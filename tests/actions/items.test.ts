@@ -80,6 +80,17 @@ describe('/tareas', () => {
   });
 });
 
+describe('addItem de una tarea que se repite', () => {
+  it('guarda la repetición en sus campos', async () => {
+    const item = await actions.addItem(deps, form({ type: 'tarea', title: 'Regar', dueDate: '2026-10-22', recurrence: 'semanal' }));
+    expect(item.data).toEqual({ recurrence: 'semanal' });
+  });
+
+  it('sin fecha no se puede repetir', async () => {
+    await expect(actions.addItem(deps, form({ type: 'tarea', title: 'Regar', recurrence: 'semanal' }))).rejects.toThrow(/necesita fecha/);
+  });
+});
+
 describe('toggleDone', () => {
   it('alterna entre pendiente y hecha', async () => {
     const item = await actions.addItem(deps, form({ type: 'tarea', title: 'X' }));
@@ -89,6 +100,53 @@ describe('toggleDone', () => {
 
   it('lanza si el elemento no existe', async () => {
     await expect(actions.toggleDone(deps, 'nope')).rejects.toThrow();
+  });
+});
+
+describe('toggleDone de una tarea que se repite', () => {
+  // El reloj de los tests es el 2026-10-21 10:00 UTC.
+  const repeating = (dueDate: string, recurrence: string, dueTime = '09:30') =>
+    deps.items.createItem({
+      type: 'tarea',
+      title: 'Regar las plantas',
+      area: 'personal',
+      ...(dueTime ? { dueAt: new Date(`${dueDate}T${dueTime}:00+02:00`).toISOString(), hasTime: true } : {}),
+      data: { recurrence },
+    });
+
+  it('no se cierra: sigue pendiente y pasa a su siguiente fecha', async () => {
+    const item = await repeating('2026-10-21', 'semanal');
+    const done = await actions.toggleDone(deps, item.id, new Date('2026-10-21T10:00:00Z'));
+    expect(done.status).toBe('pendiente');
+    expect(done.completedAt).toBeNull();
+    // 09:30 en Madrid: el 25 de octubre cambia la hora, y la tarea sigue a las 09:30 locales.
+    expect(done.dueAt).toBe('2026-10-28T08:30:00.000Z');
+    expect(done.data.recurrence).toBe('semanal');
+  });
+
+  it('si se completa antes de tiempo, la siguiente cuenta desde su fecha, no desde hoy', async () => {
+    const item = await repeating('2026-10-22', 'semanal');
+    const done = await actions.toggleDone(deps, item.id, new Date('2026-10-21T10:00:00Z'));
+    expect(done.dueAt).toBe('2026-10-29T08:30:00.000Z');
+  });
+
+  it('si va con retraso, la siguiente es la primera que queda por delante', async () => {
+    const item = await repeating('2026-10-01', 'diaria');
+    const done = await actions.toggleDone(deps, item.id, new Date('2026-10-21T10:00:00Z'));
+    expect(done.dueAt).toBe('2026-10-22T07:30:00.000Z');
+  });
+
+  it('una repetición sin fecha no tiene de dónde contar: se completa como cualquier tarea', async () => {
+    const item = await deps.items.createItem({ type: 'tarea', title: 'Sin fecha', area: 'personal', data: { recurrence: 'diaria' } });
+    expect((await actions.toggleDone(deps, item.id)).status).toBe('hecha');
+  });
+
+  it('una tarea que ya estaba hecha se reabre (no se avanza)', async () => {
+    const item = await repeating('2026-10-21', 'diaria');
+    await deps.items.updateItem(item.id, { status: 'hecha' });
+    const reopened = await actions.toggleDone(deps, item.id, new Date('2026-10-21T10:00:00Z'));
+    expect(reopened.status).toBe('pendiente');
+    expect(reopened.dueAt).toBe(item.dueAt);
   });
 });
 

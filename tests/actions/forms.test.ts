@@ -125,6 +125,19 @@ describe('editPatchFromForm', () => {
     });
   });
 
+  it('una tarea que se repite necesita fecha', () => {
+    expect(editPatchFromForm(form({ title: 'Regar', recurrence: 'semanal' }), { type: 'tarea', area: 'personal' })).toEqual({
+      ok: false,
+      error: 'Para repetirla, la tarea necesita fecha.',
+    });
+    const r = editPatchFromForm(form({ title: 'Regar', recurrence: 'semanal', dueDate: '2026-10-22' }), {
+      type: 'tarea',
+      area: 'personal',
+      item: makeItem({ type: 'tarea', data: {} }),
+    });
+    expect(r).toMatchObject({ ok: true, value: { data: { recurrence: 'semanal' } } });
+  });
+
   it('título vacío → error', () => {
     expect(editPatchFromForm(form({ title: ' ' }), { type: 'idea', area: 'personal' })).toEqual({
       ok: false,
@@ -166,6 +179,12 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
   it('regalo: precio aproximado y ocasión', () => {
     expect(dataFromForm('regalo', form({ approxPrice: '30', occasion: ' Cumpleaños ' }), {})).toEqual({ ok: true, value: { approxPrice: 30, occasion: 'Cumpleaños' } });
     expect(dataFromForm('regalo', form({ approxPrice: 'x' }), {})).toEqual({ ok: false, error: 'El precio no es válido.' });
+  });
+
+  it('tarea: la repetición se guarda en sus campos y se puede quitar', () => {
+    expect(dataFromForm('tarea', form({ recurrence: 'semanal' }), {})).toEqual({ ok: true, value: { recurrence: 'semanal' } });
+    expect(dataFromForm('tarea', form({ recurrence: '' }), { recurrence: 'diaria', context: 'casa' })).toEqual({ ok: true, value: { context: 'casa' } });
+    expect(dataFromForm('tarea', form({ recurrence: 'cada_lustro' }), {})).toEqual({ ok: false, error: 'La repetición no es válida.' });
   });
 
   it('libro: valoración de 1 a 5 y páginas; no pierde la portada que ya tenía', () => {

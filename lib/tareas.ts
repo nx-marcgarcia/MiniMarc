@@ -4,6 +4,8 @@
  * added optimistically has a group to land in.
  */
 import type { Item } from '@/lib/db/types';
+import { isOpen } from '@/lib/items/itemTypes';
+import { isRepeat, nextDue } from '@/lib/recurrence';
 import { madridDateTime } from '@/lib/time';
 
 export type TaskGroupKey = 'atrasadas' | 'hoy' | 'manana' | 'semana' | 'despues' | 'sin-fecha';
@@ -44,4 +46,16 @@ export function groupTareas(items: Item[], today: string): TaskGroup[] {
   const groups = new Map<TaskGroupKey, Item[]>(ORDER.map((k) => [k, []]));
   for (const item of items) groups.get(groupOf(item, today))!.push(item);
   return ORDER.map((key) => ({ key, header: HEADERS[key], items: groups.get(key)! }));
+}
+
+/**
+ * A repeating task that is open and has a date: completing it moves it to this date (ISO) instead
+ * of closing it. null for anything else. Used by the server (toggleDone) and the screen (to show
+ * the row moving on at once), so both agree.
+ */
+export function nextOccurrence(item: Item, now: Date): string | null {
+  if (item.type !== 'tarea' || !item.dueAt || !isOpen(item) || !isRepeat(item.data.recurrence)) return null;
+  const due = new Date(item.dueAt);
+  // After the later of now and the due date: done early, the next one still counts from its date.
+  return nextDue(item.dueAt, item.data.recurrence, { after: due > now ? due : now, hasTime: item.hasTime });
 }

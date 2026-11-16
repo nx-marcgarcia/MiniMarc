@@ -14,6 +14,7 @@ import { LinkPreviewCard } from '@/components/links/LinkPreviewCard';
 import { LinkText } from '@/components/links/LinkText';
 import { InsetList, LargeTitle, Row, Switch, Toast, type ToastProps } from '@/components/ui';
 import type { MovePatch } from '@/lib/actions/items';
+import { nextOccurrence } from '@/lib/tareas';
 import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item, Person } from '@/lib/db/types';
 import { TYPE_LABELS } from '@/lib/format';
@@ -249,7 +250,12 @@ export function SearchScreen() {
         onClose={closeSheet}
         onCreate={(fd) => settle(() => addItem(fd), OFFLINE)}
         onSave={save}
-        onComplete={(i) => act(() => toggleDone(i.id), 'Marcado como hecho', () => toggleDone(i.id))}
+        onComplete={(i) =>
+          // A repeating task moves to its next date; undoing puts the old date back (toggling again would move it on twice).
+          nextOccurrence(i, new Date())
+            ? act(() => toggleDone(i.id), 'Hecha. Pasa a su próxima fecha', () => moveItem(i.id, { dueAt: i.dueAt, hasTime: i.hasTime }))
+            : act(() => toggleDone(i.id), 'Marcado como hecho', () => toggleDone(i.id))
+        }
         onArchive={(i) =>
           act(() => moveItem(i.id, { archived: true }), 'Archivado', () => moveItem(i.id, { archived: false }))
         }

@@ -9,8 +9,9 @@ import type { Area, Item, ItemPatch, ItemType, NewItem, Person } from '@/lib/db/
 import { completionStatus, defaultStatus, ITEM_TYPE_IDS } from '@/lib/items/itemTypes';
 import { READING_STATES } from '@/lib/libros';
 import { deriveLink } from '@/lib/links/linkify';
+import { nextOccurrence } from '@/lib/tareas';
 import { isValidDate, toDue } from '@/lib/time';
-import { dataFromForm, personProfileFromForm } from './forms';
+import { dataFromForm, personProfileFromForm, REPEAT_NEEDS_DATE } from './forms';
 import { UserError } from './result';
 
 /** Same shape as Tarea 7's `syncTaskEvent(item, gw)`. */
@@ -65,6 +66,7 @@ export function parseNewItem(fd: FormData): NewItem {
     ...due(field(fd, 'dueDate'), field(fd, 'dueTime')),
     origin: 'web',
   };
+  if (type === 'tarea' && field(fd, 'recurrence') && !item.dueAt) throw new UserError(REPEAT_NEEDS_DATE);
   const own = dataFromForm(type, fd, {});
   if (!own.ok) throw new UserError(own.error);
   if (Object.keys(own.value).length > 0) item.data = own.value;
@@ -157,8 +159,10 @@ export async function saveNewItem(deps: ActionDeps, fields: NewItem): Promise<It
   return afterWrite(deps, await deps.items.createItem(fields));
 }
 
-export async function toggleDone(deps: ActionDeps, id: string): Promise<Item> {
+export async function toggleDone(deps: ActionDeps, id: string, now: Date = new Date()): Promise<Item> {
   const item = await findItem(deps, id);
+  const next = nextOccurrence(item, now);
+  if (next) return afterWrite(deps, await deps.items.updateItem(id, { dueAt: next }));
   // Complete ⇄ reopen: the state the type's check sets (tarea: hecha, compra: comprado, libro: leido…)
   // and the type's initial one.
   const status = item.status === completionStatus(item.type) ? defaultStatus(item.type) : completionStatus(item.type);
