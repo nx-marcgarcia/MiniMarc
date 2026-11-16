@@ -1,5 +1,7 @@
 /** Real wiring for /api/telegram/webhook: service-role repos scoped to Marc (single user). Server only. */
 import { UserError } from '@/lib/actions/result';
+import { calendarGatewayFor } from '@/lib/calendar/server';
+import { taskSyncHook } from '@/lib/calendar/taskSync';
 import { revalidateUser } from '@/lib/cache/server';
 import { WRITES } from '@/lib/cache/tags';
 import { resolveUserId } from '@/lib/cron/server';
@@ -33,6 +35,7 @@ export function webhookDeps(): WebhookDeps {
           resurfacing: createSupabaseResurfacingRepo(admin, { userId: id }),
           now: () => new Date(),
           tz: process.env.APP_TZ || DEFAULT_TZ,
+          sync: taskSyncHook(() => calendarGatewayFor(id)),
         },
         eventId,
         action,

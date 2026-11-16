@@ -2428,3 +2428,39 @@ a.app-enlace__title:focus-visible {
   text-decoration: line-through;
   opacity: 0.6;
 }
+
+/* Hoy: «Para hoy» (components/hoy/ParaHoy.tsx) */
+.app-resurface {
+  align-items: flex-start;
+  padding-block: 10px;
+}
+
+.app-resurface__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-resurface__title {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.app-resurface__meta {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.app-resurface__ask {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.app-resurface__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}

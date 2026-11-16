@@ -10,7 +10,7 @@ import { madridToUtc } from '@/lib/time';
 
 const NOW = madridToUtc('2026-11-17', '11:00'); // martes
 
-function setup() {
+function setup(sync?: ActDeps['sync']) {
   const backend = createMemoryBackend({ now: () => NOW });
   const deps: ActDeps = {
     items: createItemsRepo(backend, { now: () => NOW }),
@@ -18,6 +18,7 @@ function setup() {
     resurfacing: createResurfacingRepo(backend, { now: () => NOW }),
     now: () => NOW,
     tz: 'Europe/Madrid',
+    sync,
   };
   return deps;
 }
@@ -93,6 +94,50 @@ describe('Posponer 1 semana', () => {
     const out = await actOnEvent(deps, (await sent(deps, null, 'date:p1:2026-11-20')).id, 'posponer');
     expect(out.message).toBe('Te lo recuerdo más adelante');
     expect(out.event.action).toBe('posponer');
+  });
+});
+
+describe('Google Calendar', () => {
+  const syncSpy = () => {
+    const seen: { title: string; dueAt: string | null; archived: boolean }[] = [];
+    const sync: ActDeps['sync'] = async (item) => {
+      seen.push({ title: item.title, dueAt: item.dueAt, archived: item.archived });
+      return { eventId: 'ev-1', error: null };
+    };
+    return { seen, sync };
+  };
+
+  it('posponer una tarea con hora mueve también su evento (con la fecha nueva)', async () => {
+    const { seen, sync } = syncSpy();
+    const deps = setup(sync);
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Llamar', area: 'personal', dueAt: madridToUtc('2026-11-10', '09:30').toISOString(), hasTime: true, calendarEventId: 'ev-1' });
+    await actOnEvent(deps, (await sent(deps, t.id)).id, 'posponer');
+    expect(seen).toEqual([{ title: 'Llamar', dueAt: madridToUtc('2026-11-24', '09:30').toISOString(), archived: false }]);
+  });
+
+  it('archivar una tarea con evento lo avisa para que se quite', async () => {
+    const { seen, sync } = syncSpy();
+    const deps = setup(sync);
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Llamar', area: 'personal', dueAt: madridToUtc('2026-11-20', '09:30').toISOString(), hasTime: true, calendarEventId: 'ev-1' });
+    await actOnEvent(deps, (await sent(deps, t.id)).id, 'archivar');
+    expect(seen).toHaveLength(1);
+    expect(seen[0].archived).toBe(true);
+  });
+
+  it('hecho también pasa por la sincronización', async () => {
+    const { seen, sync } = syncSpy();
+    const deps = setup(sync);
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Llamar', area: 'personal', dueAt: madridToUtc('2026-11-20', '09:30').toISOString(), hasTime: true, calendarEventId: 'ev-1' });
+    await actOnEvent(deps, (await sent(deps, t.id)).id, 'hecho');
+    expect(seen).toHaveLength(1);
+  });
+
+  it('un fallo de Calendar no hace fallar la acción', async () => {
+    const deps = setup(async () => {
+      throw new Error('calendar down');
+    });
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Llamar', area: 'personal', dueAt: madridToUtc('2026-11-10', '09:30').toISOString(), hasTime: true, calendarEventId: 'ev-1' });
+    await expect(actOnEvent(deps, (await sent(deps, t.id)).id, 'posponer')).resolves.toMatchObject({ message: 'Pospuesto una semana' });
   });
 });
 

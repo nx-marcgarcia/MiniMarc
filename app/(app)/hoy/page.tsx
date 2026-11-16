@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { HoyScreen } from '@/components/hoy/HoyScreen';
 import { HoyFallback } from '@/components/items/ScreenFallback';
-import { readHoy } from '@/lib/cache/reads';
+import { readHoy, readParaHoy } from '@/lib/cache/reads';
 import type { Settings } from '@/lib/db/settings';
 import { FALLBACK_HEADLINE, generateHeadline } from '@/lib/digest/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
@@ -18,7 +18,7 @@ export default function HoyPage() {
 }
 
 async function Hoy() {
-  const { digest, headlinePrompt, settings } = await readHoy();
+  const [{ digest, headlinePrompt, settings }, paraHoy] = await Promise.all([readHoy(), readParaHoy().catch(() => [])]);
   // The AI line never holds the page: it streams in on its own when it is not cached yet.
   const headline = headlinePrompt ? (
     <Suspense fallback={<span className="app-headline-pending" aria-hidden />}>
@@ -26,7 +26,7 @@ async function Hoy() {
     </Suspense>
   ) : undefined;
   return (
-    <HoyScreen digest={digest} headline={headline} tz={settings.tz} vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ''} />
+    <HoyScreen digest={digest} headline={headline} tz={settings.tz} vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ''} paraHoy={paraHoy} />
   );
 }
 

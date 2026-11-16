@@ -4,7 +4,7 @@
  * failure can be retried; a notice already acted on is a no-op (a double tap, or Telegram resending).
  */
 import { UserError } from '@/lib/actions/result';
-import { toggleDone } from '@/lib/actions/items';
+import { afterWrite, toggleDone, type ActionDeps } from '@/lib/actions/items';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo } from '@/lib/db/people';
 import type { ResurfaceAction, ResurfacingEvent, ResurfacingRepo } from '@/lib/db/resurfacing';
@@ -19,6 +19,8 @@ export interface ActDeps {
   resurfacing: ResurfacingRepo;
   now: () => Date;
   tz: string;
+  /** Timed tasks ↔ the "Tareas" calendar: a moved date or an archived task updates its event. */
+  sync?: ActionDeps['sync'];
 }
 
 export interface ActOutcome {
@@ -45,7 +47,7 @@ async function find(deps: ActDeps, id: string): Promise<Item> {
 
 async function done(deps: ActDeps, item: Item): Promise<string> {
   if (!isOpen(item)) return 'Ya estaba cerrado';
-  const after = await toggleDone({ items: deps.items, people: deps.people }, item.id, deps.now());
+  const after = await toggleDone({ items: deps.items, people: deps.people, sync: deps.sync }, item.id, deps.now());
   // A repeating task is still open: it moved on to its next date.
   if (isOpen(after) && after.dueAt !== item.dueAt) return 'Hecha. Pasa a su próxima fecha';
   const label = ITEM_TYPES[item.type].states.find((s) => s.id === completionStatus(item.type))?.label ?? 'Hecho';
@@ -63,7 +65,7 @@ async function snooze(deps: ActDeps, item: Item): Promise<string> {
   } else {
     patch.snoozedUntil = new Date(now.getTime() + SNOOZE_DAYS * DAY).toISOString();
   }
-  await deps.items.updateItem(item.id, patch);
+  await afterWrite(deps, await deps.items.updateItem(item.id, patch));
   return 'Pospuesto una semana';
 }
 
@@ -81,7 +83,7 @@ async function perform(deps: ActDeps, event: ResurfacingEvent, action: Resurface
     if (action === 'hecho') message = await done(deps, item);
     else if (action === 'posponer') message = await snooze(deps, item);
     else if (action === 'archivar') {
-      await deps.items.updateItem(item.id, { archived: true });
+      await afterWrite(deps, await deps.items.updateItem(item.id, { archived: true }));
       message = 'Archivado';
     } else message = '';
   }
@@ -96,7 +98,7 @@ export async function actOnEvent(deps: ActDeps, eventId: string, action: Resurfa
 }
 
 /** A button of "Para hoy" (web): nothing was sent, so the notice is recorded now, on the web channel. */
-export async function actOnCandidate(deps: ActDeps, c: Candidate, action: ResurfaceAction): Promise<ActOutcome> {
+export async function actOnCandidate(deps: ActDeps, c: Pick<Candidate, 'subject' | 'itemId' | 'kind'>, action: ResurfaceAction): Promise<ActOutcome> {
   const event = await deps.resurfacing.record({ itemId: c.itemId, subject: c.subject, kind: c.kind, channel: 'web' });
   return perform(deps, event, action);
 }

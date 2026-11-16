@@ -128,7 +128,7 @@ async function findItem(deps: ActionDeps, id: string): Promise<Item> {
  * Never throws: the item write has already happened, so a sync failure (or failing to store
  * its result) must not turn it into a reported failure, which would invite a duplicate.
  */
-async function afterWrite(deps: ActionDeps, item: Item): Promise<Item> {
+export async function afterWrite(deps: Pick<ActionDeps, 'items' | 'sync'>, item: Item): Promise<Item> {
   if (!deps.sync) return item;
   let fields: Pick<Item, 'calendarEventId' | 'syncError'>;
   try {

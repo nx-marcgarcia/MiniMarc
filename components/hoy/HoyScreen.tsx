@@ -7,6 +7,8 @@ import { formatDay, formatDue } from '@/lib/format';
 import { yearsText } from '@/lib/people/format';
 import { RECONNECT_HREF } from '@/lib/nav';
 import { formatLongDate, madridDateTime, madridToUtc } from '@/lib/time';
+import type { Candidate } from '@/lib/resurfacing/candidates';
+import { ParaHoy } from './ParaHoy';
 import { PushButton } from './PushButton';
 
 export type HoyScreenProps = {
@@ -16,6 +18,8 @@ export type HoyScreenProps = {
   tz: string;
   /** VAPID public key (server env); empty hides "Activar notificaciones". */
   vapidPublicKey: string;
+  /** What the brain would bring back now (the block at the top); none hides it. */
+  paraHoy?: Candidate[];
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,7 +82,7 @@ function dateRow(d: DigestDate, today: string) {
 }
 
 /** The morning digest as a screen: readable in ~20 s, one calm section per area. */
-export function HoyScreen({ digest, headline, tz, vapidPublicKey }: HoyScreenProps) {
+export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }: HoyScreenProps) {
   const today = digest.date;
   const longDate = formatLongDate(madridToUtc(today, '12:00', tz), tz);
 
@@ -90,6 +94,8 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey }: HoyScreenPro
         <p className="app-hoy__date">{longDate.charAt(0).toUpperCase() + longDate.slice(1)}</p>
         <p className="app-hoy__headline">{headline ?? digest.headline}</p>
       </div>
+
+      <ParaHoy candidates={paraHoy} />
 
       <Section
         header="Citas de hoy"

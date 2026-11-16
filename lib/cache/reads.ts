@@ -27,9 +27,13 @@ import type { CalendarEvent } from '@/lib/calendar/client';
 import { calendarGatewayFor } from '@/lib/calendar/server';
 import { toSyncError, type SyncErrorCode } from '@/lib/calendar/taskSync';
 import { createSettingsRepo, loadSettingsOrDefaults } from '@/lib/db/settings';
+import { createSupabaseItemsRepo } from '@/lib/db/items';
 import { createSupabaseLinksRepo } from '@/lib/db/links';
+import { createSupabasePeopleRepo } from '@/lib/db/people';
 import { createSupabaseStoresRepo } from '@/lib/db/stores';
 import { toCards } from '@/lib/enlaces';
+import { DATE_WINDOW_DAYS, findCandidates } from '@/lib/resurfacing/candidates';
+import { pickForToday } from '@/lib/resurfacing/today';
 import { isOpen } from '@/lib/items/itemTypes';
 import type { Area, ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
@@ -266,6 +270,22 @@ export async function readHoy() {
   const date = toMadrid(now, settings.tz).date;
   const { digest, headlinePrompt } = await buildDigestDeferred({ client, userId: user.id, date, now, settings });
   return { digest, headlinePrompt, settings };
+}
+
+/** "Para hoy": what the brain would bring back right now (a few, urgent first), for the top of Hoy. */
+export async function readParaHoy() {
+  'use cache: private';
+  cacheLife('userData');
+  const { user, client, settings } = await sessionSettings();
+  tagUserData(user.id, ['items', 'people']);
+  const now = new Date();
+  const today = toMadrid(now, settings.tz).date;
+  const [items, upcoming] = await Promise.all([
+    createSupabaseItemsRepo(client).listItems(),
+    createSupabasePeopleRepo(client).upcomingDates(today, DATE_WINDOW_DAYS),
+  ]);
+  // `sent: []`: the block shows what is pending, also what a Telegram notice already mentioned.
+  return pickForToday(findCandidates({ now, tz: settings.tz, items, upcoming, sent: [] }));
 }
 
 /** The week of `w` (any day of it; default this week), without waiting on the AI. */
