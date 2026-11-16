@@ -15,7 +15,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
 1. Entra en https://supabase.com y crea una cuenta.
 2. Pulsa **New project**. Elige la organización, un nombre (por ejemplo `agente-personal`), una contraseña para la base de datos (guárdala) y una región UE: **West EU (Paris)** (`eu-west-3`) o **Central EU (Frankfurt)** (`eu-central-1`). Plan: **Free**.
 3. Espera a que el proyecto termine de crearse.
-4. Aplica el esquema: las trece migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
+4. Aplica el esquema: las catorce migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
 
    | # | Archivo | Qué hace | Sección |
    |---|---|---|---|
@@ -32,6 +32,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | 11 | `0011_segundo_cerebro.sql` | Tablas `stores`, `item_links` y `tags`; columnas nuevas en `items` y `people`; quita los CHECK de `type` y `status`. **Aplícala antes de desplegar el código de la fase 1.** Después, ver `docs/migracion.md` para migrar tus datos | — |
    | 12 | `0012_captura.sql` | `items.suggestion` (lo que la IA cree de un item dudoso) y la tabla `capture_log` (texto original, salida del modelo, items creados y tus correcciones). Solo añade; sin ella la app funciona (el registro falla en silencio y no hay sugerencias) | — |
    | 13 | `0013_resurfacing.sql` | Fase 4: `items.updated_at` (con un trigger que solo mueve el contenido), `items.snoozed_until` y `snooze_count`, la tabla `resurfacing_events` (cada aviso enviado y qué hiciste), los ajustes de avisos en `settings` y el trabajo de `pg_cron`, que pasa a correr **cada 30 minutos**. Solo añade y se puede repetir. **Aplícala antes de desplegar el código de la fase 4**: hasta entonces el resurfacing y Telegram no envían nada | 7 y 14 |
+   | 14 | `0014_proyectos.sql` | Reformulación: la tabla `projects` (nombre, área, estado activo / en pausa / terminado, notas, fecha límite) y `items.project_id` (se suelta, nunca se borra el item, al borrar un proyecto). Solo añade y se puede repetir. Sin ella la app funciona igual y la pantalla **Proyectos** avisa de que falta | 7 |
 
    Hay dos formas de aplicarlas:
    - **Editor SQL (sin CLI):** abre **SQL Editor → New query**, pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**. Repite con cada archivo siguiente, en orden, cada uno en una consulta nueva.

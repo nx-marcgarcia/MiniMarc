@@ -51,6 +51,8 @@ export interface Item {
   /** Fields of the item's type (0011), validated by the registry: `ITEM_TYPES[type].fields`. */
   data: Record<string, unknown>;
   storeId: string | null;
+  /** The project it belongs to (0014); null when none or before the migration. */
+  projectId: string | null;
   priority: Priority | null;
   /** ISO 8601 (UTC). */
   remindAt: string | null;

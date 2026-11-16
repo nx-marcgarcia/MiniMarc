@@ -6,6 +6,7 @@ import type { DbBackend } from '@/lib/db/backend';
 import { rowToItem } from '@/lib/db/items';
 import { rowToLink, type ItemLink } from '@/lib/db/links';
 import { rowToPerson, rowToPersonDate } from '@/lib/db/people';
+import { rowToProject, type Project } from '@/lib/db/projects';
 import { rowToStore, type Store } from '@/lib/db/stores';
 import { rowToTag, type Tag } from '@/lib/db/tags';
 import { rowToPhoto, type ItemPhoto } from '@/lib/db/photos';
@@ -43,6 +44,8 @@ export interface ExportData {
   /** Previews included; one row per link of an item. */
   itemLinks: ItemLink[];
   tags: Tag[];
+  /** 0014; empty before it. */
+  projects: Project[];
   settings: ExportSettings | null;
   apiTokens: ExportToken[];
 }
@@ -73,6 +76,7 @@ export const CSV_COLUMNS = [
   'location',
   'data',
   'storeId',
+  'projectId',
   'priority',
   'remindAt',
   'pinned',
@@ -132,6 +136,7 @@ function clean(data: ExportData): ExportData {
       position,
     })),
     tags: data.tags.map(({ id, name, color }) => ({ id, name, color })),
+    projects: data.projects.map(({ id, name, area, status, notes, dueDate, createdAt, updatedAt }) => ({ id, name, area, status, notes, dueDate, createdAt, updatedAt })),
     settings: data.settings && { digestHour: data.settings.digestHour, tz: data.settings.tz, weeklyDigest: data.settings.weeklyDigest },
     apiTokens: data.apiTokens.map(({ name, createdAt, revokedAt }) => ({ name, createdAt, revokedAt })),
   };
@@ -168,7 +173,7 @@ async function orEmpty<T>(what: string, read: () => Promise<T>, empty: T): Promi
 
 export async function collectExport(deps: CollectDeps): Promise<ExportData> {
   const { backend } = deps;
-  const [items, people, personDates, photos, stores, itemLinks, tags, settings, tokens] = await Promise.all([
+  const [items, people, personDates, photos, stores, itemLinks, tags, projects, settings, tokens] = await Promise.all([
     backend
       .select('items')
       .then((rows) =>
@@ -182,6 +187,7 @@ export async function collectExport(deps: CollectDeps): Promise<ExportData> {
     orEmpty('stores', async () => (await backend.select('stores')).map(rowToStore), [] as Store[]),
     orEmpty('item_links', async () => (await backend.select('item_links')).map(rowToLink), [] as ItemLink[]),
     orEmpty('tags', async () => (await backend.select('tags')).map(rowToTag), [] as Tag[]),
+    orEmpty('projects', async () => (await backend.select('projects')).map(rowToProject), [] as Project[]),
     orEmpty<ExportSettings | null>('settings', deps.settings, null),
     orEmpty('api_tokens', deps.tokens, [] as ExportToken[]),
   ]);
@@ -194,6 +200,7 @@ export async function collectExport(deps: CollectDeps): Promise<ExportData> {
     stores,
     itemLinks,
     tags,
+    projects,
     settings: settings && { digestHour: settings.digestHour, tz: settings.tz, weeklyDigest: settings.weeklyDigest },
     apiTokens: tokens.map(({ name, createdAt, revokedAt }) => ({ name, createdAt, revokedAt })),
   };

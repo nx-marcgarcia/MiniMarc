@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createMemoryBackend } from '@/lib/db/memory';
 import { createLinksRepo } from '@/lib/db/links';
+import { createProjectsRepo } from '@/lib/db/projects';
 import { createStoresRepo } from '@/lib/db/stores';
 import { createTagsRepo } from '@/lib/db/tags';
 import { createItemsRepo } from '@/lib/db/items';
@@ -40,6 +41,7 @@ const item = (over: Partial<Item> = {}): Item => ({
   location: null,
   data: {},
   storeId: null,
+  projectId: null,
   priority: null,
   remindAt: null,
   pinned: false,
@@ -64,6 +66,7 @@ const data = (over: Partial<ExportData> = {}): ExportData => ({
   stores: [],
   itemLinks: [],
   tags: [],
+  projects: [],
   settings: null,
   apiTokens: [],
   ...over,
@@ -220,6 +223,7 @@ describe('collectExport', () => {
     await createStoresRepo(backend).upsertStoreByName('Casio', { domain: 'casio.com' });
     await createLinksRepo(backend).addLink(casio.id, { url: 'https://www.casio.com/es/x', title: 'Casio' });
     await createTagsRepo(backend).upsertTagByName('reloj', '#336699');
+    await createProjectsRepo(backend).createProject({ name: 'Viaje a Japón', area: 'personal' });
 
     const out = await collectExport({
       backend,
@@ -232,13 +236,14 @@ describe('collectExport', () => {
     expect(out.people[0]).toMatchObject({ alias: ['papá'], relation: 'familia', likes: 'relojes' });
     const json = JSON.parse(serializeExport(out, 'json'));
     expect(json.stores[0].domain).toBe('casio.com');
+    expect(json.projects).toEqual([expect.objectContaining({ name: 'Viaje a Japón', status: 'activo', area: 'personal' })]);
     expect(json.itemLinks).toHaveLength(1);
     expect(json.people[0].alias).toEqual(['papá']);
   });
 
   it('una parte opcional que falla (migración sin aplicar) queda vacía', async () => {
     const backend = createMemoryBackend();
-    const failing = { ...backend, select: async (t: string, w?: never) => { if (['item_photos', 'person_dates', 'stores', 'item_links', 'tags'].includes(t)) throw new Error('no table'); return backend.select(t as never, w); } };
+    const failing = { ...backend, select: async (t: string, w?: never) => { if (['item_photos', 'person_dates', 'stores', 'item_links', 'tags', 'projects'].includes(t)) throw new Error('no table'); return backend.select(t as never, w); } };
     const out = await collectExport({
       backend: failing as never,
       settings: async () => { throw new Error('x'); },
@@ -249,6 +254,7 @@ describe('collectExport', () => {
     expect(out.stores).toEqual([]);
     expect(out.itemLinks).toEqual([]);
     expect(out.tags).toEqual([]);
+    expect(out.projects).toEqual([]);
     expect(out.settings).toBeNull();
     expect(out.apiTokens).toEqual([]);
   });

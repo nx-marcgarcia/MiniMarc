@@ -339,3 +339,28 @@ describe('0013_resurfacing.sql', () => {
     expect(s).toMatch(/drop policy if exists resurfacing_events_owner/);
   });
 });
+
+describe('0014_proyectos.sql', () => {
+  const s = sql('0014_proyectos.sql');
+  const owner =
+    'for all to authenticated\\s+using \\(user_id = \\(select auth\\.uid\\(\\)\\) and \\(select private\\.is_allowed_user\\(\\)\\)\\)\\s+with check \\(user_id = \\(select auth\\.uid\\(\\)\\) and \\(select private\\.is_allowed_user\\(\\)\\)\\);';
+
+  it('crea projects con RLS de propietario y usuario permitido', () => {
+    expect(s).toMatch(/create table if not exists public\.projects \(/);
+    expect(s).toMatch(/alter table public\.projects\s+enable row level security;/);
+    expect(s).toMatch(/drop policy if exists projects_owner on public\.projects;/);
+    expect(s).toMatch(new RegExp(`create policy projects_owner on public\\.projects\\s+${owner}`));
+  });
+
+  it('el estado solo admite activo, en_pausa o terminado', () => {
+    expect(s).toMatch(/status\s+text not null default 'activo' check \(status in \('activo', 'en_pausa', 'terminado'\)\)/);
+  });
+
+  it('items.project_id se suelta (no se borra el item) al borrar el proyecto', () => {
+    expect(s).toMatch(/add column if not exists project_id uuid references public\.projects\(id\) on delete set null/);
+  });
+
+  it('un proyecto no se repite por nombre', () => {
+    expect(s).toMatch(/create unique index if not exists projects_user_name_uniq on public\.projects \(user_id, lower\(btrim\(name\)\)\);/);
+  });
+});

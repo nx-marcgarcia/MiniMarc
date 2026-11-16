@@ -72,6 +72,7 @@ export function draftItem(fd: FormData, n: number, now: Date): Item | null {
     location: null,
     data: {},
     storeId: null,
+    projectId: null,
     priority: null,
     remindAt: null,
     pinned: false,

@@ -17,6 +17,26 @@ beforeEach(() => {
   people = createPeopleRepo(backend);
 });
 
+describe('items: project_id (0014)', () => {
+  it('sin proyecto no escribe project_id, ni al crear ni al editar', async () => {
+    const backend = createMemoryBackend();
+    const repo = createItemsRepo(backend);
+    const item = await repo.createItem({ type: 'tarea', title: 'X' });
+    expect(Object.hasOwn(backend.tables.items[0], 'project_id')).toBe(false);
+    await repo.updateItem(item.id, { title: 'Y' });
+    expect(Object.hasOwn(backend.tables.items[0], 'project_id')).toBe(false);
+    expect(item.projectId).toBeNull();
+  });
+
+  it('con proyecto lo guarda y lo devuelve', async () => {
+    const backend = createMemoryBackend();
+    const repo = createItemsRepo(backend);
+    const item = await repo.createItem({ type: 'tarea', title: 'X', projectId: 'p1' });
+    expect(backend.tables.items[0].project_id).toBe('p1');
+    expect(item.projectId).toBe('p1');
+  });
+});
+
 describe('items repo', () => {
   it('crea un regalo enlazado a una persona con valores por defecto', async () => {
     const ana = await people.upsertPersonByName('Ana');

@@ -37,6 +37,7 @@ export function createMemoryBackend(opts: { now?: () => Date } = {}): DbBackend 
     tags: [],
     capture_log: [],
     resurfacing_events: [],
+    projects: [],
   };
 
   return {

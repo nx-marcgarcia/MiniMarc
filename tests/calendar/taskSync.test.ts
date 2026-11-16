@@ -73,6 +73,7 @@ function task(overrides: Partial<Item> = {}): Item {
     location: null,
     data: {},
     storeId: null,
+    projectId: null,
     priority: null,
     remindAt: null,
     pinned: false,
