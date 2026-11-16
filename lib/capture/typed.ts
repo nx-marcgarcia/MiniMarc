@@ -18,6 +18,8 @@ export type TypedFields = {
   personName?: string;
   /** Libro: its author (optional). */
   author?: string;
+  /** Captured in a project's page: the item goes into it (a project that no longer exists is ignored). */
+  projectId?: string;
 };
 
 export async function saveTypedItem(
@@ -46,5 +48,6 @@ export async function saveTypedItem(
     const personId = newName ? (await deps.people.upsertPersonByName(newName)).id : (fields.personId ?? '').trim();
     form.set('personId', personId);
   }
-  return saveNewItem(actionDeps, { ...parseNewItem(form), notes, sourceText: text, origin });
+  const project = fields.projectId?.trim() ? await deps.projects?.getProject(fields.projectId.trim()).catch(() => null) : null;
+  return saveNewItem(actionDeps, { ...parseNewItem(form), notes, sourceText: text, origin, ...(project && { projectId: project.id }) });
 }

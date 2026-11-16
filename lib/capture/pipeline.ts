@@ -6,6 +6,7 @@
  * "Sin clasificar". Trabajo text never reaches the AI.
  * Pure: everything comes in through `deps` (tests use the memory backend and fakes).
  */
+import type { Project, ProjectsRepo } from '@/lib/db/projects';
 import { createCita } from '@/lib/actions/events';
 import { SYNC_UNAVAILABLE } from '@/lib/actions/items';
 import { classify, type Classification } from '@/lib/ai/classify';
@@ -30,7 +31,13 @@ export const TITLE_MAX = 200;
 export const MIN_CONFIDENCE = 0.6;
 export const DEDUP_WINDOW_MS = 30_000;
 
-export type CaptureInput = { text: string; area?: 'trabajo'; origin: Origin };
+export type CaptureInput = {
+  text: string;
+  area?: 'trabajo';
+  origin: Origin;
+  /** Captured inside a project's page: everything made goes into it (wins over a `>proyecto`). */
+  projectId?: string;
+};
 /** A special date saved from a capture (`kind: 'fecha'`); a birthday has no `id`. */
 export type CapturedDate = Pick<PersonDate, 'personId' | 'label' | 'date'> & { personName: string };
 export type CaptureResult = {
@@ -53,6 +60,8 @@ export interface CaptureDeps {
   stores?: StoresRepo;
   links?: LinksRepo;
   tags?: TagsRepo;
+  /** Projects (0014), for `>proyecto` and captures made in a project's page. Optional. */
+  projects?: ProjectsRepo;
   /** Fetches a pasted link's page (title, image, site); never throws. Optional. */
   preview?: (url: string) => Promise<LinkPreview | null>;
   /** Classification log (0012): the input, what the model said, what was created, later Marc's corrections. Optional; never stops a capture. */
@@ -175,18 +184,24 @@ async function fetchPage(deps: CaptureDeps, url: string): Promise<LinkPreview | 
   }
 }
 
-async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promise<CaptureResult> {
+async function run(text: string, input: CaptureInput, rawDeps: CaptureDeps): Promise<CaptureResult> {
   const { origin } = input;
 
-  // Trabajo never goes to the AI: one work task with the text as is.
-  if (input.area === 'trabajo') {
-    const item = await deps.items.createItem({ ...textFields(text), type: 'tarea', area: 'trabajo', origin, sourceText: text });
-    return { items: [item], eventIds: [] };
-  }
-
-  // The shortcuts (#tag, @persona, !alta, /compra, $25) are read in code; the AI gets the rest.
+  // The shortcuts (#tag, @persona, !alta, /compra, $25, >proyecto) are read in code; the AI gets the rest.
   const shortcuts = parseShortcuts(text);
   const body = shortcuts.text || text;
+
+  // The project is settled before anything else: a Trabajo project keeps the text away from the AI.
+  const project = await resolveProject(input, shortcuts.project, rawDeps);
+  const deps = project ? intoProject(rawDeps, project) : rawDeps;
+  const work = input.area === 'trabajo' || project?.area === 'trabajo';
+
+  // Trabajo never goes to the AI: one work task with the text as is (without a `>proyecto` already used).
+  if (work) {
+    const title = project && !input.projectId ? body : text;
+    const item = await deps.items.createItem({ ...textFields(title), type: 'tarea', area: 'trabajo', origin, sourceText: text });
+    return { items: [item], eventIds: [] };
+  }
 
   // Fuera del try de la IA: si la base de datos no da las personas, la captura sigue (sin la
   // lista de nombres) y, sobre todo, el fallo no se cuenta como si fuera de la IA.
@@ -292,6 +307,37 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
   }
   if (out.items.length === 0 && out.eventIds.length === 0 && !out.dates?.length) throw failure;
   return finish(out);
+}
+
+/**
+ * The project of this capture: the page's (`input.projectId`), else the one a `>nombre` names
+ * (found without accents, or created when there is none and 0014 is applied). Never throws: a
+ * capture never fails because of its project.
+ */
+async function resolveProject(input: CaptureInput, name: string | undefined, deps: CaptureDeps): Promise<Project | null> {
+  const repo = deps.projects;
+  if (!repo) return null;
+  try {
+    if (input.projectId) return await repo.getProject(input.projectId);
+    if (!name) return null;
+    const found = await repo.findByName(name);
+    if (found) return found;
+    if (!(await repo.available())) return null;
+    return await repo.createProject({ name });
+  } catch (err) {
+    console.error('project lookup failed:', err instanceof Error ? err.name : 'unknown error');
+    return null;
+  }
+}
+
+/** The same deps, but every item created goes into `project` (and takes its area when it has none). */
+function intoProject(deps: CaptureDeps, project: Project): CaptureDeps {
+  const items: ItemsRepo = {
+    ...deps.items,
+    createItem: (fields, opts) =>
+      deps.items.createItem({ ...fields, projectId: project.id, area: fields.area ?? project.area ?? null }, opts),
+  };
+  return { ...deps, items };
 }
 
 type SaveExtras = { shortcuts: Shortcuts; urls: string[]; page: LinkPreview | null; existing?: Item[] };

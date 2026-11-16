@@ -90,6 +90,8 @@ export type CaptureDefaults = {
   personId: string | null;
   /** The switch follows the Tareas screen (`?area`); null leaves it as Marc set it. */
   area: Area | null;
+  /** Under /proyectos/[id]: what is captured goes into that project. */
+  projectId?: string | null;
 };
 
 /** The chip a screen starts with: /compras → Compra, /tareas → Tarea (with its area)… everything else Auto. */
@@ -109,6 +111,8 @@ export function captureDefaults(pathname: string, areaParam: string | null): Cap
       return sub ? { kind: 'regalo', personId: decodeURIComponent(sub), area: null } : { kind: 'auto', personId: null, area: null };
     case 'agenda':
       return { kind: 'cita', personId: null, area: null };
+    case 'proyectos':
+      return { kind: 'auto', personId: null, area: null, projectId: sub ? decodeURIComponent(sub) : null };
     case 'tareas':
       return { kind: 'tarea', personId: null, area: areaParam === 'trabajo' ? 'trabajo' : 'personal' };
     default:

@@ -250,6 +250,7 @@ function CaptureBarView({ screen, screenKey }: { screen: CaptureDefaults; screen
       fd.set('end', end);
     }
     if (kind === 'libro') fd.set('author', author);
+    if (screen.projectId) fd.set('projectId', screen.projectId);
     const newPerson = kind === 'regalo' && personId === NEW_PERSON;
     if (kind === 'regalo') {
       if (newPerson) fd.set('personName', personName);

@@ -62,6 +62,8 @@ export async function captureFromWeb(fd: FormData, deps: WebCaptureDeps): Promis
       const text = readText(fd);
       const input: CaptureInput = { text, origin: 'web' };
       if (fd.get('area') === 'trabajo') input.area = 'trabajo';
+      const projectId = fd.get('projectId');
+      if (typeof projectId === 'string' && projectId.trim()) input.projectId = projectId.trim();
       try {
         const result = await capture(input, captureDeps);
         const understood = await understand(result, captureDeps);
@@ -133,6 +135,7 @@ async function saveItem(type: ItemType, text: string, fd: FormData, deps: Captur
     personId: str(fd, 'personId'),
     personName: str(fd, 'personName'),
     author: str(fd, 'author'),
+    projectId: str(fd, 'projectId'),
   };
   const item = await saveTypedItem(type, text, fields, deps, 'web');
   return { message: captureMessage({ items: [item], eventIds: [] }), href: itemHref(item) };
