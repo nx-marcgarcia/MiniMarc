@@ -24,6 +24,8 @@ export type ItemSection = {
   items: Item[];
   /** Only the header is shown (the parent folds it). */
   collapsed?: boolean;
+  /** Where a task added optimistically shows; by default the first section. */
+  takesNew?: boolean;
 };
 
 export type ItemsScreenProps = {
@@ -94,7 +96,8 @@ export function ItemsScreen({
 
   const peopleById = new Map(people.map((p) => [p.id, p.name]));
   // New rows go to the first section (the screen's own list); the server then sorts them.
-  const visible = sections.map((s, i) => ({ ...s, items: applyListOps(s.items, ops, i === 0) }));
+  const someTakesNew = sections.some((s) => s.takesNew);
+  const visible = sections.map((s, i) => ({ ...s, items: applyListOps(s.items, ops, s.takesNew ?? (!someTakesNew && i === 0)) }));
   const isEmpty = visible.every((s) => s.items.length === 0);
 
   function showToast(message: string, undo?: () => Promise<ActionResult<unknown>>, actionLabel = 'Deshacer') {

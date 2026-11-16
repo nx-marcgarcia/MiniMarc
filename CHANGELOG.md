@@ -9,6 +9,7 @@ Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la
 - **Tareas y notas:** correos y teléfonos pulsables (`mailto:` y `tel:`).
 - **Regalos:** «Próximas ocasiones» (cumpleaños y fechas de los próximos 90 días) con el aviso «Sin regalo comprado» cuando faltan 30 días o menos; cada persona resume sus regalos («2 ideas · 1 comprado»). En su ficha: historial de regalos entregados (año, ocasión, precio) y botón «Sugerir ideas» (una llamada a la IA por pulsación, con gustos, lo que no le gusta y lo ya regalado; las personas de Trabajo no lo tienen ni se envían a la IA).
 - **Libros:** portada, autor y páginas se buscan solos al guardar un libro (Open Library, y Google Books para lo que falte), después de responder y sin pisar nada de lo que escribiste; una foto subida manda sobre la portada automática. Valoración de 1 a 5 en la hoja y estrellas en la fila. Solo se envía el título (y el autor si lo hay) a esos servicios.
+- **Tareas agrupadas por día:** Atrasadas, Hoy, Mañana, Esta semana, Más adelante y Sin fecha (en hora de Madrid).
 - **Enlaces** (nueva): por ver / vistos, con vista previa, filtros por tipo y dominio. Lo que se captura como enlace llega aquí.
 - **Ideas:** sin círculo de completar; cada idea lleva su selector de estado (semilla, explorando, en marcha, descartada) que guarda al momento. Filtros por estado, categoría y tag; las descartadas solo salen al filtrar por ese estado; orden por potencial.
 

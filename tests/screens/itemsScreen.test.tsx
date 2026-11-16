@@ -67,3 +67,26 @@ test('cada fila tiene un objetivo táctil accesible', () => {
   expect(screen.getByRole('checkbox', { name: 'Completar «Llamar al dentista»' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Abrir «Comprar pan»' })).toBeTruthy();
 });
+
+test('una tarea nueva aparece en la sección que acepta nuevas, no en la primera', async () => {
+  const hoy = makeItem({ id: 't1', type: 'tarea', title: 'Llamar al médico', status: 'pendiente', area: 'personal' });
+  const { user } = renderScreen(
+    <ItemsScreen
+      title="Tareas"
+      today="2026-10-22"
+      sections={[
+        { key: 'hoy', header: 'Hoy', items: [hoy] },
+        { key: 'sin-fecha', header: 'Sin fecha', items: [], takesNew: true },
+      ]}
+      newItem={{ type: 'tarea', label: 'Nueva tarea' }}
+    />,
+  );
+  itemsActions.addItem.mockReturnValue(new Promise(() => {})); // the save is still in flight
+  await user.click(screen.getByRole('button', { name: 'Nueva tarea' }));
+  await screen.findByRole('dialog', { name: 'Nueva tarea' });
+  await user.type(screen.getByLabelText('Título'), 'Comprar pan');
+  await user.click(screen.getByRole('button', { name: 'Añadir' }));
+  const row = await screen.findByText('Comprar pan');
+  expect(row.closest('section')?.textContent).toContain('Sin fecha');
+  expect(screen.getByText('Llamar al médico').closest('section')?.textContent).not.toContain('Comprar pan');
+});

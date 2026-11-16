@@ -5,6 +5,7 @@ import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ScreenFallback } from '@/components/items/ScreenFallback';
 import { readTareas } from '@/lib/cache/reads';
 import type { Area } from '@/lib/db/types';
+import { groupTareas } from '@/lib/tareas';
 
 export const metadata: Metadata = { title: 'Tareas' };
 
@@ -28,7 +29,7 @@ async function Tareas({ searchParams }: { searchParams: SearchParams }) {
       title="Tareas"
       today={today}
       before={<AreaSelector area={area} />}
-      sections={[{ key: area, items }]}
+      sections={groupTareas(items, today).map((g) => ({ ...g, takesNew: g.key === 'sin-fecha' }))}
       syncNotices
       photos={photos}
       emptyText={area === 'trabajo' ? 'No hay tareas de trabajo pendientes.' : 'No hay tareas personales pendientes.'}
