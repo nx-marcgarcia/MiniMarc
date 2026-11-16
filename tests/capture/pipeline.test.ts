@@ -713,7 +713,7 @@ describe('cuando la IA falla, la captura dice por qué', () => {
     const { deps } = setup(aiThrowing(err));
     const res = await captureText({ text: 'llamar al fontanero', origin: 'web' }, deps);
     expect(res.items[0]).toMatchObject({ needsReview: true, title: 'llamar al fontanero' });
-    expect(captureMessage(res)).toBe(`Guardado en Sin clasificar: ${expected}`);
+    expect(captureMessage(res)).toBe(`Guardado en la Bandeja: ${expected}`);
   });
 
   it('una captura que sí se clasifica no arrastra ningún motivo', async () => {

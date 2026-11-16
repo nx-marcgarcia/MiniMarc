@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { PERSONAS_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { OccasionsSection } from '@/components/items/OccasionsSection';
 import { PeopleSection } from '@/components/items/PeopleSection';
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: 'Regalos' };
 
 export default function RegalosPage() {
   return (
-    <Suspense fallback={<ScreenFallback title="Regalos" check />}>
+    <Suspense fallback={<ScreenFallback title="Regalos" segmented check />}>
       <Regalos />
     </Suspense>
   );
@@ -25,6 +26,7 @@ async function Regalos() {
       today={today}
       before={
         <>
+          <ViewSwitch label="Vista" options={PERSONAS_VIEWS} current="/regalos" />
           <OccasionsSection occasions={occasions} />
           <PeopleSection
             groups={people

@@ -148,6 +148,15 @@ export function BookIcon() {
   );
 }
 
+export function NoteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden {...line}>
+      <path d="M6.6 3.8h7.6l4.2 4.2v10.4a1.8 1.8 0 0 1-1.8 1.8H6.6a1.8 1.8 0 0 1-1.8-1.8V5.6a1.8 1.8 0 0 1 1.8-1.8z" />
+      <path d="M14 3.8V8h4.4M8.4 12.2h7.2M8.4 15.8h5" />
+    </svg>
+  );
+}
+
 export function PersonIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden {...line}>

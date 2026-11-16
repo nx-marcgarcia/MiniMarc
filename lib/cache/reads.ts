@@ -172,22 +172,22 @@ export async function readListCounts() {
   cacheLife('userData');
   const { userId, deps } = await sessionDeps();
   tagUserData(userId, ['items']);
-  const [ideas, compras, regalos, libros, sinClasificar, enlaces] = await Promise.all([
+  const [ideas, notas, compras, regalos, libros, enlaces] = await Promise.all([
     listByType(deps, 'idea'),
+    listByType(deps, 'nota'),
     listByType(deps, 'compra'),
     listByType(deps, 'regalo'),
     listLibros(deps),
-    listSinClasificar(deps),
     listByType(deps, 'enlace'),
   ]);
   return {
     ideas: ideas.length,
+    notas: notas.length,
     enlaces: enlaces.length,
     compras: compras.length,
     regalos: regalos.length,
     // Books still to read or being read; the read ones are a record, not a to-do.
     libros: libros.filter((b) => b.readingState !== 'leido').length,
-    sinClasificar: sinClasificar.length,
   };
 }
 

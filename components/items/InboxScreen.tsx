@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { MoveIcon } from '@/components/icons';
 import { LinkText } from '@/components/links/LinkText';
-import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from 'react';
 import { deleteItem, moveItem, undoDelete } from '@/app/actions/items';
 import { InsetList, LargeTitle, Toast, type ToastProps } from '@/components/ui';
 import { applyListOps, type ListOp } from '@/lib/actions/optimistic';
@@ -27,6 +27,8 @@ export type InboxScreenProps = {
   photos?: PhotoMap;
   /** Toast shown on arrival, e.g. where a share from Android was saved (`?guardado=`). */
   notice?: string;
+  /** Content between the title and the lists (the Por revisar / Últimas 24 h pills). */
+  before?: ReactNode;
 };
 
 type ToastState = NonNullable<ToastProps['toast']>;
@@ -40,13 +42,13 @@ function createdLabel(item: Item, today: string): string {
 }
 
 /**
- * Bandeja "Recién añadido": what came in during the last 24 h, Personal and Trabajo apart.
+ * Bandeja, "Últimas 24 h" view: what came in during the last 24 h, Personal and Trabajo apart.
  * Each row is one inset row: title, where it went, the time on the right and a trailing "Mover"
  * icon button (44 pt) that opens the usual edit sheet to correct it (so does tapping the row).
  * Rows stay after completing or archiving (this is a log of arrivals); deleting hides the row
  * and offers "Deshacer".
  */
-export function InboxScreen({ today, personal, trabajo, people, photos = {}, notice }: InboxScreenProps) {
+export function InboxScreen({ today, personal, trabajo, people, photos = {}, notice, before }: InboxScreenProps) {
   const [, startTransition] = useTransition();
   // Pending writes over the server's lists: a row changes (or leaves) at once and comes back if the write fails.
   const [ops, addOp] = useOptimistic<ListOp[], ListOp>([], (list, op) => [...list, op]);
@@ -125,13 +127,14 @@ export function InboxScreen({ today, personal, trabajo, people, photos = {}, not
   return (
     <>
       <LargeTitle
-        title="Recién añadido"
+        title="Bandeja"
         trailing={
           <Link href="/bandeja/papelera" className="ui-bar-button">
             Papelera
           </Link>
         }
       >
+        {before}
         {sections.map(
           (section) =>
             section.items.length > 0 && (

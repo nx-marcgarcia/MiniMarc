@@ -173,7 +173,7 @@ export function CaptureCard({ data, onClose, onNotice }: { data: CaptureCardData
               </span>
             </li>
           ))}
-          {items.length > shown.length && <li className="app-capture-card__more">y {items.length - shown.length} más en Recién añadido</li>}
+          {items.length > shown.length && <li className="app-capture-card__more">y {items.length - shown.length} más en la Bandeja</li>}
         </ul>
       )}
 

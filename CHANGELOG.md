@@ -2,6 +2,17 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Reorganización de la app
+
+Menos pantallas sueltas y un sitio claro para cada cosa.
+
+- **Cinco pestañas con un trabajo cada una:** Hoy, Agenda, Tareas, **Bandeja** (nueva pestaña) y Listas. Ajustes deja de ocupar una pestaña y pasa al final de Listas (en el ordenador sigue abajo en la barra lateral).
+- **Una sola Bandeja** con dos vistas: **Por revisar** (lo que la IA no tuvo claro, antes «Bandeja» en `/sin-clasificar`) y **Últimas 24 h** (antes «Recién añadido» en `/bandeja`). Las dos direcciones siguen funcionando para Siri, la extensión y los marcadores. La Papelera se abre desde aquí. Los textos de «Sin clasificar» pasan a decir «la Bandeja».
+- **Hoy | Semana:** la semana es la segunda vista de Hoy (un selector arriba), en lugar del enlace «Ver la semana» al final.
+- **Personas | Regalos:** las dos son la misma sección («Personas y regalos»), con un selector para pasar de una a otra.
+- **Notas** tiene por fin su pantalla (`/notas`); lo que se captura como nota se abre ahí.
+- **Listas agrupadas por lo que haces con ellas:** *Por conseguir* (Compras, Personas y regalos), *Para leer y ver* (Libros, Enlaces) y *Para pensar* (Ideas, Notas), con una línea que explica cada una. La barra lateral usa los mismos grupos.
+
 ## Rediseño de interfaz (tras la Fase 4)
 
 - **Botones de verdad** dentro de filas y tarjetas (`.app-btn`: principal, tintado, discreto, destructivo), en lugar del texto azul de la barra superior que se usaba por error. Afecta a «Para hoy», Enlaces, Compras, Bandeja, la tarjeta de captura, subtareas y sugerencias de regalo.

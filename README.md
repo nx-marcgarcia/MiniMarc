@@ -4,10 +4,10 @@ PWA personal (Next.js + Supabase + Google Calendar + Gemini) para capturar tarea
 
 ## Qué hace
 
-- **Captura** desde la app, Siri, la extensión de Chrome o "Compartir" en Android; Gemini la clasifica (nunca lo de Trabajo) y, si falla, queda en "Sin clasificar".
-- **Hoy, Agenda y Semana:** citas y tareas con hora sincronizadas con Google Calendar (avisos de 3 h y 1 h); resumen de la mañana y semanal por notificación.
-- **Listas:** tareas, ideas, compras, regalos y libros (por leer, leyendo, leídos), con fotos, enlaces con vista previa, papelera de 30 días y buscador sin acentos.
-- **Personas:** cumpleaños y fechas especiales con aviso el mismo día.
+- **Captura** desde la app, Siri, la extensión de Chrome o "Compartir" en Android; Gemini la clasifica (nunca lo de Trabajo) y, si falla, queda en la Bandeja (Por revisar).
+- **Cinco pestañas:** **Hoy** (con su vista **Semana**), **Agenda** (Google Calendar), **Tareas** (Personal / Trabajo), **Bandeja** (**Por revisar**: lo que la IA no tuvo claro; **Últimas 24 h**: lo recién capturado, con la Papelera) y **Listas**.
+- **Listas**, agrupadas por lo que haces con ellas: *Por conseguir* (Compras, Personas y regalos), *Para leer y ver* (Libros, Enlaces) y *Para pensar* (Ideas, Notas). Ajustes también vive aquí.
+- **Personas y regalos:** cumpleaños y fechas especiales con aviso, y las ideas de regalo de cada persona.
 - **Tus datos:** exportación completa en JSON o de los elementos en CSV desde Ajustes.
 
 Despliegue paso a paso en `docs/despliegue.md`.

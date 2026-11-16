@@ -11,7 +11,7 @@ describe('itemHref: dónde vive cada item', () => {
     [{ type: 'compra' }, '/compras'],
     [{ type: 'libro' }, '/libros'],
     [{ type: 'enlace' }, '/enlaces'],
-    [{ type: 'nota' }, '/bandeja'],
+    [{ type: 'nota' }, '/notas'],
     [{ type: 'regalo', personId: 'p1' }, '/personas/p1'],
     [{ type: 'regalo', personId: null }, '/regalos'],
   ] as const)('%j → %s', (over, href) => {

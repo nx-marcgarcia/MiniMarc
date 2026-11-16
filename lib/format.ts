@@ -50,7 +50,7 @@ export function destinationLabel(
   item: Pick<Item, 'type' | 'area' | 'needsReview' | 'personId'>,
   personName?: string,
 ): string {
-  if (item.needsReview) return 'Sin clasificar';
+  if (item.needsReview) return 'Bandeja';
   switch (item.type) {
     case 'tarea':
       return `Tareas · ${item.area === 'trabajo' ? 'Trabajo' : 'Personal'}`;

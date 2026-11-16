@@ -88,8 +88,8 @@ const LABELS: Record<SearchGroupKey, string> = {
   enlaces: 'Enlaces',
   notas: 'Notas',
   personas: 'Personas',
-  'sin-clasificar': 'Sin clasificar',
-  'sin-clasificar-trabajo': 'Sin clasificar · Trabajo',
+  'sin-clasificar': 'Bandeja',
+  'sin-clasificar-trabajo': 'Bandeja · Trabajo',
   papelera: 'Papelera',
   'papelera-trabajo': 'Papelera · Trabajo',
 };

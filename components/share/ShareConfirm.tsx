@@ -104,7 +104,7 @@ export function ShareConfirm({ id, failed }: { id: string | null; failed: boolea
       {state.kind === 'empty' && (
         <InsetList footer={state.message}>
           <button type="button" className="ui-row app-action" onClick={() => router.replace('/bandeja')}>
-            Ir a Recién añadido
+            Ir a la Bandeja
           </button>
         </InsetList>
       )}

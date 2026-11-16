@@ -143,7 +143,7 @@ describe('POST /api/capture', () => {
       },
     });
     const body = await (await handleCapture(post({ text: 'algo' }), deps)).json();
-    expect(body.message).toBe('Guardado en Sin clasificar: la IA no ha respondido');
+    expect(body.message).toBe('Guardado en la Bandeja: la IA no ha respondido');
     expect(body.items[0]).toMatchObject({ title: 'algo', needsReview: true, area: null });
   });
 
@@ -183,7 +183,7 @@ describe('POST /api/capture', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items.map((i: Item) => i.title)).toEqual(['Leche', 'comprar leche e idea: app de recetas']);
-    expect(body.message).toBe('Guardado en Compras y Sin clasificar');
+    expect(body.message).toBe('Guardado en Compras y la Bandeja');
     expect(db.tables.items).toHaveLength(2);
   });
 
@@ -260,7 +260,7 @@ describe('captureMessage', () => {
     [[item({ type: 'idea' })], [], 'Guardado en Ideas'],
     [[item({ type: 'compra' })], [], 'Guardado en Compras'],
     [[item({ type: 'regalo' })], [], 'Guardado en Regalos'],
-    [[item({ type: 'compra', needsReview: true })], [], 'Guardado en Sin clasificar'],
+    [[item({ type: 'compra', needsReview: true })], [], 'Guardado en la Bandeja'],
     [[], ['ev-1'], 'Guardado en Calendar'],
     [[item({ type: 'compra' }), item({ type: 'compra' }), item({ area: 'personal' })], ['ev-1'], 'Guardado en Compras, Tareas · Personal y Calendar'],
   ])('%#', (items, eventIds, msg) => {

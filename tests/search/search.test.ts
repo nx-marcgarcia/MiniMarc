@@ -173,8 +173,8 @@ describe('groupResults', () => {
       ['regalos', 'Regalos'],
       ['libros', 'Libros'],
       ['personas', 'Personas'],
-      ['sin-clasificar', 'Sin clasificar'],
-      ['sin-clasificar-trabajo', 'Sin clasificar · Trabajo'],
+      ['sin-clasificar', 'Bandeja'],
+      ['sin-clasificar-trabajo', 'Bandeja · Trabajo'],
       ['papelera', 'Papelera'],
       ['papelera-trabajo', 'Papelera · Trabajo'],
     ]);

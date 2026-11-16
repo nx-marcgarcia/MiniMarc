@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons';
+import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
 import { addDays, clockTime, isAllDay, WEEKDAY_INITIALS, weekLabel } from '@/lib/agenda/week';
 import type { Area } from '@/lib/db/types';
@@ -149,6 +150,7 @@ export function SemanaScreen({ week, thisWeek, headline }: SemanaScreenProps) {
         </>
       }
     >
+      <ViewSwitch label="Periodo" options={HOY_VIEWS} current="/semana" />
       <div className="app-hoy__intro">
         <p className="app-hoy__date">{weekLabel(weekStart)}</p>
         <p className="app-hoy__headline">{headline ?? week.headline ?? counts}</p>
@@ -181,7 +183,7 @@ export function SemanaScreen({ week, thisWeek, headline }: SemanaScreenProps) {
 
       {week.unclassified > 0 && (
         <InsetList>
-          <Row href="/sin-clasificar" title={`${week.unclassified} sin clasificar`} />
+          <Row href="/sin-clasificar" title={`${week.unclassified} por revisar en la Bandeja`} />
         </InsetList>
       )}
     </LargeTitle>

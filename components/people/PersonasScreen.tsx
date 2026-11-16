@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { PlusIcon } from '@/components/icons';
+import { PERSONAS_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { PersonSheet } from '@/components/items/PersonSheet';
 import { LargeTitle } from '@/components/ui';
 import type { PersonaCard } from '@/lib/actions/people';
@@ -44,6 +45,7 @@ export function PersonasScreen({ cards }: { cards: PersonaCard[] }) {
         </button>
       }
     >
+      <ViewSwitch label="Vista" options={PERSONAS_VIEWS} current="/personas" />
       {cards.length === 0 ? (
         <p className="app-empty">Añade a alguien para recordar sus fechas y guardar ideas de regalo.</p>
       ) : (

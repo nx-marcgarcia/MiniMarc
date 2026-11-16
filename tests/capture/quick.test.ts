@@ -249,7 +249,7 @@ describe('quickCapture', () => {
     const res = await quickCapture(form({ text: 'Dentista', kind: 'cita', date: '2026-10-25', start: '10:00' }), deps);
     expect(res).toEqual({
       ok: true,
-      value: { message: 'Calendar no responde: guardado en Sin clasificar', href: '/sin-clasificar' },
+      value: { message: 'Calendar no responde: guardado en la Bandeja', href: '/sin-clasificar' },
     });
     expect(await items.listItems()).toMatchObject([
       {

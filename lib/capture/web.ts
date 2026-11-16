@@ -165,5 +165,5 @@ async function saveCita(text: string, fd: FormData, deps: CaptureDeps): Promise<
     throw new UserError(EVENT_ERROR_MESSAGES[r.error]);
   }
   const why = r.error === 'calendar_auth' ? 'Calendar necesita que vuelvas a entrar' : 'Calendar no responde';
-  return { message: `${why}: guardado en Sin clasificar`, href: '/sin-clasificar' };
+  return { message: `${why}: guardado en la Bandeja`, href: '/sin-clasificar' };
 }

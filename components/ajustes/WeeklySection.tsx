@@ -20,7 +20,7 @@ const LABELS: Record<WeeklyDigest, string> = {
 const FOOTERS: Record<WeeklyDigest, string> = {
   lunes: 'El primer día laborable de la semana, con el resumen de la mañana. Se abre en Semana.',
   domingo: 'El primer día laborable de la semana, con el resumen de la mañana. Se abre en Semana.',
-  off: 'Sin aviso semanal. La semana sigue en Hoy → Ver la semana.',
+  off: 'Sin aviso semanal. La semana sigue en Hoy → Semana.',
 };
 
 /** What the select offers: Sunday night is outside the 9:00-16:00 window, so "domingo" is no longer a choice. */

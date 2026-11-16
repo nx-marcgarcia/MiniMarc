@@ -6,61 +6,73 @@ import {
   BagIcon,
   BookIcon,
   CaptureIcon,
-  ClockIcon,
   GiftIcon,
   GlobeIcon,
   IdeaIcon,
   ListIcon,
-  PersonIcon,
+  NoteIcon,
   SearchIcon,
   SettingsIcon,
   TasksIcon,
   TodayIcon,
   TrayIcon,
-  WeekIcon,
 } from '@/components/icons';
-import { tabFor, type Section } from '@/lib/nav';
+import { REVISAR_HREF, tabFor, type Section } from '@/lib/nav';
 import { CaptureLink } from './CaptureLink';
 
 /*
- * At most 5 tabs. Capturar is not a tab: on iPhone the CaptureBar floats right above the tab bar;
- * on desktop the sidebar's first action focuses it. The Bandeja lives under Listas; the week
- * (/semana) is reached from Hoy ("Ver la semana") and lights up the Hoy tab.
+ * Five tabs, one job each: Hoy (what matters now; the week is its second view), Agenda (Google
+ * Calendar), Tareas, Bandeja (review what the AI was not sure about, and what came in lately) and
+ * Listas (every collection, plus Ajustes). Capturar is not a tab: on iPhone the CaptureBar floats
+ * right above the tab bar; on desktop the sidebar's first action focuses it.
  */
 const TABS: TabBarItem[] = [
   { key: 'hoy', label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
   { key: 'agenda', label: 'Agenda', href: '/agenda', icon: <AgendaIcon /> },
   { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
+  { key: 'bandeja', label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
   { key: 'listas', label: 'Listas', href: '/listas', icon: <ListIcon /> },
-  { key: 'ajustes', label: 'Ajustes', href: '/ajustes', icon: <SettingsIcon /> },
 ];
 
-type SidebarLink = { key: Section; label: string; href: string; icon: ReactNode };
+/** `also`: other sections that light up the same link (the second view of a section). */
+type SidebarLink = { key: Section; also?: Section[]; label: string; href: string; icon: ReactNode };
 
+/** Same order and groups as the Listas screen, so the two never disagree. */
 const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
   {
     links: [
-      { key: 'hoy', label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
-      { key: 'semana', label: 'Semana', href: '/semana', icon: <WeekIcon /> },
+      { key: 'hoy', also: ['semana'], label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
       { key: 'agenda', label: 'Agenda', href: '/agenda', icon: <AgendaIcon /> },
       { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
-      { key: 'bandeja', label: 'Recién añadido', href: '/bandeja', icon: <ClockIcon /> },
+      { key: 'sin-clasificar', also: ['bandeja'], label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
     ],
   },
   {
-    header: 'Listas',
+    header: 'Por conseguir',
     links: [
-      { key: 'ideas', label: 'Ideas', href: '/ideas', icon: <IdeaIcon /> },
       { key: 'compras', label: 'Compras', href: '/compras', icon: <BagIcon /> },
-      { key: 'regalos', label: 'Regalos', href: '/regalos', icon: <GiftIcon /> },
+      { key: 'personas', also: ['regalos'], label: 'Personas y regalos', href: '/personas', icon: <GiftIcon /> },
+    ],
+  },
+  {
+    header: 'Para leer y ver',
+    links: [
       { key: 'libros', label: 'Libros', href: '/libros', icon: <BookIcon /> },
       { key: 'enlaces', label: 'Enlaces', href: '/enlaces', icon: <GlobeIcon /> },
-      { key: 'personas', label: 'Personas', href: '/personas', icon: <PersonIcon /> },
-      { key: 'sin-clasificar', label: 'Bandeja', href: '/sin-clasificar', icon: <TrayIcon /> },
+    ],
+  },
+  {
+    header: 'Para pensar',
+    links: [
+      { key: 'ideas', label: 'Ideas', href: '/ideas', icon: <IdeaIcon /> },
+      { key: 'notas', label: 'Notas', href: '/notas', icon: <NoteIcon /> },
     ],
   },
   { links: [{ key: 'ajustes', label: 'Ajustes', href: '/ajustes', icon: <SettingsIcon /> }] },
 ];
+
+const isCurrent = (link: SidebarLink, active: Section | null) =>
+  active !== null && (link.key === active || (link.also?.includes(active) ?? false));
 
 /**
  * App navigation: the floating tab bar on iPhone and an iPadOS/macOS-style glass
@@ -99,7 +111,7 @@ export function AppNav({ active }: { active: Section | null }) {
                     href={link.href}
                     prefetch
                     className="app-sidebar__link"
-                    aria-current={link.key === active ? 'page' : undefined}
+                    aria-current={isCurrent(link, active) ? 'page' : undefined}
                   >
                     <span className="app-sidebar__icon" aria-hidden>
                       {link.icon}

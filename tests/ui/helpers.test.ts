@@ -35,16 +35,17 @@ describe('navigation sections', () => {
     ['/tareas', 'tareas', 'tareas'],
     ['/agenda', 'agenda', 'agenda'],
     ['/semana', 'semana', 'hoy'],
-    ['/ajustes/iphone', 'ajustes', 'ajustes'],
+    ['/ajustes/iphone', 'ajustes', 'listas'],
     ['/regalos/abc', 'regalos', 'listas'],
     ['/libros', 'libros', 'listas'],
     ['/enlaces', 'enlaces', 'listas'],
     ['/personas', 'personas', 'listas'],
     ['/personas/abc', 'personas', 'listas'],
-    ['/sin-clasificar', 'sin-clasificar', 'listas'],
+    ['/sin-clasificar', 'sin-clasificar', 'bandeja'],
+    ['/notas', 'notas', 'listas'],
     ['/listas', 'listas', 'listas'],
-    ['/bandeja', 'bandeja', 'listas'],
-    ['/bandeja/papelera', 'bandeja', 'listas'],
+    ['/bandeja', 'bandeja', 'bandeja'],
+    ['/bandeja/papelera', 'bandeja', 'bandeja'],
     ['/login', null, ''],
   ])('%s', (path, section, tab) => {
     expect(sectionFor(path)).toBe(section);
@@ -86,7 +87,7 @@ describe('destinationLabel (Bandeja)', () => {
     [{ ...base, type: 'compra' }, undefined, 'Compras'],
     [{ ...base, type: 'regalo', personId: 'p1' }, 'Ainhoa', 'Regalo · Ainhoa'],
     [{ ...base, type: 'regalo' }, undefined, 'Regalos'],
-    [{ ...base, type: 'tarea', area: 'trabajo', needsReview: true }, undefined, 'Sin clasificar'],
+    [{ ...base, type: 'tarea', area: 'trabajo', needsReview: true }, undefined, 'Bandeja'],
   ] as const)('caso %#', (item, person, label) => {
     expect(destinationLabel(item, person)).toBe(label);
   });

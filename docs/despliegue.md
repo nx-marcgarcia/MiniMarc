@@ -104,7 +104,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | `SUPABASE_SERVICE_ROLE_KEY` | Secret key de Supabase (paso 1.6). Solo servidor. Hace falta desde el primer inicio de sesión: es la única vía para guardar el acceso a Google Calendar. |
    | `GOOGLE_CLIENT_ID` | Client ID del cliente OAuth (paso 2.4). |
    | `GOOGLE_CLIENT_SECRET` | Client secret del cliente OAuth (paso 2.4). Solo servidor. |
-   | `GEMINI_API_KEY` | Clave de Google AI Studio creada en un proyecto **sin facturación** (https://aistudio.google.com/apikey). Sin ella la app funciona, pero todo lo capturado queda en "Sin clasificar" y el resumen sale sin frase de la IA. |
+   | `GEMINI_API_KEY` | Clave de Google AI Studio creada en un proyecto **sin facturación** (https://aistudio.google.com/apikey). Sin ella la app funciona, pero todo lo capturado queda en la Bandeja (Por revisar) y el resumen sale sin frase de la IA. |
    | `VAPID_PUBLIC_KEY` | Clave pública para notificaciones web push. Generar con `npx web-push generate-vapid-keys` (en tu ordenador). |
    | `VAPID_PRIVATE_KEY` | Clave privada de la misma pareja VAPID. Solo servidor. |
    | `CRON_SECRET` | Secreto que protege las rutas que llama el cron. Generar con `openssl rand -hex 32`. Solo servidor. |
@@ -114,7 +114,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | `TELEGRAM_WEBHOOK_SECRET` | **Opcional** (sección 14). Texto largo y aleatorio (`openssl rand -hex 32`) que Telegram repite en cada llamada al webhook; sin él, el webhook rechaza todo. Solo servidor. |
    | `APP_URL` | **Opcional.** Dirección pública de la app para los botones «Abrir» de Telegram. Si falta se usa el dominio de producción de Vercel. |
    | `GEMINI_MODEL` | **Opcional.** Modelo de Gemini. Si falta, `gemini-3.5-flash-lite`. Cámbialo solo si Google retira ese modelo del nivel gratuito. |
-   | `GEMINI_DAILY_CAP` | **Opcional.** Tope de llamadas a Gemini al día (entero positivo). Si falta, 200. Al llegar al tope, las capturas se guardan como "Sin clasificar". |
+   | `GEMINI_DAILY_CAP` | **Opcional.** Tope de llamadas a Gemini al día (entero positivo). Si falta, 200. Al llegar al tope, las capturas van a la Bandeja (Por revisar). |
 
 5. Pulsa **Deploy**. Cuando termine, la URL será `https://<app>.vercel.app`. Vuelve al paso 3 y pon esa URL en Site URL y en Redirect URLs.
 6. Cada vez que cambies una variable, vuelve a desplegar: **Deployments → ⋯ → Redeploy**. Las variables no se aplican a despliegues ya hechos.
@@ -192,7 +192,7 @@ Cada 30 minutos, Supabase llama a `POST /api/cron/morning` con `pg_cron` + `pg_n
 
 1. Aplica la migración `0005_photos.sql` (`npx supabase db push`, o pégala en el SQL Editor). Crea el bucket privado `photos` (máximo 8 MB por imagen; JPEG, PNG, WebP o HEIC), sus políticas (cada usuario solo su carpeta y solo el correo permitido) y la tabla `item_photos`. Compruébalo en **Storage**: el bucket `photos` debe aparecer como **Private**.
 2. Las fotos se reducen en el navegador antes de subirlas (1600 px, WebP o JPEG), para que el 1 GB gratuito dure. Al purgar la papelera (30 días) el cron borra también sus imágenes; mientras un elemento está en la papelera, sus fotos se conservan.
-3. **Compartir en Android:** "Agente" aparece en el menú **Compartir** de Android (texto, enlaces e imágenes) solo después de **reinstalar o actualizar la PWA** en el Pixel: Chrome lee el `share_target` del manifiesto al instalarla. Si no aparece, desinstala la app de la pantalla de inicio y vuelve a instalarla desde Chrome (**⋮ → Instalar aplicación**). Al compartir se abre la pantalla **Compartido** con una vista previa (texto, enlace y fotos); no se guarda nada hasta pulsar **Guardar** (**Descartar** lo borra del móvil). Tras guardar, vas a **Recién añadido** con un aviso de dónde se ha guardado: texto y enlaces pasan por la captura automática; las imágenes crean una idea con la foto.
+3. **Compartir en Android:** "Agente" aparece en el menú **Compartir** de Android (texto, enlaces e imágenes) solo después de **reinstalar o actualizar la PWA** en el Pixel: Chrome lee el `share_target` del manifiesto al instalarla. Si no aparece, desinstala la app de la pantalla de inicio y vuelve a instalarla desde Chrome (**⋮ → Instalar aplicación**). Al compartir se abre la pantalla **Compartido** con una vista previa (texto, enlace y fotos); no se guarda nada hasta pulsar **Guardar** (**Descartar** lo borra del móvil). Tras guardar, vas a **Bandeja → Últimas 24 h** con un aviso de dónde se ha guardado: texto y enlaces pasan por la captura automática; las imágenes crean una idea con la foto.
 4. **iPhone:** iOS no admite `share_target` en las PWA, así que "Agente" no saldrá en la hoja de Compartir de Safari. Más adelante lo cubrirá un atajo de Siri (ver `docs/siri.md`).
 
 ## 9. Personas y fechas especiales

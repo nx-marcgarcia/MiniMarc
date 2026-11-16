@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
 import type { Area } from '@/lib/db/types';
 import type { Digest, DigestArea, DigestDate, DigestEvent, DigestTask } from '@/lib/digest/build';
@@ -90,6 +91,7 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }
 
   return (
     <LargeTitle title="Hoy">
+      <ViewSwitch label="Periodo" options={HOY_VIEWS} current="/hoy" />
       <div className="app-hoy__intro">
         <p className="app-hoy__date">{longDate.charAt(0).toUpperCase() + longDate.slice(1)}</p>
         <p className="app-hoy__headline">{headline ?? digest.headline}</p>
@@ -125,13 +127,9 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }
         empty="Ninguna fecha especial en las próximas dos semanas."
       />
 
-      <InsetList>
-        <Row href="/semana" title="Ver la semana" />
-      </InsetList>
-
       {digest.unclassified > 0 ? (
         <InsetList>
-          <Row href="/sin-clasificar" title={`${digest.unclassified} sin clasificar`} />
+          <Row href="/sin-clasificar" title={`${digest.unclassified} por revisar en la Bandeja`} />
         </InsetList>
       ) : (
         <p className="app-hoy__empty app-hoy__empty--solo">Todo clasificado.</p>

@@ -62,7 +62,7 @@ export function TrashScreen({ today, items, people }: TrashScreenProps) {
         leading={
           <Link href="/bandeja" className="ui-bar-button app-back">
             <ChevronLeftIcon />
-            Recién añadido
+            Bandeja
           </Link>
         }
       >

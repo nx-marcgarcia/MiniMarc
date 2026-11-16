@@ -45,7 +45,7 @@ export function captureOptions(req: Request): Response {
 
 
 function destination(item: Item): string {
-  if (item.needsReview) return 'Sin clasificar';
+  if (item.needsReview) return 'la Bandeja';
   if (item.type === 'tarea') return `Tareas · ${item.area === 'trabajo' ? 'Trabajo' : 'Personal'}`;
   return ITEM_TYPES[item.type].plural;
 }
@@ -69,7 +69,7 @@ export function captureMessage(res: CaptureResult): string {
       ...(res.dates?.length ? ['Personas'] : []),
     ]),
   ];
-  const list = places.length > 1 ? `${places.slice(0, -1).join(', ')} y ${places.at(-1)}` : (places[0] ?? 'Sin clasificar');
+  const list = places.length > 1 ? `${places.slice(0, -1).join(', ')} y ${places.at(-1)}` : (places[0] ?? 'la Bandeja');
   // Un fallo de la IA se cuenta aquí: si no, "Sin clasificar" parece una decisión y no una avería.
   const why = res.aiError ? `: ${AI_ERROR_TEXT[res.aiError] ?? 'la IA no ha respondido'}` : '';
   return `Guardado en ${list}${why}`;

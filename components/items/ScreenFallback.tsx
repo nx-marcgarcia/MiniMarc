@@ -42,9 +42,9 @@ export function ScreenFallback({
   );
 }
 
-/** Recién añadido: Personal and Trabajo, each row with its destination, time and "Mover". */
+/** Bandeja, Últimas 24 h: Personal and Trabajo, each row with its destination, time and "Mover". */
 export function InboxFallback() {
-  return <ScreenFallback title="Recién añadido" sections={['Personal', 'Trabajo']} detail trailing />;
+  return <ScreenFallback title="Bandeja" segmented sections={['Personal', 'Trabajo']} detail trailing />;
 }
 
 /** Hoy: the date and the headline, then its sections. */
@@ -52,6 +52,9 @@ export function HoyFallback() {
   return (
     <LargeTitle title="Hoy">
       <SkeletonRegion>
+        <div className="app-segmented">
+          <SkeletonBar width="100%" height={32} radius={9} />
+        </div>
         <div className="app-hoy__intro">
           <SkeletonBar width="44%" height={13} style={{ margin: '3px 0' }} />
           <span className="app-headline-pending" style={{ marginTop: 8 }} />
@@ -70,6 +73,9 @@ export function SemanaFallback() {
   return (
     <LargeTitle title="Semana">
       <SkeletonRegion>
+        <div className="app-segmented">
+          <SkeletonBar width="100%" height={32} radius={9} />
+        </div>
         <div className="app-hoy__intro">
           <SkeletonBar width="40%" height={13} style={{ margin: '3px 0' }} />
           <span className="app-headline-pending" style={{ marginTop: 8 }} />
@@ -86,6 +92,9 @@ export function PersonasFallback() {
   return (
     <LargeTitle title="Personas">
       <SkeletonRegion>
+        <div className="app-segmented">
+          <SkeletonBar width="100%" height={32} radius={9} />
+        </div>
         <ul className="app-person-cards">
           {['36%', '28%', '44%', '32%'].map((w, i) => (
             <li key={i}>

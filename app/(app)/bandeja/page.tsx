@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { BANDEJA_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { InboxScreen } from '@/components/items/InboxScreen';
 import { InboxFallback } from '@/components/items/ScreenFallback';
 import { readRecent } from '@/lib/cache/reads';
 
-export const metadata: Metadata = { title: 'Recién añadido' };
+export const metadata: Metadata = { title: 'Bandeja' };
 
 type SearchParams = Promise<{ guardado?: string | string[] }>;
 
@@ -28,6 +29,7 @@ async function Bandeja({ searchParams }: { searchParams: SearchParams }) {
       people={people}
       photos={photos}
       notice={notice}
+      before={<ViewSwitch label="Bandeja" options={BANDEJA_VIEWS} current="/bandeja" />}
     />
   );
 }

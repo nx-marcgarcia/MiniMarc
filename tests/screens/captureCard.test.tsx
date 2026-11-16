@@ -75,7 +75,7 @@ test('Deshacer manda a la papelera lo creado y las citas, y avisa', async () => 
   expect(await screen.findByText('Captura deshecha')).toBeTruthy();
 });
 
-test('Editar lleva a Recién añadido, donde se edita cada item', async () => {
+test('Editar lleva a la Bandeja (Últimas 24 h), donde se edita cada item', async () => {
   const { user } = await capture();
   await user.click(screen.getByRole('button', { name: 'Editar' }));
   expect(router.push).toHaveBeenCalledWith('/bandeja');
