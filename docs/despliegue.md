@@ -15,7 +15,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
 1. Entra en https://supabase.com y crea una cuenta.
 2. Pulsa **New project**. Elige la organización, un nombre (por ejemplo `agente-personal`), una contraseña para la base de datos (guárdala) y una región UE: **West EU (Paris)** (`eu-west-3`) o **Central EU (Frankfurt)** (`eu-central-1`). Plan: **Free**.
 3. Espera a que el proyecto termine de crearse.
-4. Aplica el esquema: las nueve migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
+4. Aplica el esquema: las diez migraciones de `supabase/migrations/` **en este orden**. Si ya aplicaste algunas, aplica solo las que falten (de la 0004 en adelante se pueden ejecutar otra vez sin problema):
 
    | # | Archivo | Qué hace | Sección |
    |---|---|---|---|
@@ -28,6 +28,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
    | 7 | `0007_weekly.sql` | Resumen semanal en `settings` | 10 |
    | 8 | `0008_libros.sql` | Tipo `libro` y columnas `author`, `reading_state`, `link` | 11 |
    | 9 | `0009_link_preview.sql` | Vista previa de enlaces y columnas de búsqueda sin acentos | 12 |
+   | 10 | `0010_ubicacion_y_clasificacion_diferida.sql` | `items.location` (va al campo Ubicación de Calendar) y `items.ai_state`. Sin la migración, la app funciona: no escribe esas columnas mientras valgan null | — |
 
    Hay dos formas de aplicarlas:
    - **Editor SQL (sin CLI):** abre **SQL Editor → New query**, pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**. Repite con cada archivo siguiente, en orden, cada uno en una consulta nueva.
@@ -89,6 +90,7 @@ Orden recomendado: Supabase (1), Google Cloud (2), Supabase Auth (3), Vercel (4)
 1. Entra en https://vercel.com, crea una cuenta y elige el plan **Hobby**. Hobby es gratuito y solo para uso personal no comercial, que es el caso.
 2. **Add New → Project → Import Git Repository**. Autoriza a Vercel sobre GitHub e importa `marcgarciaball/MiniMarc`. Rama: `main` (o `feat/agente-personal` si aún no has fusionado).
 3. Nombre del proyecto: el que quieras. Determina el dominio `<app>.vercel.app`.
+   - **En este despliegue:** el proyecto enlazado en local (`.vercel/project.json`, ignorado por git) se llama `mini-marc`, y el dominio de producción que usa el resto de esta guía es `mini-marc-personal.vercel.app`. El nombre del proyecto y el dominio no tienen por qué coincidir (un proyecto puede tener varios dominios o alias). Para ver cuál es cuál: **Vercel → proyecto → Settings → Domains**. Si cambias de dominio, actualiza `app_url` en Supabase Vault (sección 7) y el Site URL de Supabase Auth (paso 3).
 4. Antes de desplegar, abre **Environment Variables** y crea las siguientes (todas para Production; añade Preview si quieres probar ramas). Todas son obligatorias salvo las marcadas como opcionales:
 
    | Variable | Qué es y de dónde sale |
@@ -228,3 +230,7 @@ Marc ejecuta esta lista cuando la guía esté terminada. Todas las casillas debe
 - [ ] Otra cuenta de Google no puede crear un usuario: tras intentarlo, **Authentication → Users** sigue mostrando solo tu usuario.
 - [ ] `select allowed_email from private.app_config;` devuelve tu correo, y **Allow new users to sign up** está desactivado (paso 3.4).
 - [ ] La PWA se instala en el iPhone desde Safari: **Compartir → Añadir a pantalla de inicio** (iOS 16.4 o superior).
+
+## Copias de seguridad locales
+
+Antes de cualquier migración de datos, descarga una copia desde **Ajustes → Tus datos → JSON** y guárdala en `backups/` (carpeta en la raíz del repositorio, **ignorada por git**: comprobado con `git check-ignore backups/x.json`). No subas nunca esos archivos: contienen todo lo tuyo.

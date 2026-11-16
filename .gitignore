@@ -40,3 +40,6 @@ next-env.d.ts
 
 # supabase cli
 supabase/.temp/
+
+# personal data exports (JSON backups for the migration dry-run): never commit
+/backups/
