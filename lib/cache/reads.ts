@@ -17,6 +17,7 @@
 import { cacheLife } from 'next/cache';
 import { listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
 import { listPersonas, NEXT_DATE_WINDOW_DAYS } from '@/lib/actions/people';
+import { occasionsWithGifts } from '@/lib/regalos';
 import { sessionDeps } from '@/lib/actions/server';
 import { parseWeekParam, weekRange } from '@/lib/agenda/week';
 import { madridToday } from '@/lib/actions/today';
@@ -122,13 +123,24 @@ export async function readLibros() {
   return { books, photos: await loadPhotoMap(books) };
 }
 
+/** How far ahead Regalos lists occasions (the warning itself starts 30 days before). */
+const OCCASIONS_WINDOW_DAYS = 90;
+
 export async function readRegalos() {
   'use cache: private';
   cacheLife('userData');
   const { userId, deps } = await sessionDeps();
   tagUserData(userId, ['items', 'people']);
-  const { people, unassigned } = await listRegalos(deps);
-  return { people, unassigned, photos: await loadPhotoMap(unassigned), today: madridToday() };
+  const today = madridToday();
+  const [{ people, unassigned }, upcoming] = await Promise.all([listRegalos(deps), deps.people.upcomingDates(today, OCCASIONS_WINDOW_DAYS)]);
+  const gifts = people.flatMap((g) => g.items);
+  return {
+    people,
+    unassigned,
+    occasions: occasionsWithGifts(upcoming, gifts),
+    photos: await loadPhotoMap(unassigned),
+    today,
+  };
 }
 
 export async function readSinClasificar(area: Area) {

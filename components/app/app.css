@@ -2384,3 +2384,9 @@ a.app-enlace__title:focus-visible {
 .app-idea__state {
   flex: none;
 }
+
+/* Regalos: aviso de una fecha cercana sin regalo comprado (components/items/OccasionsSection.tsx) */
+.app-warn {
+  font-weight: 600;
+  color: var(--danger, #b3261e);
+}

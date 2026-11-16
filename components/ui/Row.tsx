@@ -4,7 +4,8 @@ import { LinkPending } from './LinkPending';
 
 export type RowProps = {
   title: string;
-  subtitle?: string;
+  /** Text, or a node when part of it needs emphasis (a warning). */
+  subtitle?: ReactNode;
   /** Secondary value on the right, e.g. "10:00". */
   detail?: string;
   /** Icon tile (`.ui-icon-tile`), checkbox… */
