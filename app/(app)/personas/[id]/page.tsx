@@ -6,6 +6,7 @@ import { ChevronLeftIcon } from '@/components/icons';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ScreenFallback } from '@/components/items/ScreenFallback';
 import { GiftHistory } from '@/components/people/GiftHistory';
+import { GiftSuggestions } from '@/components/people/GiftSuggestions';
 import { PersonDetail, type PersonDetailProps } from '@/components/people/PersonDetail';
 import { readPersona } from '@/lib/cache/reads';
 
@@ -49,6 +50,7 @@ async function Persona({ params }: { params: Params }) {
       before={
         <>
           <PersonDetail person={person} dates={dates} next={next} />
+          {person.relation !== 'trabajo' && <GiftSuggestions personId={person.id} occasion={upcoming[0]?.label} />}
           <GiftHistory rows={history} />
         </>
       }

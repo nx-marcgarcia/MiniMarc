@@ -7,6 +7,7 @@ Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la
 - **Compras:** agrupadas por tienda (secciones plegables con logo, número y total estimado) o por urgencia; cantidad y precio en cada fila; modo «En la tienda» para ir tachando; lo comprado pasa a un historial.
 - **Estado por tipo y campos propios** en la hoja de edición y en el formulario manual (compra: cantidad, precio, variante, urgencia; idea: categoría, potencial, siguiente paso; regalo: precio aproximado, ocasión).
 - **Tareas y notas:** correos y teléfonos pulsables (`mailto:` y `tel:`).
+- **Regalos:** «Próximas ocasiones» (cumpleaños y fechas de los próximos 90 días) con el aviso «Sin regalo comprado» cuando faltan 30 días o menos; cada persona resume sus regalos («2 ideas · 1 comprado»). En su ficha: historial de regalos entregados (año, ocasión, precio) y botón «Sugerir ideas» (una llamada a la IA por pulsación, con gustos, lo que no le gusta y lo ya regalado; las personas de Trabajo no lo tienen ni se envían a la IA).
 - **Enlaces** (nueva): por ver / vistos, con vista previa, filtros por tipo y dominio. Lo que se captura como enlace llega aquí.
 - **Ideas:** sin círculo de completar; cada idea lleva su selector de estado (semilla, explorando, en marcha, descartada) que guarda al momento. Filtros por estado, categoría y tag; las descartadas solo salen al filtrar por ese estado; orden por potencial.
 

@@ -2390,3 +2390,20 @@ a.app-enlace__title:focus-visible {
   font-weight: 600;
   color: var(--danger, #b3261e);
 }
+
+/* Regalos: botón «Sugerir ideas» en la ficha (components/people/GiftSuggestions.tsx) */
+.app-suggest {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.app-suggest > * {
+  align-self: stretch;
+}
+
+.app-suggest > button {
+  align-self: flex-start;
+}
