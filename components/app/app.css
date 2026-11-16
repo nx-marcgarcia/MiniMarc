@@ -2407,3 +2407,24 @@ a.app-enlace__title:focus-visible {
 .app-suggest > button {
   align-self: flex-start;
 }
+
+/* Tareas: subtareas en la hoja (components/items/SubtasksEditor.tsx) */
+.app-subtask {
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-subtask__label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-subtask__label [data-done] {
+  text-decoration: line-through;
+  opacity: 0.6;
+}

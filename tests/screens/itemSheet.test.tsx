@@ -175,3 +175,51 @@ test('una compra no enseña «Repetir»', async () => {
   await screen.findByRole('dialog', { name: 'Nueva compra' });
   expect(screen.queryByLabelText('Repetir')).toBeNull();
 });
+
+const withSubtasks = makeItem({
+  id: 's1',
+  title: 'Pintar el salón',
+  dueAt: null,
+  data: { subtasks: [{ title: 'Comprar pintura', done: true }, { title: 'Lijar la pared', done: false }] },
+});
+const subtasksUi = () => <ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [withSubtasks] }]} />;
+const openSubtasksRow = async (user: ReturnType<typeof renderScreen>['user']) => {
+  await user.click(screen.getByRole('button', { name: 'Abrir «Pintar el salón»' }));
+  await screen.findByRole('dialog', { name: 'Editar' });
+};
+
+test('la hoja de una tarea lista sus subtareas, marcadas o no', async () => {
+  const { user } = renderScreen(subtasksUi());
+  await openSubtasksRow(user);
+  expect((screen.getByRole('checkbox', { name: 'Comprar pintura' }) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole('checkbox', { name: 'Lijar la pared' }) as HTMLInputElement).checked).toBe(false);
+});
+
+test('marcar, añadir y quitar subtareas se guarda con la tarea', async () => {
+  const { user } = renderScreen(subtasksUi());
+  await openSubtasksRow(user);
+  await user.click(screen.getByRole('checkbox', { name: 'Lijar la pared' }));
+  await user.type(screen.getByLabelText('Nueva subtarea'), 'Barnizar{Enter}');
+  await user.click(screen.getByRole('button', { name: 'Quitar «Comprar pintura»' }));
+  expect(itemsActions.moveItem).not.toHaveBeenCalled(); // Enter added the subtask, it did not submit the sheet
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({
+    data: { subtasks: [{ title: 'Lijar la pared', done: true }, { title: 'Barnizar', done: false }] },
+  });
+});
+
+test('quitar todas las subtareas las borra de la tarea', async () => {
+  const { user } = renderScreen(subtasksUi());
+  await openSubtasksRow(user);
+  await user.click(screen.getByRole('button', { name: 'Quitar «Comprar pintura»' }));
+  await user.click(screen.getByRole('button', { name: 'Quitar «Lijar la pared»' }));
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1].data).toEqual({});
+});
+
+test('la fila de una tarea con subtareas dice cuántas lleva hechas', () => {
+  renderScreen(subtasksUi());
+  expect(screen.getByText(/1\/2 subtareas/)).toBeTruthy();
+});

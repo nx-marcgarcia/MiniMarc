@@ -8,6 +8,7 @@ import { isReadingState } from '@/lib/libros';
 import { isValidDate, toDue } from '@/lib/time';
 import type { MovePatch } from './items';
 import { fail, ok, type ActionResult } from './result';
+import { parseSubtasks } from '@/lib/subtasks';
 
 const text = (fd: FormData, name: string) => String(fd.get(name) ?? '').trim();
 
@@ -74,7 +75,7 @@ export function dateFormError(fd: FormData): string | null {
 
 // ---------- Campos propios de cada tipo (items.data) ----------
 
-type FieldSpec = { key: string; kind: 'int' | 'money' | 'text'; error?: string };
+type FieldSpec = { key: string; kind: 'int' | 'money' | 'text' | 'subtasks'; error?: string };
 
 const PRICE_ERROR = 'El precio no es válido.';
 /** A repeating task counts its next date from its own: without one there is nothing to count from. */
@@ -92,7 +93,10 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
     { key: 'approxPrice', kind: 'money', error: PRICE_ERROR },
     { key: 'occasion', kind: 'text' },
   ],
-  tarea: [{ key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' }],
+  tarea: [
+    { key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' },
+    { key: 'subtasks', kind: 'subtasks', error: 'Las subtareas no son válidas.' },
+  ],
   libro: [
     { key: 'rating', kind: 'int', error: 'La valoración va de 1 a 5.' },
     { key: 'pages', kind: 'int', error: 'Las páginas no son válidas.' },
@@ -116,7 +120,11 @@ export function dataFromForm(type: ItemType, fd: FormData, base: Record<string, 
   for (const spec of specs) {
     if (!fd.has(spec.key)) continue;
     const raw = text(fd, spec.key);
-    if (raw === '') {
+    if (spec.kind === 'subtasks') {
+      const list = parseSubtasks(raw);
+      if (list.length === 0) delete out[spec.key];
+      else out[spec.key] = list;
+    } else if (raw === '') {
       delete out[spec.key];
     } else if (spec.kind === 'int') {
       if (!/^\d+$/.test(raw)) return fail(spec.error ?? 'Revisa los campos.');

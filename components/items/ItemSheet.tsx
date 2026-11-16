@@ -12,8 +12,10 @@ import { originalText } from '@/lib/format';
 import { ITEM_TYPES } from '@/lib/items/itemTypes';
 import type { PhotoView } from '@/lib/photos/view';
 import { REPEAT_LABELS, REPEATS } from '@/lib/recurrence';
+import { parseSubtasks, type Subtask } from '@/lib/subtasks';
 import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
+import { SubtasksEditor } from './SubtasksEditor';
 
 export type NewItemDefaults = { type: ItemType; area?: Area; personId?: string; label: string };
 
@@ -35,6 +37,8 @@ const TYPE_OPTIONS: { value: ItemType; label: string }[] = [
 ];
 
 /** An own field of the item as the input's default value ("" when it has none). */
+const subtasksOf = (item: Item | null): Subtask[] => parseSubtasks(JSON.stringify(item?.data.subtasks ?? []));
+
 const own = (item: Item | null, key: string) => {
   const v = item?.data[key];
   return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
@@ -281,6 +285,7 @@ function ItemForm(props: ItemFormProps) {
               </select>
             </label>
           </InsetList>
+          <SubtasksEditor key={item?.id ?? 'new'} initial={subtasksOf(item)} />
         </>
       )}
 

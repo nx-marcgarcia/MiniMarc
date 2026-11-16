@@ -2,7 +2,7 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
-## Fase 3: secciones que funcionan de verdad (en curso)
+## Fase 3: secciones que funcionan de verdad
 
 - **Compras:** agrupadas por tienda (secciones plegables con logo, número y total estimado) o por urgencia; cantidad y precio en cada fila; modo «En la tienda» para ir tachando; lo comprado pasa a un historial.
 - **Estado por tipo y campos propios** en la hoja de edición y en el formulario manual (compra: cantidad, precio, variante, urgencia; idea: categoría, potencial, siguiente paso; regalo: precio aproximado, ocasión).
@@ -11,6 +11,7 @@ Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la
 - **Libros:** portada, autor y páginas se buscan solos al guardar un libro (Open Library, y Google Books para lo que falte), después de responder y sin pisar nada de lo que escribiste; una foto subida manda sobre la portada automática. Valoración de 1 a 5 en la hoja y estrellas en la fila. Solo se envía el título (y el autor si lo hay) a esos servicios.
 - **Tareas agrupadas por día:** Atrasadas, Hoy, Mañana, Esta semana, Más adelante y Sin fecha (en hora de Madrid).
 - **Tareas que se repiten** (cada día, semana, mes o año; selector «Repetir» en la hoja, y necesitan fecha): al completarlas no se cierran, pasan a su siguiente fecha (contada desde la fecha de la tarea, o desde hoy si va con retraso, y a la misma hora local aunque cambie la hora de verano). El toast dice la próxima fecha y Deshacer devuelve la anterior.
+- **Subtareas** en la hoja de una tarea (marcar, añadir con Intro, quitar); la fila dice «1/3 subtareas».
 - **Enlaces** (nueva): por ver / vistos, con vista previa, filtros por tipo y dominio. Lo que se captura como enlace llega aquí.
 - **Ideas:** sin círculo de completar; cada idea lleva su selector de estado (semilla, explorando, en marcha, descartada) que guarda al momento. Filtros por estado, categoría y tag; las descartadas solo salen al filtrar por ese estado; orden por potencial.
 

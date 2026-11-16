@@ -187,6 +187,13 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
     expect(dataFromForm('tarea', form({ recurrence: 'cada_lustro' }), {})).toEqual({ ok: false, error: 'La repetición no es válida.' });
   });
 
+  it('tarea: las subtareas viajan como JSON y una lista vacía las quita', () => {
+    const list = [{ title: 'Lijar', done: false }, { title: 'Pintar', done: true }];
+    expect(dataFromForm('tarea', form({ subtasks: JSON.stringify(list) }), {})).toEqual({ ok: true, value: { subtasks: list } });
+    expect(dataFromForm('tarea', form({ subtasks: '[]' }), { subtasks: list, recurrence: 'diaria' })).toEqual({ ok: true, value: { recurrence: 'diaria' } });
+    expect(dataFromForm('tarea', form({ title: 'x' }), { subtasks: list })).toEqual({ ok: true, value: { subtasks: list } });
+  });
+
   it('libro: valoración de 1 a 5 y páginas; no pierde la portada que ya tenía', () => {
     const base = { cover: 'https://covers.openlibrary.org/b/id/7-M.jpg' };
     expect(dataFromForm('libro', form({ rating: '4', pages: '320' }), base)).toEqual({ ok: true, value: { ...base, rating: 4, pages: 320 } });

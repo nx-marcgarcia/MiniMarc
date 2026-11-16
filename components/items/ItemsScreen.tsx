@@ -11,6 +11,7 @@ import type { Item, Person } from '@/lib/db/types';
 import { priceText } from '@/lib/compras';
 import { formatDue, TYPE_LABELS } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
+import { subtaskProgress } from '@/lib/subtasks';
 import { nextOccurrence } from '@/lib/tareas';
 import { ItemRow } from './ItemRow';
 import { ItemSheet, type NewItemDefaults, type SheetMode } from './ItemSheet';
@@ -225,6 +226,8 @@ export function ItemsScreen({
       if (name) parts.push(`Para ${name}`);
     }
     if (item.area === 'trabajo' && item.type !== 'tarea') parts.push('Trabajo');
+    const progress = subtaskProgress(item.data);
+    if (item.type === 'tarea' && progress) parts.push(`${progress} subtareas`);
     let detail = time;
     if (item.type === 'compra') {
       // A purchase says what it costs on the right, and its variant, urgency and store under the title.
