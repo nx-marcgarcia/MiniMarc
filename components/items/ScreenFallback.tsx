@@ -86,10 +86,10 @@ export function SemanaFallback() {
   );
 }
 
-/** Personas: a column of glass cards. */
-export function PersonasFallback() {
+/** Personas (and Proyectos): a column of glass cards. */
+export function PersonasFallback({ title = 'Personas' }: { title?: string } = {}) {
   return (
-    <LargeTitle title="Personas">
+    <LargeTitle title={title}>
       <SkeletonRegion>
         <div className="app-segmented">
           <SkeletonBar width="100%" height={32} radius={9} />

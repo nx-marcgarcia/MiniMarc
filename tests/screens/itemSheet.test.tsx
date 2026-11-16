@@ -2,7 +2,9 @@
 import { screen, waitFor } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
-import { itemsActions, makeItem, renderScreen } from './setup';
+import { ok } from '@/lib/actions/result';
+import { makeProject, projectsActions } from '../projectsDoubles';
+import { itemsActions, makeItem, renderScreen, router } from './setup';
 
 vi.mock('@/app/actions/items', () => import('./setup').then((m) => m.itemsActionsModule));
 vi.mock('@/app/actions/photos', () => ({ addPhoto: vi.fn(), deletePhoto: vi.fn() }));
@@ -222,4 +224,42 @@ test('quitar todas las subtareas las borra de la tarea', async () => {
 test('la fila de una tarea con subtareas dice cuántas lleva hechas', () => {
   renderScreen(subtasksUi());
   expect(screen.getByText(/1\/2 subtareas/)).toBeTruthy();
+});
+
+test('con proyectos, la hoja deja elegir uno y guardar lo manda en el patch', async () => {
+  projectsActions.listProjectOptions.mockResolvedValue(ok({ available: true, projects: [makeProject()] }));
+  const { user } = renderScreen(screenUi());
+  await openRow(user);
+  await user.selectOptions(await screen.findByLabelText('Proyecto'), 'Viaje a Japón');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ projectId: 'p1' });
+});
+
+test('sin proyectos no hay selector, y guardar no toca el proyecto', async () => {
+  const { user } = renderScreen(screenUi());
+  await openRow(user);
+  await waitFor(() => expect(projectsActions.listProjectOptions).toHaveBeenCalled());
+  expect(screen.queryByLabelText('Proyecto')).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).not.toHaveProperty('projectId');
+});
+
+test('una idea se convierte en proyecto y se abre su ficha', async () => {
+  const idea = makeItem({ id: 'i1', type: 'idea', title: 'Huerto urbano', status: 'semilla' });
+  const { user } = renderScreen(<ItemsScreen title="Ideas" today="2026-10-22" sections={[{ key: 'a', items: [idea] }]} />);
+  await user.click(screen.getByRole('button', { name: 'Abrir «Huerto urbano»' }));
+  await user.click(await screen.findByRole('button', { name: 'Convertir en proyecto' }));
+  await waitFor(() => expect(projectsActions.ideaToProject).toHaveBeenCalledWith('i1'));
+  await waitFor(() => expect(router.push).toHaveBeenCalledWith('/proyectos/p1'));
+});
+
+test('sin la migración 0014, una idea no ofrece convertirse en proyecto', async () => {
+  projectsActions.listProjectOptions.mockResolvedValue(ok({ available: false, projects: [] }));
+  const idea = makeItem({ id: 'i1', type: 'idea', title: 'Huerto urbano', status: 'semilla' });
+  const { user } = renderScreen(<ItemsScreen title="Ideas" today="2026-10-22" sections={[{ key: 'a', items: [idea] }]} />);
+  await user.click(screen.getByRole('button', { name: 'Abrir «Huerto urbano»' }));
+  await waitFor(() => expect(projectsActions.listProjectOptions).toHaveBeenCalled());
+  expect(screen.queryByRole('button', { name: 'Convertir en proyecto' })).toBeNull();
 });

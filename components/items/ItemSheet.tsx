@@ -1,12 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition, type FormEvent, type TransitionStartFunction } from 'react';
+import { ideaToProject } from '@/app/actions/projects';
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard';
 import { LinkText } from '@/components/links/LinkText';
 import { InsetList, Segmented, Sheet } from '@/components/ui';
 import { editPatchFromForm, newItemFormError } from '@/lib/actions/forms';
 import type { MovePatch } from '@/lib/actions/items';
-import type { ActionResult } from '@/lib/actions/result';
+import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Area, Item, ItemType, Person } from '@/lib/db/types';
 import { originalText } from '@/lib/format';
 import { ITEM_TYPES } from '@/lib/items/itemTypes';
@@ -16,8 +18,9 @@ import { parseSubtasks, type Subtask } from '@/lib/subtasks';
 import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
 import { SubtasksEditor } from './SubtasksEditor';
+import { useProjectOptions } from './useProjectOptions';
 
-export type NewItemDefaults = { type: ItemType; area?: Area; personId?: string; label: string };
+export type NewItemDefaults = { type: ItemType; area?: Area; personId?: string; projectId?: string; label: string };
 
 export type SheetMode = { kind: 'new'; defaults: NewItemDefaults } | { kind: 'edit'; item: Item };
 
@@ -96,7 +99,9 @@ export function ItemSheet(props: ItemSheetProps) {
 type ItemFormProps = ItemSheetProps & { startTransition: TransitionStartFunction };
 
 function ItemForm(props: ItemFormProps) {
-  const { mode, people, photos, reviewMode, onClose, onCreate, onSave, onComplete, onArchive, onDelete, startTransition } = props;
+  const { open, mode, people, photos, reviewMode, onClose, onCreate, onSave, onComplete, onArchive, onDelete, startTransition } = props;
+  const router = useRouter();
+  const projectOptions = useProjectOptions(open);
   const item = mode.kind === 'edit' ? mode.item : null;
   const defaults = mode.kind === 'new' ? mode.defaults : null;
   const [type, setType] = useState<ItemType>(item?.type ?? defaults?.type ?? 'tarea');
@@ -329,6 +334,24 @@ function ItemForm(props: ItemFormProps) {
         </InsetList>
       )}
 
+      {projectOptions && projectOptions.projects.length > 0 ? (
+        <InsetList>
+          <label className="app-field">
+            <span>Proyecto</span>
+            <select className="app-input" name="projectId" defaultValue={item?.projectId ?? defaults?.projectId ?? ''}>
+              <option value="">Ninguno</option>
+              {projectOptions.projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </InsetList>
+      ) : (
+        defaults?.projectId && <input type="hidden" name="projectId" value={defaults.projectId} />
+      )}
+
       {error && (
         <p className="app-form__error" role="alert">
           {error}
@@ -343,6 +366,22 @@ function ItemForm(props: ItemFormProps) {
           <button type="button" className="ui-row app-action" onClick={() => onArchive(item)}>
             Archivar
           </button>
+          {item.type === 'idea' && !item.projectId && projectOptions?.available && (
+            <button
+              type="button"
+              className="ui-row app-action"
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await settle(() => ideaToProject(item.id), 'No se ha podido crear el proyecto.');
+                  if (!result.ok) return setError(result.error);
+                  onClose();
+                  router.push(`/proyectos/${result.value.id}`);
+                })
+              }
+            >
+              Convertir en proyecto
+            </button>
+          )}
           <button type="button" className="ui-row app-action app-action--destructive" onClick={() => onDelete(item)}>
             Eliminar
           </button>

@@ -11,6 +11,7 @@ export type Section =
   | 'enlaces'
   | 'personas'
   | 'notas'
+  | 'proyectos'
   | 'sin-clasificar'
   | 'bandeja'
   | 'listas'
@@ -29,6 +30,7 @@ const SECTIONS: Section[] = [
   'enlaces',
   'personas',
   'notas',
+  'proyectos',
   'sin-clasificar',
   'bandeja',
   'listas',

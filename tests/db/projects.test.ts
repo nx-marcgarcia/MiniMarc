@@ -53,6 +53,11 @@ describe('proyectos', () => {
     expect((await projects.findByName('mudanza piso'))?.id).toBe(p.id);
   });
 
+  it('getProject con un id que no es un uuid no consulta y devuelve null', async () => {
+    const backend = { select: async () => { throw new Error('invalid input syntax for type uuid'); } } as unknown as DbBackend;
+    expect(await createProjectsRepo(backend).getProject('abc')).toBeNull();
+  });
+
   it('available es false si la tabla aún no existe, y la lista sale vacía', async () => {
     const missing = new Error('Could not find the table public.projects in the schema cache');
     const backend = { select: async () => { throw missing; } } as unknown as DbBackend;

@@ -47,6 +47,7 @@ export interface ProjectsRepo {
 }
 
 const statusSchema = z.enum(PROJECT_STATUSES);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const areaSchema = z.enum(['personal', 'trabajo']).nullable();
 
 const cleanName = (name: string) => {
@@ -89,6 +90,8 @@ export function createProjectsRepo(backend: DbBackend): ProjectsRepo {
     },
 
     async getProject(id) {
+      // A link like /proyectos/abc: Postgres would reject the uuid; it simply does not exist.
+      if (!UUID.test(id)) return null;
       const [row] = await emptyIfTableMissing(backend.select('projects', { eq: { id } }));
       return row ? rowToProject(row) : null;
     },

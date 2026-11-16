@@ -5,6 +5,7 @@ import {
   BagIcon,
   BookIcon,
   CaptureIcon,
+  FolderIcon,
   GiftIcon,
   GlobeIcon,
   IdeaIcon,
@@ -29,6 +30,7 @@ const TABS: TabBarItem[] = [
   { key: 'hoy', label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
   { key: 'bandeja', label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
   { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
+  { key: 'proyectos', label: 'Proyectos', href: '/proyectos', icon: <FolderIcon /> },
   { key: 'listas', label: 'Listas', href: '/listas', icon: <ListIcon /> },
 ];
 
@@ -42,6 +44,7 @@ const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
       { key: 'hoy', also: ['semana', 'agenda'], label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
       { key: 'sin-clasificar', also: ['bandeja'], label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
       { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
+      { key: 'proyectos', label: 'Proyectos', href: '/proyectos', icon: <FolderIcon /> },
     ],
   },
   {

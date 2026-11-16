@@ -2674,3 +2674,29 @@ a.app-enlace__title:focus-visible {
 .app-shop-cta {
   margin: 0 calc(var(--gutter) + var(--safe-right)) 20px calc(var(--gutter) + var(--safe-left));
 }
+
+/* Proyectos ------------------------------------------------------------------------------- */
+
+/* "Sin siguiente paso": a project with no open task (GTD's next action is missing). */
+.app-project-alert {
+  color: var(--destructive);
+  font-weight: 600;
+}
+
+/* Folded groups (En pausa, Terminados): the header is the toggle. */
+.app-fold > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-fold > summary::after {
+  content: ' ›';
+}
+
+.app-fold[open] > summary::after {
+  content: ' ⌄';
+}

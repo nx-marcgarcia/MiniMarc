@@ -174,6 +174,11 @@ export function editPatchFromForm(
     if (!data.ok) return fail(data.error);
     if (JSON.stringify(data.value) !== JSON.stringify(opts.item.data)) patch.data = data.value;
   }
+  // The "Proyecto" select is only there once 0014 is applied: without it, the project is not touched.
+  if (fd.has('projectId')) {
+    const projectId = text(fd, 'projectId') || null;
+    if (projectId !== (opts.item?.projectId ?? null)) patch.projectId = projectId;
+  }
   if (opts.type === 'tarea' && text(fd, 'recurrence') && !patch.dueAt) return fail(REPEAT_NEEDS_DATE);
   if (opts.reviewMode) patch.needsReview = false;
   return ok(patch);

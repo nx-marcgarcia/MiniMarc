@@ -43,6 +43,8 @@ describe('navigation sections', () => {
     ['/personas/abc', 'personas', 'listas'],
     ['/sin-clasificar', 'sin-clasificar', 'bandeja'],
     ['/notas', 'notas', 'listas'],
+    ['/proyectos', 'proyectos', 'proyectos'],
+    ['/proyectos/abc', 'proyectos', 'proyectos'],
     ['/listas', 'listas', 'listas'],
     ['/bandeja', 'bandeja', 'bandeja'],
     ['/bandeja/papelera', 'bandeja', 'bandeja'],
