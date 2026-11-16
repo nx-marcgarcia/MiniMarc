@@ -15,6 +15,7 @@ import {
   undoInputSchema,
   type FollowUpDeps,
 } from '@/lib/capture/followUp';
+import { emptyIfTableMissing } from '@/lib/db/missingTable';
 import { createSupabaseCaptureLogRepo } from '@/lib/db/captureLog';
 import { createSupabaseStoresRepo } from '@/lib/db/stores';
 import type { Item } from '@/lib/db/types';
@@ -65,7 +66,7 @@ export async function listCaptureChoices(): Promise<ActionResult<{ people: { id:
   return run(
     [],
     async (deps) => {
-      const [people, stores] = await Promise.all([deps.people.listPeople(), deps.stores.listStores()]);
+      const [people, stores] = await Promise.all([deps.people.listPeople(), emptyIfTableMissing(deps.stores.listStores())]);
       return {
         people: people.map(({ id, name }) => ({ id, name })),
         stores: stores.map(({ id, name }) => ({ id, name })),

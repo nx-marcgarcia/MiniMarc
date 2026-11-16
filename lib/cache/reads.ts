@@ -28,6 +28,7 @@ import { calendarGatewayFor } from '@/lib/calendar/server';
 import { toSyncError, type SyncErrorCode } from '@/lib/calendar/taskSync';
 import { createSettingsRepo, loadSettingsOrDefaults } from '@/lib/db/settings';
 import { createSupabaseItemsRepo } from '@/lib/db/items';
+import { emptyIfTableMissing } from '@/lib/db/missingTable';
 import { createSupabaseLinksRepo } from '@/lib/db/links';
 import { createSupabasePeopleRepo } from '@/lib/db/people';
 import { createSupabaseStoresRepo } from '@/lib/db/stores';
@@ -80,7 +81,7 @@ export async function readCompras() {
   const [items, all, stores] = await Promise.all([
     listByType(deps, 'compra'),
     deps.items.listItems({ type: 'compra', needsReview: false, archived: false }),
-    createSupabaseStoresRepo(client).listStores(),
+    emptyIfTableMissing(createSupabaseStoresRepo(client).listStores()),
   ]);
   const history = all
     .filter((i) => !isOpen(i))
@@ -103,7 +104,7 @@ export async function readEnlaces() {
   tagUserData(userId, ['items']);
   const [items, links] = await Promise.all([
     deps.items.listItems({ type: 'enlace', needsReview: false, archived: false }),
-    createSupabaseLinksRepo(client).listLinks(),
+    emptyIfTableMissing(createSupabaseLinksRepo(client).listLinks()),
   ]);
   return { cards: toCards(items, links) };
 }
