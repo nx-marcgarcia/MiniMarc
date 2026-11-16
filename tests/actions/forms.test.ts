@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { editPatchFromForm, newItemFormError, personFormError } from '@/lib/actions/forms';
+import {
+  editPatchFromForm,
+  newItemFormError,
+  parseSizes,
+  personFormError,
+  personProfileFromForm,
+  sizesToText,
+} from '@/lib/actions/forms';
 
 function form(fields: Record<string, string>): FormData {
   const fd = new FormData();
@@ -18,6 +25,74 @@ describe('personFormError', () => {
   it('pide un nombre si está vacío', () => {
     expect(personFormError(form({ name: '' }))).toBe('Escribe un nombre.');
     expect(personFormError(form({ name: 'Ana' }))).toBeNull();
+  });
+});
+
+describe('personFormError: ficha ampliada', () => {
+  it('rechaza un correo que no lo es y una relación desconocida', () => {
+    expect(personFormError(form({ name: 'Ana', email: 'no-es-correo' }))).toBe('El correo no es válido.');
+    expect(personFormError(form({ name: 'Ana', relation: 'vecino' }))).toBe('La relación no es válida.');
+  });
+
+  it('acepta correo y relación válidos, o vacíos', () => {
+    expect(personFormError(form({ name: 'Ana', email: 'ana@example.com', relation: 'amigo' }))).toBeNull();
+    expect(personFormError(form({ name: 'Ana', email: '', relation: '' }))).toBeNull();
+  });
+});
+
+describe('personProfileFromForm', () => {
+  it('lee alias, relación, gustos, tallas y contacto', () => {
+    const patch = personProfileFromForm(
+      form({
+        alias: ' papá , padre,, ',
+        relation: 'familia',
+        likes: ' Relojes ',
+        dislikes: 'Perfume',
+        sizes: 'camiseta: M\nzapatos: 42',
+        email: ' rosendo@example.com ',
+        phone: '600 000 000',
+      }),
+    );
+    expect(patch).toEqual({
+      alias: ['papá', 'padre'],
+      relation: 'familia',
+      likes: 'Relojes',
+      dislikes: 'Perfume',
+      sizes: { camiseta: 'M', zapatos: '42' },
+      contact: { email: 'rosendo@example.com', phone: '600 000 000' },
+    });
+  });
+
+  it('un campo vacío lo borra', () => {
+    expect(personProfileFromForm(form({ alias: '', relation: '', likes: '', dislikes: '', sizes: '', email: '', phone: '' }))).toEqual({
+      alias: [],
+      relation: null,
+      likes: null,
+      dislikes: null,
+      sizes: {},
+      contact: {},
+    });
+  });
+
+  it('un campo que el formulario no trae no se toca', () => {
+    expect(personProfileFromForm(form({ name: 'Ana' }))).toEqual({});
+    expect(personProfileFromForm(form({ likes: 'té' }))).toEqual({ likes: 'té' });
+  });
+});
+
+describe('tallas como texto', () => {
+  it('parseSizes lee "clave: valor" por líneas y se salta lo que no lo es', () => {
+    expect(parseSizes('camiseta: M\n\nsin dos puntos\n zapatos : 42 \nurl: https://x.es')).toEqual({
+      camiseta: 'M',
+      zapatos: '42',
+      url: 'https://x.es',
+    });
+  });
+
+  it('sizesToText es la inversa', () => {
+    expect(sizesToText({ camiseta: 'M', zapatos: '42' })).toBe('camiseta: M\nzapatos: 42');
+    expect(parseSizes(sizesToText({ a: '1', b: '2' }))).toEqual({ a: '1', b: '2' });
+    expect(sizesToText({})).toBe('');
   });
 });
 

@@ -21,7 +21,7 @@ async function Regalos() {
     <ItemsScreen
       title="Regalos"
       today={today}
-      before={<PeopleSection groups={people.map((g) => ({ person: g.person, count: g.items.length }))} />}
+      before={<PeopleSection groups={people.filter((g) => g.items.length > 0).map((g) => ({ person: g.person, count: g.items.length }))} />}
       sections={[{ key: 'sin-persona', header: 'Sin persona', items: unassigned }]}
       people={people.map((g) => g.person)}
       newItem={{ type: 'regalo', label: 'Nuevo regalo' }}

@@ -10,6 +10,7 @@ import { completionStatus, defaultStatus, ITEM_TYPE_IDS } from '@/lib/items/item
 import { READING_STATES } from '@/lib/libros';
 import { deriveLink } from '@/lib/links/linkify';
 import { isValidDate, toDue } from '@/lib/time';
+import { personProfileFromForm } from './forms';
 import { UserError } from './result';
 
 /** Same shape as Tarea 7's `syncTaskEvent(item, gw)`. */
@@ -226,8 +227,9 @@ export async function addPerson(deps: ActionDeps, fd: FormData): Promise<Person>
   const birthday = parseBirthday(fd);
   const notes = field(fd, 'notes');
   const person = await deps.people.upsertPersonByName(field(fd, 'name'));
-  if (!birthday && !notes) return person;
-  return deps.people.updatePerson(person.id, { ...(birthday && { birthday }), ...(notes && { notes }) });
+  const profile = personProfileFromForm(fd);
+  if (!birthday && !notes && Object.keys(profile).length === 0) return person;
+  return deps.people.updatePerson(person.id, { ...(birthday && { birthday }), ...(notes && { notes }), ...profile });
 }
 
 export async function updatePerson(deps: ActionDeps, id: string, fd: FormData): Promise<Person> {
@@ -235,6 +237,7 @@ export async function updatePerson(deps: ActionDeps, id: string, fd: FormData): 
     name: field(fd, 'name'),
     birthday: parseBirthday(fd),
     notes: field(fd, 'notes') || null,
+    ...personProfileFromForm(fd),
   });
 }
 

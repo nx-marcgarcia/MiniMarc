@@ -35,6 +35,8 @@ export function PersonDetail({ person, dates, next }: PersonDetailProps) {
 
   return (
     <>
+      <ProfileRows person={person} onEdit={() => setPersonOpen(true)} />
+
       <InsetList header="Notas">
         <div className="ui-row app-person-notes app-press">
           <button
@@ -88,6 +90,31 @@ export function PersonDetail({ person, dates, next }: PersonDetailProps) {
         onClose={() => setDateSheet((s) => ({ ...s, open: false }))}
       />
     </>
+  );
+}
+
+const RELATION_TEXT = { familia: 'Familia', pareja: 'Pareja', amigo: 'Amigo/a', trabajo: 'Trabajo', otro: 'Otro' } as const;
+
+/** The ficha: relation, alias, likes, dislikes, sizes and contact (email and phone are links). Only what is filled in. */
+function ProfileRows({ person, onEdit }: { person: Person; onEdit: () => void }) {
+  const sizes = Object.entries(person.sizes).map(([k, v]) => `${k}: ${v}`).join(' · ');
+  const rows = [
+    person.relation && { title: 'Relación', subtitle: RELATION_TEXT[person.relation] },
+    person.alias.length > 0 && { title: 'También le llamas', subtitle: person.alias.join(', ') },
+    person.likes && { title: 'Le gusta', subtitle: person.likes },
+    person.dislikes && { title: 'No le gusta', subtitle: person.dislikes },
+    sizes && { title: 'Tallas', subtitle: sizes },
+  ].filter((r): r is { title: string; subtitle: string } => Boolean(r));
+  const { email, phone } = person.contact;
+  if (rows.length === 0 && !email && !phone) return null;
+  return (
+    <InsetList header="Ficha">
+      {rows.map((r) => (
+        <Row key={r.title} title={r.title} subtitle={r.subtitle} onClick={onEdit} />
+      ))}
+      {email && <Row title="Correo" subtitle={email} href={`mailto:${email}`} />}
+      {phone && <Row title="Teléfono" subtitle={phone} href={`tel:${phone.replace(/[^\d+]/g, '')}`} />}
+    </InsetList>
   );
 }
 

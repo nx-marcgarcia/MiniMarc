@@ -3,9 +3,9 @@
 import { useRef, useState, useTransition, type FormEvent } from 'react';
 import { addPerson, updatePerson } from '@/app/actions/items';
 import { InsetList, Sheet } from '@/components/ui';
-import { personFormError } from '@/lib/actions/forms';
+import { personFormError, sizesToText } from '@/lib/actions/forms';
 import { settle } from '@/lib/actions/result';
-import type { Person } from '@/lib/db/types';
+import { RELATIONS, type Person } from '@/lib/db/types';
 
 export type PersonSheetProps = {
   open: boolean;
@@ -16,7 +16,16 @@ export type PersonSheetProps = {
 
 const FORM_ID = 'person-sheet-form';
 
-/** Add a person or change their name, birthday and notes. */
+/** Relación, as the select shows it. */
+const RELATION_LABELS: Record<(typeof RELATIONS)[number], string> = {
+  familia: 'Familia',
+  pareja: 'Pareja',
+  amigo: 'Amigo/a',
+  trabajo: 'Trabajo',
+  otro: 'Otro',
+};
+
+/** Add a person or change their ficha: name, birthday, relation, alias, likes, sizes, contact and notes. */
 export function PersonSheet({ open, person, onClose }: PersonSheetProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +84,63 @@ export function PersonSheet({ open, person, onClose }: PersonSheetProps) {
           <label className="app-field">
             <span>Cumpleaños</span>
             <input className="app-input" type="date" name="birthday" defaultValue={person?.birthday ?? undefined} />
+          </label>
+          <label className="app-field">
+            <span>Relación</span>
+            <select className="app-input" name="relation" defaultValue={person?.relation ?? ''}>
+              <option value="">Sin indicar</option>
+              {RELATIONS.map((r) => (
+                <option key={r} value={r}>
+                  {RELATION_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="app-field">
+            <span>También le llamas</span>
+            <input
+              className="app-input"
+              name="alias"
+              defaultValue={person?.alias.join(', ')}
+              placeholder="papá, padre"
+              autoComplete="off"
+            />
+          </label>
+        </InsetList>
+        <InsetList>
+          <textarea
+            className="app-input app-input--notes"
+            name="likes"
+            defaultValue={person?.likes ?? undefined}
+            placeholder="Le gusta (relojes, té, ciencia ficción…)"
+            aria-label="Le gusta"
+            rows={2}
+          />
+          <textarea
+            className="app-input app-input--notes"
+            name="dislikes"
+            defaultValue={person?.dislikes ?? undefined}
+            placeholder="No le gusta (perfumes, ropa…)"
+            aria-label="No le gusta"
+            rows={2}
+          />
+          <textarea
+            className="app-input app-input--notes"
+            name="sizes"
+            defaultValue={person ? sizesToText(person.sizes) : undefined}
+            placeholder={'Tallas, una por línea:\ncamiseta: M\nzapatos: 42'}
+            aria-label="Tallas"
+            rows={3}
+          />
+        </InsetList>
+        <InsetList>
+          <label className="app-field">
+            <span>Correo</span>
+            <input className="app-input" type="email" name="email" defaultValue={person?.contact.email} autoComplete="off" />
+          </label>
+          <label className="app-field">
+            <span>Teléfono</span>
+            <input className="app-input" type="tel" name="phone" defaultValue={person?.contact.phone} autoComplete="off" />
           </label>
         </InsetList>
         <InsetList>

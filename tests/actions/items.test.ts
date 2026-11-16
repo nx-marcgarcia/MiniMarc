@@ -222,6 +222,22 @@ describe('regalos', () => {
     expect(up.birthday).toBe('1990-11-02');
     await expect(actions.updatePerson(deps, ana.id, form({ name: 'Ana', birthday: '1990-13-40' }))).rejects.toThrow();
   });
+
+  it('addPerson y updatePerson guardan la ficha: alias, relación, gustos, tallas y contacto', async () => {
+    const rosendo = await actions.addPerson(
+      deps,
+      form({ name: 'Rosendo', alias: 'papá', relation: 'familia', likes: 'relojes', sizes: 'camiseta: L', email: 'r@example.com' }),
+    );
+    expect(rosendo).toMatchObject({
+      alias: ['papá'],
+      relation: 'familia',
+      likes: 'relojes',
+      sizes: { camiseta: 'L' },
+      contact: { email: 'r@example.com' },
+    });
+    const up = await actions.updatePerson(deps, rosendo.id, form({ name: 'Rosendo', alias: '', likes: 'té', dislikes: 'perfume' }));
+    expect(up).toMatchObject({ alias: [], likes: 'té', dislikes: 'perfume', relation: 'familia' });
+  });
 });
 
 describe('Bandeja y Papelera (Tarea 11)', () => {

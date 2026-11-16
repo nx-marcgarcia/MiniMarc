@@ -1,40 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusIcon } from '@/components/icons';
 import { InsetList, Row } from '@/components/ui';
 import type { Person } from '@/lib/db/types';
 import { formatBirthday } from '@/lib/format';
-import { PersonSheet } from './PersonSheet';
 
 export type PeopleSectionProps = { groups: { person: Person; count: number }[] };
 
-/** Regalos: one row per person (birthday and number of gift ideas) plus "Añadir persona". */
+/**
+ * Regalos: a view of Personas, not a second list. Only the people who have gift ideas (their
+ * ficha is where they are edited), plus a way to all of them. Adding a person lives in Personas.
+ */
 export function PeopleSection({ groups }: PeopleSectionProps) {
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <InsetList header="Personas" footer={groups.length ? undefined : 'Añade a alguien para guardar ideas de regalo y recordar su cumpleaños.'}>
-        {groups.map(({ person, count }) => (
-          <Row
-            key={person.id}
-            href={`/personas/${person.id}`}
-            title={person.name}
-            subtitle={person.birthday ? `Cumple el ${formatBirthday(person.birthday)}` : undefined}
-            detail={count ? String(count) : undefined}
-          />
-        ))}
+    <InsetList
+      header="Personas con ideas"
+      footer={groups.length ? undefined : 'Aún no hay ideas de regalo. Escribe «regalo para Ana: libro de cocina» arriba, o añade una desde la ficha de la persona.'}
+    >
+      {groups.map(({ person, count }) => (
         <Row
-          leading={
-            <span className="app-add-icon">
-              <PlusIcon />
-            </span>
-          }
-          title="Añadir persona"
-          onClick={() => setOpen(true)}
+          key={person.id}
+          href={`/personas/${person.id}`}
+          title={person.name}
+          subtitle={person.birthday ? `Cumple el ${formatBirthday(person.birthday)}` : undefined}
+          detail={String(count)}
         />
-      </InsetList>
-      <PersonSheet open={open} onClose={() => setOpen(false)} />
-    </>
+      ))}
+      <Row href="/personas" title="Todas las personas" />
+    </InsetList>
   );
 }
