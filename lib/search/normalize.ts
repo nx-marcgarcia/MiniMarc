@@ -13,3 +13,8 @@ export function normalizeSearch(text: string): string {
   for (const c of text.toLowerCase()) out += MAP.get(c) ?? c;
   return out;
 }
+
+/** How two names are compared to decide they are the same (person, store, tag): no case, no accents, single spaces. */
+export function nameKey(name: string): string {
+  return normalizeSearch(name.trim()).replace(/\s+/g, ' ');
+}

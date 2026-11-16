@@ -4,7 +4,10 @@
  */
 import type { DbBackend } from '@/lib/db/backend';
 import { rowToItem } from '@/lib/db/items';
+import { rowToLink, type ItemLink } from '@/lib/db/links';
 import { rowToPerson, rowToPersonDate } from '@/lib/db/people';
+import { rowToStore, type Store } from '@/lib/db/stores';
+import { rowToTag, type Tag } from '@/lib/db/tags';
 import { rowToPhoto, type ItemPhoto } from '@/lib/db/photos';
 import type { WeeklyDigest } from '@/lib/db/settings';
 import type { Item, Person, PersonDate } from '@/lib/db/types';
@@ -33,6 +36,10 @@ export interface ExportData {
   personDates: PersonDate[];
   /** Storage paths in the private `photos` bucket, not signed URLs. */
   photos: ItemPhoto[];
+  stores: Store[];
+  /** Previews included; one row per link of an item. */
+  itemLinks: ItemLink[];
+  tags: Tag[];
   settings: ExportSettings | null;
   apiTokens: ExportToken[];
 }
@@ -90,9 +97,33 @@ function clean(data: ExportData): ExportData {
   return {
     exportedAt: data.exportedAt,
     items: data.items.map((i) => Object.fromEntries(CSV_COLUMNS.map((c) => [c, i[c] ?? null])) as unknown as Item),
-    people: data.people.map(({ id, name, birthday, notes }) => ({ id, name, birthday, notes })),
+    people: data.people.map(({ id, name, birthday, notes, alias, relation, likes, dislikes, sizes, contact }) => ({
+      id,
+      name,
+      birthday,
+      notes,
+      alias,
+      relation,
+      likes,
+      dislikes,
+      sizes,
+      contact,
+    })),
     personDates: data.personDates.map(({ id, personId, label, date, yearly, notes, createdAt }) => ({ id, personId, label, date, yearly, notes, createdAt })),
     photos: data.photos.map(({ id, itemId, path, width, height, createdAt }) => ({ id, itemId, path, width, height, createdAt })),
+    stores: data.stores.map(({ id, name, domain, kind, favicon }) => ({ id, name, domain, kind, favicon })),
+    itemLinks: data.itemLinks.map(({ id, itemId, url, title, description, image, domain, favicon, position }) => ({
+      id,
+      itemId,
+      url,
+      title,
+      description,
+      image,
+      domain,
+      favicon,
+      position,
+    })),
+    tags: data.tags.map(({ id, name, color }) => ({ id, name, color })),
     settings: data.settings && { digestHour: data.settings.digestHour, tz: data.settings.tz, weeklyDigest: data.settings.weeklyDigest },
     apiTokens: data.apiTokens.map(({ name, createdAt, revokedAt }) => ({ name, createdAt, revokedAt })),
   };
@@ -129,11 +160,14 @@ async function orEmpty<T>(what: string, read: () => Promise<T>, empty: T): Promi
 
 export async function collectExport(deps: CollectDeps): Promise<ExportData> {
   const { backend } = deps;
-  const [items, people, personDates, photos, settings, tokens] = await Promise.all([
+  const [items, people, personDates, photos, stores, itemLinks, tags, settings, tokens] = await Promise.all([
     backend.select('items').then((rows) => rows.map(rowToItem).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
     backend.select('people').then((rows) => rows.map(rowToPerson).sort((a, b) => a.name.localeCompare(b.name, 'es'))),
     orEmpty('person_dates', async () => (await backend.select('person_dates')).map(rowToPersonDate), [] as PersonDate[]),
     orEmpty('item_photos', async () => (await backend.select('item_photos')).map(rowToPhoto), [] as ItemPhoto[]),
+    orEmpty('stores', async () => (await backend.select('stores')).map(rowToStore), [] as Store[]),
+    orEmpty('item_links', async () => (await backend.select('item_links')).map(rowToLink), [] as ItemLink[]),
+    orEmpty('tags', async () => (await backend.select('tags')).map(rowToTag), [] as Tag[]),
     orEmpty<ExportSettings | null>('settings', deps.settings, null),
     orEmpty('api_tokens', deps.tokens, [] as ExportToken[]),
   ]);
@@ -143,6 +177,9 @@ export async function collectExport(deps: CollectDeps): Promise<ExportData> {
     people,
     personDates,
     photos,
+    stores,
+    itemLinks,
+    tags,
     settings: settings && { digestHour: settings.digestHour, tz: settings.tz, weeklyDigest: settings.weeklyDigest },
     apiTokens: tokens.map(({ name, createdAt, revokedAt }) => ({ name, createdAt, revokedAt })),
   };

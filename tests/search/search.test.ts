@@ -164,7 +164,7 @@ describe('groupResults', () => {
       base({ type: 'tarea', area: 'trabajo', deletedAt: '2026-10-02T00:00:00Z' }),
       base({ type: 'idea', deletedAt: '2026-10-02T00:00:00Z' }),
     ];
-    const groups = groupResults(items, [{ id: 'p', name: 'Ana', birthday: null, notes: null }]);
+    const groups = groupResults(items, [{ id: 'p', name: 'Ana', birthday: null, notes: null, alias: [], relation: null, likes: null, dislikes: null, sizes: {}, contact: {} }]);
     expect(groups.map((g) => [g.key, g.label])).toEqual([
       ['tareas-personal', 'Tareas · Personal'],
       ['tareas-trabajo', 'Tareas · Trabajo'],

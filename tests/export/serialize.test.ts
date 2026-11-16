@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createMemoryBackend } from '@/lib/db/memory';
+import { createLinksRepo } from '@/lib/db/links';
+import { createStoresRepo } from '@/lib/db/stores';
+import { createTagsRepo } from '@/lib/db/tags';
 import { createItemsRepo } from '@/lib/db/items';
 import { createPeopleRepo } from '@/lib/db/people';
 import { createPhotosRepo } from '@/lib/db/photos';
@@ -55,6 +58,9 @@ const data = (over: Partial<ExportData> = {}): ExportData => ({
   people: [],
   personDates: [],
   photos: [],
+  stores: [],
+  itemLinks: [],
+  tags: [],
   settings: null,
   apiTokens: [],
   ...over,
@@ -68,7 +74,7 @@ describe('serializeExport json', () => {
       serializeExport(
         data({
           items: [item(), deleted, libro],
-          people: [{ id: 'p1', name: 'Ana', birthday: '1990-03-01', notes: null }],
+          people: [{ id: 'p1', name: 'Ana', birthday: '1990-03-01', notes: null, alias: [], relation: null, likes: null, dislikes: null, sizes: {}, contact: {} }],
           personDates: [{ id: 'd1', personId: 'p1', label: 'Santo', date: '1604-07-26', yearly: true, notes: null, createdAt: '2026-10-01T00:00:00.000Z' }],
           photos: [{ id: 'f1', itemId: 'i1', path: 'u/i1/a.webp', width: 10, height: 20, createdAt: '2026-10-21T10:00:00.000Z' }],
           settings: { digestHour: 8, tz: 'Europe/Madrid', weeklyDigest: 'lunes' },
@@ -190,9 +196,35 @@ describe('collectExport', () => {
     expect(out.exportedAt).toBe('2026-10-22T08:00:00.000Z');
   });
 
+  it('reúne tiendas, enlaces y tags, y la ficha ampliada de las personas', async () => {
+    const backend = createMemoryBackend();
+    const people = createPeopleRepo(backend);
+    const rosendo = await people.upsertPersonByName('Rosendo');
+    await people.updatePerson(rosendo.id, { alias: ['papá'], relation: 'familia', likes: 'relojes' });
+    const items = createItemsRepo(backend);
+    const casio = await items.createItem({ type: 'compra', title: 'Casio MTP-B220BL' });
+    await createStoresRepo(backend).upsertStoreByName('Casio', { domain: 'casio.com' });
+    await createLinksRepo(backend).addLink(casio.id, { url: 'https://www.casio.com/es/x', title: 'Casio' });
+    await createTagsRepo(backend).upsertTagByName('reloj', '#336699');
+
+    const out = await collectExport({
+      backend,
+      settings: async () => ({ digestHour: 9, tz: 'Europe/Madrid', weeklyDigest: 'off' }),
+      tokens: async () => [],
+    });
+    expect(out.stores.map((s) => s.name)).toEqual(['Casio']);
+    expect(out.itemLinks[0]).toMatchObject({ itemId: casio.id, url: 'https://www.casio.com/es/x', domain: 'casio.com' });
+    expect(out.tags).toEqual([expect.objectContaining({ name: 'reloj', color: '#336699' })]);
+    expect(out.people[0]).toMatchObject({ alias: ['papá'], relation: 'familia', likes: 'relojes' });
+    const json = JSON.parse(serializeExport(out, 'json'));
+    expect(json.stores[0].domain).toBe('casio.com');
+    expect(json.itemLinks).toHaveLength(1);
+    expect(json.people[0].alias).toEqual(['papá']);
+  });
+
   it('una parte opcional que falla (migración sin aplicar) queda vacía', async () => {
     const backend = createMemoryBackend();
-    const failing = { ...backend, select: async (t: string, w?: never) => { if (t === 'item_photos' || t === 'person_dates') throw new Error('no table'); return backend.select(t as never, w); } };
+    const failing = { ...backend, select: async (t: string, w?: never) => { if (['item_photos', 'person_dates', 'stores', 'item_links', 'tags'].includes(t)) throw new Error('no table'); return backend.select(t as never, w); } };
     const out = await collectExport({
       backend: failing as never,
       settings: async () => { throw new Error('x'); },
@@ -200,6 +232,9 @@ describe('collectExport', () => {
     });
     expect(out.photos).toEqual([]);
     expect(out.personDates).toEqual([]);
+    expect(out.stores).toEqual([]);
+    expect(out.itemLinks).toEqual([]);
+    expect(out.tags).toEqual([]);
     expect(out.settings).toBeNull();
     expect(out.apiTokens).toEqual([]);
   });

@@ -94,7 +94,7 @@ describe('buildWeekDigest', () => {
       ...due('2026-10-23'),
     });
     const ana = await s.people.upsertPersonByName('Ana');
-    await s.people.updatePerson(ana.id, { birthday: '1990-10-24', notes: 'SENTINELA_PERSONA' });
+    await s.people.updatePerson(ana.id, { birthday: '1990-10-24', notes: 'SENTINELA_PERSONA', alias: [], relation: null, likes: null, dislikes: null, sizes: {}, contact: {} });
     await s.people.addDate({ personId: ana.id, label: 'Santo', date: '2000-10-20', notes: 'SENTINELA_FECHA' });
     await s.add({ type: 'regalo', title: 'SENTINELA_REGALO', notes: 'SENTINELA_NOTA_REGALO', personId: ana.id });
 

@@ -88,7 +88,7 @@ describe('listPersonas (summary cards)', () => {
 describe('date words', () => {
   it('countdown and summaries', () => {
     expect([countdown(0), countdown(1), countdown(12)]).toEqual(['hoy', 'mañana', 'en 12 días']);
-    const p = { id: 'p', name: 'Ainhoa', birthday: null, notes: null };
+    const p = { id: 'p', name: 'Ainhoa', birthday: null, notes: null, alias: [], relation: null, likes: null, dislikes: null, sizes: {}, contact: {} };
     expect(dateSummary({ label: 'Santo', daysUntil: 0 })).toBe('Santo · hoy');
     expect(dateWithPerson({ kind: 'date', label: 'Aniversario', person: p, yearsSince: 5 })).toBe('aniversario con Ainhoa (5 años)');
   });

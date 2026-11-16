@@ -390,7 +390,7 @@ describe('digestPayload', () => {
     expect(digestPayload(none).body).toBe('Buenos días');
   });
 
-  const person = (name: string) => ({ id: `p-${name}`, name, birthday: null, notes: 'SENTINELA_NOTA_PERSONA' });
+  const person = (name: string) => ({ id: `p-${name}`, name, birthday: null, notes: 'SENTINELA_NOTA_PERSONA', alias: [], relation: null, likes: null, dislikes: null, sizes: {}, contact: {} });
   const date = (over: Partial<DigestDate>): DigestDate => ({
     person: person('Ainhoa'),
     kind: 'date',

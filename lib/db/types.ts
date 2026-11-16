@@ -88,12 +88,23 @@ export interface ItemFilter {
   createdSince?: string;
 }
 
+export const RELATIONS = ['familia', 'pareja', 'amigo', 'trabajo', 'otro'] as const;
+export type Relation = (typeof RELATIONS)[number];
+
 export interface Person {
   id: string;
   name: string;
   /** 'YYYY-MM-DD' */
   birthday: string | null;
   notes: string | null;
+  /** Other ways Marc writes the name ("papá", "padre"): the capture finds the person by them too. */
+  alias: string[];
+  relation: Relation | null;
+  likes: string | null;
+  dislikes: string | null;
+  /** "camiseta": "M", "zapatos": "42"… */
+  sizes: Record<string, string>;
+  contact: { email?: string; phone?: string };
 }
 
 /** A special date of a person besides the birthday (person_dates row). */

@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseBackend, type DbBackend, type Row } from './backend';
-import { normalizeSearch } from '@/lib/search/normalize';
+import { z } from 'zod';
+import { nameKey } from '@/lib/search/normalize';
 import { isValidDate } from '@/lib/time';
-import type { NewPersonDate, Person, PersonDate, PersonDatePatch } from './types';
+import { RELATIONS, type NewPersonDate, type Person, type PersonDate, type PersonDatePatch } from './types';
 
 export interface PeopleRepo {
   upsertPersonByName(name: string): Promise<Person>;
@@ -26,15 +27,30 @@ export interface PeopleRepo {
   deletePerson(id: string): Promise<void>;
 }
 
-export type PersonPatch = Partial<Pick<Person, 'name' | 'birthday' | 'notes'>>;
+export type PersonPatch = Partial<Omit<Person, 'id'>>;
+
+const patchSchema = z.object({
+  alias: z.array(z.string()).optional(),
+  relation: z.enum(RELATIONS).nullable().optional(),
+  likes: z.string().nullable().optional(),
+  dislikes: z.string().nullable().optional(),
+  sizes: z.record(z.string(), z.string()).optional(),
+  contact: z.strictObject({ email: z.email().optional(), phone: z.string().trim().min(1).optional() }).optional(),
+});
+
+/** Alias without blanks and without repeats (compared like names). */
+function cleanAlias(alias: string[]): string[] {
+  const seen = new Set<string>();
+  return alias
+    .map((a) => a.trim())
+    .filter((a) => a && !seen.has(nameKey(a)) && seen.add(nameKey(a)));
+}
 
 /**
  * How two names are compared to decide they are the same person: no case, no accents, single
  * spaces. Deliberately not fuzzy — "Ana" and "Ano" are different people.
  */
-export function personKey(name: string): string {
-  return normalizeSearch(name.trim()).replace(/\s+/g, ' ');
-}
+export const personKey = nameKey;
 
 export function rowToPerson(row: Row): Person {
   return {
@@ -42,6 +58,12 @@ export function rowToPerson(row: Row): Person {
     name: String(row.name),
     birthday: row.birthday == null ? null : String(row.birthday).slice(0, 10),
     notes: (row.notes as string | null) ?? null,
+    alias: Array.isArray(row.alias) ? (row.alias as string[]) : [],
+    relation: (RELATIONS as readonly unknown[]).includes(row.relation) ? (row.relation as Person['relation']) : null,
+    likes: (row.likes as string | null) ?? null,
+    dislikes: (row.dislikes as string | null) ?? null,
+    sizes: row.sizes && typeof row.sizes === 'object' ? (row.sizes as Record<string, string>) : {},
+    contact: row.contact && typeof row.contact === 'object' ? (row.contact as Person['contact']) : {},
   };
 }
 
@@ -137,7 +159,12 @@ export function createPeopleRepo(backend: DbBackend): PeopleRepo {
       // instead of creating a second person. Compared here, over every row, because the
       // comparison has to be the same on both backends; the table is one person's contacts.
       const key = personKey(clean);
-      const found = (await backend.select('people')).find((r) => personKey(String(r.name)) === key);
+      // By name or by alias ("papá" is Rosendo once he has that alias).
+      const found = (await backend.select('people')).find(
+        (r) =>
+          personKey(String(r.name)) === key ||
+          (Array.isArray(r.alias) && (r.alias as string[]).some((a) => personKey(String(a)) === key)),
+      );
       if (found) return rowToPerson(found);
       return rowToPerson(await backend.insert('people', { name: clean }));
     },
@@ -226,6 +253,11 @@ export function createPeopleRepo(backend: DbBackend): PeopleRepo {
       }
       if (patch.birthday !== undefined) row.birthday = patch.birthday;
       if (patch.notes !== undefined) row.notes = patch.notes;
+      const extra = patchSchema.parse(patch);
+      if (extra.alias !== undefined) row.alias = cleanAlias(extra.alias);
+      for (const k of ['relation', 'likes', 'dislikes', 'sizes', 'contact'] as const) {
+        if (extra[k] !== undefined) row[k] = extra[k];
+      }
       return rowToPerson(await backend.update('people', id, row));
     },
   };
