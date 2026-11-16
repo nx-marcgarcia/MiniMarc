@@ -36,10 +36,19 @@ export const captureActions = {
   listCapturePeople: vi.fn(),
 };
 
+/** Doubles for `app/actions/captureFollowUp.ts` (the capture toast's chips and Deshacer). */
+export const followUpActions = {
+  correctCapture: vi.fn(),
+  undoCapture: vi.fn(),
+  mergeCaptureDuplicate: vi.fn(),
+  listCaptureChoices: vi.fn(),
+};
+
 export const router = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() };
 
 export const itemsActionsModule = { ...itemsActions };
 export const captureActionsModule = { ...captureActions };
+export const followUpActionsModule = { ...followUpActions };
 /** Current route seen by `next/navigation`; set per test (reset to these defaults before each one). */
 export const navigation = { pathname: '/tareas', search: '' };
 
@@ -50,7 +59,7 @@ export const navigationModule = {
 };
 
 function resetDoubles() {
-  for (const fn of [...Object.values(itemsActions), ...Object.values(captureActions), ...Object.values(router)]) {
+  for (const fn of [...Object.values(itemsActions), ...Object.values(captureActions), ...Object.values(followUpActions), ...Object.values(router)]) {
     fn.mockReset();
   }
   navigation.pathname = '/tareas';
@@ -62,6 +71,10 @@ function resetDoubles() {
   }
   captureActions.quickCapture.mockResolvedValue(ok({ message: 'Guardado', href: null }));
   captureActions.listCapturePeople.mockResolvedValue(ok([]));
+  followUpActions.correctCapture.mockImplementation(async () => ok(makeItem()));
+  followUpActions.undoCapture.mockResolvedValue(ok({ deleted: 1, eventsFailed: 0 }));
+  followUpActions.mergeCaptureDuplicate.mockImplementation(async () => ok(makeItem()));
+  followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [] }));
 }
 
 beforeEach(() => {

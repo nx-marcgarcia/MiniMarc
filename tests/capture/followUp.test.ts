@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CalendarGateway } from '@/lib/calendar/client';
-import { correctCaptured, undoCaptured, type FollowUpDeps } from '@/lib/capture/followUp';
+import { correctCaptured, correctionInputSchema, undoCaptured, undoInputSchema, type FollowUpDeps } from '@/lib/capture/followUp';
 import { createCaptureLogRepo } from '@/lib/db/captureLog';
 import { createItemsRepo } from '@/lib/db/items';
 import { createMemoryBackend } from '@/lib/db/memory';
@@ -131,5 +131,22 @@ describe('undoCaptured (Deshacer)', () => {
     const a = await deps.items.createItem({ type: 'compra', title: 'A' });
     const r = await undoCaptured(deps, { itemIds: ['nope', a.id], eventIds: [] });
     expect(r.deleted).toBe(1);
+  });
+});
+
+describe('validación de lo que llega del navegador', () => {
+  it('la corrección acepta solo campos conocidos y tipos del registro', () => {
+    const ok = { itemId: 'a', patch: { type: 'compra', storeName: 'Casio' } };
+    expect(correctionInputSchema.safeParse(ok).success).toBe(true);
+    expect(correctionInputSchema.safeParse({ ...ok, patch: { type: 'viaje' } }).success).toBe(false);
+    expect(correctionInputSchema.safeParse({ ...ok, patch: { title: 'x' } }).success).toBe(false);
+    expect(correctionInputSchema.safeParse({ itemId: '', patch: {} }).success).toBe(false);
+    expect(correctionInputSchema.safeParse({ itemId: 'a', patch: { personName: 'x'.repeat(300) } }).success).toBe(false);
+  });
+
+  it('deshacer pide listas de ids, no demasiado largas', () => {
+    expect(undoInputSchema.safeParse({ itemIds: ['a'], eventIds: [] }).success).toBe(true);
+    expect(undoInputSchema.safeParse({ itemIds: 'a', eventIds: [] }).success).toBe(false);
+    expect(undoInputSchema.safeParse({ itemIds: Array.from({ length: 200 }, (_, i) => String(i)), eventIds: [] }).success).toBe(false);
   });
 });

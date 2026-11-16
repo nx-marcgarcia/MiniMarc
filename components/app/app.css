@@ -2052,3 +2052,100 @@
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* Capture card: what the capture understood, with its correction chips (components/capture/CaptureCard.tsx) */
+.app-capture-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(100%, 460px);
+  max-width: none;
+  padding: 12px 14px 8px;
+  border-radius: 22px;
+}
+
+.app-capture-card__lines,
+.app-capture-card__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-capture-card__lines li {
+  font-weight: 600;
+}
+
+.app-capture-card__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 4px 0;
+  border-top: 0.5px solid var(--separator, rgba(60, 60, 67, 0.2));
+}
+
+.app-capture-card__title {
+  flex: 1 1 140px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.app-capture-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-chip {
+  min-height: 32px;
+  max-width: 11rem;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background-color: color-mix(in srgb, var(--accent, #335a80) 12%, transparent);
+  color: var(--accent, #335a80);
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+
+.app-chip:focus-visible,
+.app-capture-card .ui-bar-button:focus-visible {
+  outline: 2px solid var(--accent, #335a80);
+  outline-offset: 2px;
+}
+
+.app-capture-card__more {
+  padding: 4px 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.app-capture-card__repeat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 14px;
+}
+
+.app-capture-card__repeat-title {
+  flex: 1 1 100%;
+  opacity: 0.7;
+}
+
+.app-capture-card__error {
+  margin: 0;
+  color: var(--destructive, #b3261e);
+  font-size: 14px;
+}
+
+.app-capture-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}

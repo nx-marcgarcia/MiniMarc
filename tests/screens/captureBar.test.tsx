@@ -6,6 +6,7 @@ import { fail } from '@/lib/actions/result';
 import { captureActions, renderScreen } from './setup';
 
 vi.mock('@/app/actions/capture', () => import('./setup').then((m) => m.captureActionsModule));
+vi.mock('@/app/actions/captureFollowUp', () => import('./setup').then((m) => m.followUpActionsModule));
 vi.mock('next/navigation', () => import('./setup').then((m) => m.navigationModule));
 
 const field = () => screen.getByRole('textbox', { name: 'Apunta algo' }) as HTMLInputElement;

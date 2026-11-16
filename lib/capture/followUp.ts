@@ -4,11 +4,13 @@
  * classification log (0012): they are the real examples the prompt is improved with.
  * Pure over injected repos; app/actions/captureFollowUp.ts binds them to the session.
  */
+import { z } from 'zod';
 import { deleteAgendaEvent, PRIMARY_CALENDAR, type EventDeps } from '@/lib/actions/events';
 import { deleteItem, moveItem, type ActionDeps, type MovePatch } from '@/lib/actions/items';
 import type { CaptureLogRepo } from '@/lib/db/captureLog';
 import type { StoresRepo } from '@/lib/db/stores';
 import type { Item, ItemType } from '@/lib/db/types';
+import { ITEM_TYPE_IDS } from '@/lib/items/itemTypes';
 
 export interface FollowUpDeps extends ActionDeps, Partial<EventDeps> {
   stores: StoresRepo;
@@ -23,6 +25,24 @@ export interface CorrectionPatch {
   storeId?: string | null;
   storeName?: string;
 }
+
+/** What a Server Action accepts from the browser for a correction: only these fields, only registry types. */
+export const correctionInputSchema = z.object({
+  logId: z.string().min(1).optional(),
+  itemId: z.string().min(1),
+  patch: z.strictObject({
+    type: z.enum(ITEM_TYPE_IDS as [ItemType, ...ItemType[]]).optional(),
+    personId: z.string().min(1).nullable().optional(),
+    personName: z.string().max(200).optional(),
+    storeId: z.string().min(1).nullable().optional(),
+    storeName: z.string().max(200).optional(),
+  }),
+});
+
+export const undoInputSchema = z.object({
+  itemIds: z.array(z.string().min(1)).max(50),
+  eventIds: z.array(z.string().min(1)).max(50),
+});
 
 export async function correctCaptured(
   deps: FollowUpDeps,

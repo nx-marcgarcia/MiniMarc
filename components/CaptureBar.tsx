@@ -25,6 +25,7 @@ import {
   SendIcon,
   TasksIcon,
 } from '@/components/icons';
+import { CaptureCard, type CaptureCardData } from '@/components/capture/CaptureCard';
 import { Toast, type ToastProps } from '@/components/ui';
 import { settle } from '@/lib/actions/result';
 import {
@@ -148,6 +149,8 @@ function CaptureBarView({ screen, screenKey }: { screen: CaptureDefaults; screen
   const [people, setPeople] = useState<Person[] | null>(null);
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<ToastState | null>(null);
+  /** What the last capture understood, with its chips (replaces the plain toast). */
+  const [card, setCard] = useState<CaptureCardData | null>(null);
   // Blocks a second submit (double Enter) before `pending` re-renders.
   const inFlight = useRef(false);
   const toastId = useRef(0);
@@ -186,6 +189,7 @@ function CaptureBarView({ screen, screenKey }: { screen: CaptureDefaults; screen
 
   function showToast(message: string, href: string | null) {
     toastId.current += 1;
+    setCard(null);
     setToast({
       id: toastId.current,
       message,
@@ -260,7 +264,14 @@ function CaptureBarView({ screen, screenKey }: { screen: CaptureDefaults; screen
           setText('');
           resetToScreen();
           if (newPerson) setPeople(null);
-          showToast(result.value.message, result.value.href);
+          const { understood } = result.value;
+          if (understood && understood.lines.length > 0) {
+            toastId.current += 1;
+            setToast(null);
+            setCard({ id: toastId.current, message: result.value.message, understood });
+          } else {
+            showToast(result.value.message, result.value.href);
+          }
           // Fast multi-entry: back to the text if the focus is still in the card (e.g. after the send button).
           if (formRef.current?.contains(document.activeElement)) inputRef.current?.focus();
         } else {
@@ -439,6 +450,16 @@ function CaptureBarView({ screen, screenKey }: { screen: CaptureDefaults; screen
 
         </div>
       </form>
+      {card && (
+        <div className="ui-toast-region">
+          <CaptureCard
+            key={card.id}
+            data={card}
+            onClose={() => setCard(null)}
+            onNotice={(message) => showToast(message, null)}
+          />
+        </div>
+      )}
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </>
   );
