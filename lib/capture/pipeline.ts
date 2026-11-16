@@ -23,6 +23,7 @@ import { ITEM_TYPES, isItemType } from '@/lib/items/itemTypes';
 import type { LinkPreview } from '@/lib/links/ogParser';
 import { extractUrls } from '@/lib/links/linkify';
 import { DEFAULT_TZ } from '@/lib/time';
+import { findDuplicate } from './duplicates';
 import { guessFromLink, parseShortcuts, type LinkGuess, type Shortcuts } from './prep';
 
 export const TITLE_MAX = 200;
@@ -38,6 +39,8 @@ export type CaptureResult = {
   dates?: CapturedDate[];
   /** Por qué no se clasificó (causeMessage). Solo cuando la IA falló: el aviso lo cuenta. */
   aiError?: string;
+  /** Items this capture made that look like one Marc already had (the toast offers to merge them). */
+  duplicates?: { itemId: string; existingId: string }[];
   /** The entry of this capture in the classification log (the toast's chips write corrections to it). */
   logId?: string;
 };
@@ -257,6 +260,14 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
     return finish({ items: [await deps.items.createItem(unclassified())], eventIds: [], ...(aiError && { aiError }) });
   }
 
+  // What Marc already has, to warn about repeats. An extra: if it cannot be read there is no warning.
+  let existing: Item[] = [];
+  try {
+    existing = await deps.items.listItems({ open: true });
+  } catch {
+    existing = [];
+  }
+
   // Each element is saved on its own: one failure does not undo or block the others.
   const out: CaptureResult = { items: [], eventIds: [] };
   let failure: unknown = null;
@@ -264,7 +275,7 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
   const linkTarget = classified.findIndex((c) => c.kind !== 'cita' && c.kind !== 'fecha');
   for (const [n, c] of classified.entries()) {
     try {
-      await saveClassified(c, text, input, deps, out, { shortcuts, urls: n === linkTarget ? urls : [], page: n === linkTarget ? page : null });
+      await saveClassified(c, text, input, deps, out, { shortcuts, urls: n === linkTarget ? urls : [], page: n === linkTarget ? page : null, existing });
     } catch (err) {
       failure ??= err;
     }
@@ -281,7 +292,7 @@ async function run(text: string, input: CaptureInput, deps: CaptureDeps): Promis
   return finish(out);
 }
 
-type SaveExtras = { shortcuts: Shortcuts; urls: string[]; page: LinkPreview | null };
+type SaveExtras = { shortcuts: Shortcuts; urls: string[]; page: LinkPreview | null; existing?: Item[] };
 
 /** Saves one classified element into `out`: a cita in Calendar, or an item. Throws if the item insert fails. */
 async function saveClassified(
@@ -347,6 +358,8 @@ async function saveClassified(
   const saved = await syncDatedTask(deps, item);
   out.items.push(saved);
   await saveLinks(deps, saved, extras);
+  const repeated = saved.needsReview ? null : findDuplicate(saved, extras.existing ?? []);
+  if (repeated) (out.duplicates ??= []).push({ itemId: saved.id, existingId: repeated.id });
   return out;
 }
 
