@@ -145,7 +145,7 @@ Tomadas por Claude, no por Marc; corregibles:
 1. **Terminar un proyecto** solo cambia su estado a `terminado`: sus items no se tocan (siguen pendientes, enlazados y visibles en su lista de tipo). No hay flag `archived` en proyectos: el estado manda. Los terminados salen plegados en `/proyectos`, no en `/archivo` (que es de items).
 2. **Área de proyecto e items:** cada item conserva su área. Un item creado *dentro* de un proyecto (el «+» de la ficha, la captura en la ficha, el atajo `>`) toma el área del proyecto si este la tiene. En la captura, el proyecto se resuelve **antes** de decidir si va la IA: si el proyecto es de Trabajo, el item es Trabajo y la IA no se llama. El filtro de área se aplica al proyecto (sin área = sale en los dos); dentro de la ficha se ve todo lo suyo.
 3. **Alcance del filtro de área:** solo filtra lo que tiene área de verdad: tareas (Hoy y Tareas), la Bandeja y los Proyectos. Las citas de Calendar, Personas y regalos y las colecciones de la Biblioteca lo ignoran (son personales). La frase de la IA de Hoy sigue usando solo lo personal.
-4. **Sin duplicados en «Tu día»:** las citas del calendario «Tareas» (las copias que hace `taskSync` de las tareas con hora) se quitan de la línea de tiempo; manda la fila de la tarea, con su círculo. Lo que Marc meta a mano en ese calendario tampoco sale en Hoy (sí en la vista Calendario).
+4. **Sin duplicados en «Tu día»:** una cita cuyo id es el `calendarEventId` de una tarea del día (la copia que hace `taskSync`) se quita de la línea de tiempo; manda la fila de la tarea, con su círculo. Lo que Marc meta a mano en el calendario «Tareas» sí sale.
 
 ## Fases (un commit por paso verde)
 
