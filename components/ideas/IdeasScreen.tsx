@@ -10,6 +10,7 @@ import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item } from '@/lib/db/types';
 import { categoriesIn, filterIdeas, sortIdeas, statesIn, tagsIn } from '@/lib/ideas';
 import { ITEM_TYPES } from '@/lib/items/itemTypes';
+import { stars } from '@/lib/libros';
 
 type ToastState = NonNullable<ToastProps['toast']>;
 
@@ -142,20 +143,29 @@ export function IdeasScreen({ ideas }: { ideas: Item[] }) {
         {shown.length > 0 ? (
           <InsetList>
             {shown.map((item) => {
-              const meta = [
-                typeof item.data.category === 'string' ? item.data.category : null,
-                typeof item.data.potential === 'number' ? `Potencial ${item.data.potential}/5` : null,
-                typeof item.data.nextStep === 'string' ? `Siguiente: ${item.data.nextStep}` : null,
-              ].filter(Boolean);
+              const category = typeof item.data.category === 'string' ? item.data.category : null;
+              const potential = typeof item.data.potential === 'number' ? item.data.potential : null;
+              const nextStep = typeof item.data.nextStep === 'string' ? item.data.nextStep : null;
               return (
                 <div key={item.id} className="ui-row app-idea">
                   <div className="app-idea__body app-press">
                     <button type="button" className="app-press__hit" aria-label={`Abrir «${item.title}»`} onClick={() => setSheet({ open: true, mode: { kind: 'edit', item } })} />
                     <span className="app-idea__title">{item.title}</span>
-                    {meta.length > 0 && <span className="app-idea__meta">{meta.join(' · ')}</span>}
+                    {(category || potential !== null) && (
+                      <span className="app-idea__chips">
+                        {category && <span className="app-idea__chip">{category}</span>}
+                        {potential !== null && (
+                          <span className="app-idea__chip app-idea__chip--stars" role="img" aria-label={`Potencial: ${potential} de 5`}>
+                            {stars(potential)}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {nextStep && <span className="app-idea__next">→ {nextStep}</span>}
                   </div>
                   <select
-                    className="app-chip app-idea__state"
+                    className="app-idea__state"
+                    data-state={item.status}
                     aria-label={`Estado de «${item.title}»`}
                     value={item.status}
                     onChange={(e) => changeState(item, e.target.value)}

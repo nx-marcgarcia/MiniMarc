@@ -22,7 +22,10 @@ test('las ideas no llevan círculo de completar y se ven con su categoría y sig
   renderScreen(ui());
   expect(screen.queryByRole('checkbox')).toBeNull();
   expect(screen.getByText('App de recetas')).toBeTruthy();
-  expect(screen.getByText('negocio · Potencial 4/5 · Siguiente: Hablar con Rosendo')).toBeTruthy();
+  const row = screen.getByText('App de recetas').closest('.app-idea') as HTMLElement;
+  expect(row.querySelector('.app-idea__chip')?.textContent).toBe('negocio');
+  expect(within(row).getByLabelText('Potencial: 4 de 5').textContent).toBe('★★★★☆');
+  expect(within(row).getByText('→ Hablar con Rosendo')).toBeTruthy();
 });
 
 test('las descartadas no salen hasta que se filtra por ese estado', async () => {

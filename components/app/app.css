@@ -2355,36 +2355,6 @@ a.app-enlace__title:focus-visible {
   margin-top: 4px;
 }
 
-/* Ideas: card per idea with a state selector instead of a check (components/ideas/IdeasScreen.tsx) */
-.app-idea {
-  align-items: center;
-  gap: 12px;
-  padding-block: 10px;
-}
-
-.app-idea__body {
-  position: relative;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.app-idea__title {
-  overflow-wrap: anywhere;
-  font-weight: 600;
-}
-
-.app-idea__meta {
-  font-size: 13px;
-  opacity: 0.7;
-}
-
-.app-idea__state {
-  flex: none;
-}
-
 /* Regalos: aviso de una fecha cercana sin regalo comprado (components/items/OccasionsSection.tsx) */
 .app-warn {
   font-weight: 600;
@@ -2463,4 +2433,102 @@ a.app-enlace__title:focus-visible {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
+}
+
+/* Filas propias sobre .ui-row: la fila base solo tiene margen izquierdo, el derecho lo pone cada fila. */
+.app-idea,
+.app-enlace,
+.app-resurface,
+.app-subtask,
+.app-bandeja-row {
+  padding-right: 16px;
+}
+
+/* Ideas: título, chips de categoría y potencial, siguiente paso y un estado de color (components/ideas/IdeasScreen.tsx) */
+.app-idea {
+  align-items: center;
+  gap: 12px;
+  padding-block: 12px;
+}
+
+.app-idea__body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.app-idea__title {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.app-idea__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-idea__chip {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--label-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.app-idea__chip--stars {
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.app-idea__next {
+  color: var(--label-secondary);
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.app-idea__state {
+  flex: none;
+  min-height: 32px;
+  max-width: 9.5rem;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--fill);
+  color: var(--label-secondary);
+}
+
+.app-idea__state[data-state='semilla'] {
+  background: color-mix(in srgb, #5b9a6a 16%, transparent);
+  color: #3d7a4d;
+}
+
+.app-idea__state[data-state='explorando'] {
+  background: color-mix(in srgb, var(--accent, #335a80) 14%, transparent);
+  color: var(--accent, #335a80);
+}
+
+.app-idea__state[data-state='en_marcha'] {
+  background: color-mix(in srgb, #d08a2e 18%, transparent);
+  color: #9a6218;
+}
+
+.app-idea__state[data-state='descartada'] {
+  opacity: 0.6;
+}
+
+.app-idea__state:focus-visible {
+  outline: 2px solid var(--accent, #335a80);
+  outline-offset: 2px;
 }
