@@ -2,6 +2,7 @@
  * Logic behind the item server actions (app/actions/items.ts) and the list screens.
  * Pure: everything goes through the repos in `deps`, so tests run on the memory backend.
  */
+import type { ProjectsRepo } from '@/lib/db/projects';
 import { z } from 'zod';
 import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { ItemsRepo } from '@/lib/db/items';
@@ -33,6 +34,8 @@ export interface ActionDeps {
   items: ItemsRepo;
   people: PeopleRepo;
   sync?: ItemSync;
+  /** Projects (0014); without it, nothing goes into a project. */
+  projects?: ProjectsRepo;
 }
 
 const ITEM_TYPES = ITEM_TYPE_IDS as [ItemType, ...ItemType[]];
@@ -102,6 +105,7 @@ export const movePatchSchema = z
     priority: z.enum(['baja', 'media', 'alta']).nullable(),
     tags: z.array(z.string().trim().min(1)),
     storeId: z.string().nullable(),
+    projectId: z.string().min(1).nullable(),
     remindAt: z.iso.datetime({ offset: true }).nullable(),
     data: z.record(z.string(), z.unknown()),
     /** What the AI thinks a doubtful item is; null clears it (accepted or reclassified). */
@@ -152,7 +156,16 @@ export async function afterWrite(deps: Pick<ActionDeps, 'items' | 'sync'>, item:
 }
 
 export async function addItem(deps: ActionDeps, fd: FormData): Promise<Item> {
-  return saveNewItem(deps, parseNewItem(fd));
+  const fields = parseNewItem(fd);
+  const projectId = field(fd, 'projectId');
+  if (projectId && deps.projects) {
+    const project = await deps.projects.getProject(projectId);
+    if (!project) throw new UserError('Ese proyecto ya no existe');
+    fields.projectId = project.id;
+    // Made inside a project: it takes the project's area unless the form chose one.
+    if (!field(fd, 'area') && project.area) fields.area = project.area;
+  }
+  return saveNewItem(deps, fields);
 }
 
 /** Creates an already-validated item and runs the sync hook (a timed task gets its event). */

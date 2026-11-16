@@ -14,7 +14,9 @@
  * and the app refreshes its screen when it returns to the foreground (RefreshOnReturn), since
  * the private results live in the client router where a server-side revalidation cannot reach.
  */
-import type { AreaFilter } from '@/lib/area';
+import { matchesArea, type AreaFilter } from '@/lib/area';
+import type { Project } from '@/lib/db/projects';
+import { PROJECT_TYPE_ORDER, projectSummary, type ProjectSummary } from '@/lib/projects';
 import { cacheLife } from 'next/cache';
 import { listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
 import { listPersonas, NEXT_DATE_WINDOW_DAYS } from '@/lib/actions/people';
@@ -226,6 +228,59 @@ export async function readPersona(id: string) {
     photos: await loadPhotoMap(group.items),
     today,
   };
+}
+
+// ---------- Proyectos ----------
+
+export type ProjectCard = { project: Project; summary: ProjectSummary };
+
+/** Proyectos: active, paused and finished cards for the area filter (a project with no area shows in both). */
+export async function readProyectos(filter: AreaFilter) {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items']);
+  const repo = deps.projects!;
+  const [available, projects, items] = await Promise.all([
+    repo.available(),
+    repo.listProjects(),
+    deps.items.listItems({ needsReview: false }),
+  ]);
+  const cards: ProjectCard[] = projects
+    .filter((p) => p.area === null || matchesArea(p.area, filter))
+    .map((project) => ({ project, summary: projectSummary(items.filter((i) => i.projectId === project.id)) }));
+  return {
+    available,
+    active: cards.filter((c) => c.project.status === 'activo'),
+    paused: cards.filter((c) => c.project.status === 'en_pausa'),
+    done: cards.filter((c) => c.project.status === 'terminado'),
+  };
+}
+
+/** A project's page: its open items by type (in PROJECT_TYPE_ORDER), or null when there is no such project. */
+export async function readProyecto(id: string) {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items', 'people']);
+  const project = await deps.projects!.getProject(id);
+  if (!project) return null;
+  const [all, people] = await Promise.all([deps.items.listItems({ needsReview: false }), deps.people.listPeople()]);
+  const mine = all.filter((i) => i.projectId === id);
+  const open = mine.filter(isOpen);
+  const sections = PROJECT_TYPE_ORDER.map((type) => ({ type, items: open.filter((i) => i.type === type) })).filter(
+    (s) => s.items.length > 0,
+  );
+  return { project, sections, summary: projectSummary(mine), people, photos: await loadPhotoMap(open), today: madridToday() };
+}
+
+/** Every project (for the edit sheet's selector); empty before 0014. */
+export async function readProjectList() {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items']);
+  return deps.projects!.listProjects();
 }
 
 // ---------- Calendar, Hoy, Semana ----------
