@@ -1,7 +1,7 @@
 import { Children, type ReactNode } from 'react';
 
 export type InsetListProps = {
-  header?: string;
+  header?: ReactNode;
   footer?: string;
   /** Usually `<Row>` elements; each child becomes a list item. */
   children: ReactNode;

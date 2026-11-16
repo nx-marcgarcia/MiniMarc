@@ -2195,3 +2195,108 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Compras: folding store sections and the "En la tienda" mode (components/compras/ComprasScreen.tsx) */
+.app-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-group-header:focus-visible {
+  outline: 2px solid var(--accent, #335a80);
+  outline-offset: 2px;
+}
+
+.app-group-header__chevron {
+  width: 1em;
+  opacity: 0.6;
+}
+
+.app-group-header__logo {
+  border-radius: 4px;
+}
+
+.app-group-header__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-group-header__count,
+.app-group-header__total {
+  font-size: 13px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shopping {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 24px;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.app-shopping__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-shopping__store {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.app-shopping__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-shopping__item {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-shopping__item[aria-pressed='true'] {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+
+.app-shopping__item:focus-visible {
+  outline: 2px solid var(--accent, #335a80);
+  outline-offset: 2px;
+}
+
+.app-shopping__detail {
+  display: block;
+  padding: 0 4px 6px;
+  font-size: 13px;
+  opacity: 0.7;
+}

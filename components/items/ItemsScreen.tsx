@@ -8,6 +8,7 @@ import type { MovePatch } from '@/lib/actions/items';
 import { applyListOps, draftItem, fitsNewList, isDraft, staysInList, type ListOp } from '@/lib/actions/optimistic';
 import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item, Person } from '@/lib/db/types';
+import { priceText } from '@/lib/compras';
 import { formatDue, TYPE_LABELS } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
 import { ItemRow } from './ItemRow';
@@ -15,7 +16,15 @@ import { ItemSheet, type NewItemDefaults, type SheetMode } from './ItemSheet';
 import { SwipeRow } from './SwipeRow';
 import { SyncNotice } from './SyncNotice';
 
-export type ItemSection = { key: string; header?: string; footer?: string; items: Item[] };
+export type ItemSection = {
+  key: string;
+  /** A string, or a node when the header does something (Compras: a store you can fold). */
+  header?: ReactNode;
+  footer?: string;
+  items: Item[];
+  /** Only the header is shown (the parent folds it). */
+  collapsed?: boolean;
+};
 
 export type ItemsScreenProps = {
   title: string;
@@ -38,6 +47,9 @@ export type ItemsScreenProps = {
   syncNotices?: boolean;
   /** itemId → photos (signed URLs), from loadPhotoMap on the server. */
   photos?: PhotoMap;
+  /** Compras: store names by id, and whether a row says its store (not when the section is the store). */
+  storeNames?: Record<string, string>;
+  showStore?: boolean;
 };
 
 type ToastState = NonNullable<ToastProps['toast']>;
@@ -63,6 +75,8 @@ export function ItemsScreen({
   before,
   syncNotices,
   photos = {},
+  storeNames = {},
+  showStore,
 }: ItemsScreenProps) {
   const [, startTransition] = useTransition();
   // Pending writes, applied over the server's lists: rows change at once and React drops these
@@ -192,8 +206,16 @@ export function ItemsScreen({
       if (name) parts.push(`Para ${name}`);
     }
     if (item.area === 'trabajo' && item.type !== 'tarea') parts.push('Trabajo');
+    let detail = time;
+    if (item.type === 'compra') {
+      // A purchase says what it costs on the right, and its variant, urgency and store under the title.
+      detail = priceText(item) ?? undefined;
+      if (typeof item.data.variant === 'string') parts.push(item.data.variant);
+      if (item.data.urgency === 'alta') parts.push('Urgente');
+      if (showStore && item.storeId && storeNames[item.storeId]) parts.push(storeNames[item.storeId]);
+    }
     if (!parts.length && item.notes) parts.push(item.notes);
-    return { subtitle: parts.join(' · ') || undefined, detail: time };
+    return { subtitle: parts.join(' · ') || undefined, detail };
   }
 
   return (
@@ -218,7 +240,12 @@ export function ItemsScreen({
         {before}
         {visible.map(
           (section) =>
-            section.items.length > 0 && (
+            section.items.length > 0 &&
+            (section.collapsed ? (
+              <section key={section.key} className="ui-inset-list">
+                <h2 className="ui-inset-list__header">{section.header}</h2>
+              </section>
+            ) : (
               <InsetList key={section.key} header={section.header} footer={section.footer}>
                 {section.items.map((item) => (
                   <SwipeRow
@@ -247,7 +274,7 @@ export function ItemsScreen({
                   </SwipeRow>
                 ))}
               </InsetList>
-            ),
+            )),
         )}
         {isEmpty && emptyText && <p className="app-empty">{emptyText}</p>}
       </LargeTitle>

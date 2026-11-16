@@ -26,6 +26,8 @@ import type { CalendarEvent } from '@/lib/calendar/client';
 import { calendarGatewayFor } from '@/lib/calendar/server';
 import { toSyncError, type SyncErrorCode } from '@/lib/calendar/taskSync';
 import { createSettingsRepo, loadSettingsOrDefaults } from '@/lib/db/settings';
+import { createSupabaseStoresRepo } from '@/lib/db/stores';
+import { isOpen } from '@/lib/items/itemTypes';
 import type { Area, ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
@@ -60,6 +62,30 @@ export async function readByType(type: ItemType) {
   tagUserData(userId, ['items']);
   const items = await listByType(deps, type);
   return { items, photos: await loadPhotoMap(items), today: madridToday() };
+}
+
+/** Compras: what is open, what was bought (newest first, the last 50) and the stores, for the grouping. */
+export async function readCompras() {
+  'use cache: private';
+  cacheLife('userData');
+  const [{ userId, deps }, client] = await Promise.all([sessionDeps(), createClient()]);
+  tagUserData(userId, ['items']);
+  const [items, all, stores] = await Promise.all([
+    listByType(deps, 'compra'),
+    deps.items.listItems({ type: 'compra', needsReview: false, archived: false }),
+    createSupabaseStoresRepo(client).listStores(),
+  ]);
+  const history = all
+    .filter((i) => !isOpen(i))
+    .sort((a, b) => Date.parse(b.completedAt ?? b.createdAt) - Date.parse(a.completedAt ?? a.createdAt))
+    .slice(0, 50);
+  return {
+    items,
+    history,
+    stores: stores.map(({ id, name, domain, favicon }) => ({ id, name, domain, favicon })),
+    photos: await loadPhotoMap(items),
+    today: madridToday(),
+  };
 }
 
 export async function readLibros() {

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { ItemsScreen } from '@/components/items/ItemsScreen';
+import { ComprasScreen } from '@/components/compras/ComprasScreen';
 import { ScreenFallback } from '@/components/items/ScreenFallback';
-import { readByType } from '@/lib/cache/reads';
+import { readCompras } from '@/lib/cache/reads';
 
 export const metadata: Metadata = { title: 'Compras' };
 
@@ -15,15 +15,6 @@ export default function ComprasPage() {
 }
 
 async function Compras() {
-  const { items, photos, today } = await readByType('compra');
-  return (
-    <ItemsScreen
-      title="Compras"
-      today={today}
-      sections={[{ key: 'compras', items }]}
-      emptyText="No hay nada en la lista de la compra."
-      newItem={{ type: 'compra', label: 'Nueva compra' }}
-      photos={photos}
-    />
-  );
+  const { items, history, stores, photos, today } = await readCompras();
+  return <ComprasScreen today={today} items={items} history={history} stores={stores} photos={photos} />;
 }
