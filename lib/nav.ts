@@ -15,6 +15,9 @@ export type Section =
   | 'sin-clasificar'
   | 'bandeja'
   | 'listas'
+  | 'biblioteca'
+  | 'archivo'
+  | 'revision'
   | 'buscar'
   | 'ajustes';
 
@@ -34,6 +37,9 @@ const SECTIONS: Section[] = [
   'sin-clasificar',
   'bandeja',
   'listas',
+  'biblioteca',
+  'archivo',
+  'revision',
   'buscar',
   'ajustes',
 ];
@@ -45,25 +51,27 @@ export function sectionFor(pathname: string): Section | null {
 }
 
 /**
- * The tab bar has five slots: Hoy (with the week), Agenda, Tareas, Bandeja (both of its views)
- * and Listas (every collection, plus Ajustes, which is not a tab).
+ * The tab bar has five slots: Hoy (with Semana and Calendario), Bandeja (both of its views),
+ * Tareas, Proyectos and Biblioteca (every collection, Archivo, Revisión semanal and Ajustes).
  */
 export function tabFor(section: Section | null): string {
-  if (section === 'semana' || section === 'agenda') return 'hoy';
-  if (section === 'sin-clasificar' || section === 'bandeja') return 'bandeja';
-  if (
-    section === 'ideas' ||
-    section === 'notas' ||
-    section === 'compras' ||
-    section === 'regalos' ||
-    section === 'libros' ||
-    section === 'enlaces' ||
-    section === 'personas' ||
-    section === 'ajustes'
-  ) {
-    return 'listas';
+  switch (section) {
+    case null:
+      return '';
+    case 'semana':
+    case 'agenda':
+      return 'hoy';
+    case 'sin-clasificar':
+    case 'bandeja':
+      return 'bandeja';
+    case 'hoy':
+    case 'tareas':
+    case 'proyectos':
+    case 'buscar':
+      return section;
+    default:
+      return 'biblioteca';
   }
-  return section ?? '';
 }
 
 /** "Volver a entrar con Google" when Calendar refuses: forces Google's consent so a fresh refresh token comes back. */

@@ -18,7 +18,7 @@ import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { Project } from '@/lib/db/projects';
 import { PROJECT_TYPE_ORDER, projectSummary, type ProjectSummary } from '@/lib/projects';
 import { cacheLife } from 'next/cache';
-import { listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
+import { listArchivo, listByType, listLibros, listPapelera, listRecent, listRegalos, listSinClasificar, listTareas } from '@/lib/actions/items';
 import { listPersonas, NEXT_DATE_WINDOW_DAYS } from '@/lib/actions/people';
 import { giftHistory, occasionsWithGifts } from '@/lib/regalos';
 import { sessionDeps } from '@/lib/actions/server';
@@ -169,7 +169,7 @@ export async function readPapelera() {
   return { items, people, today: madridToday() };
 }
 
-/** Listas: how many items each list holds. */
+/** Biblioteca: how many items each list holds. */
 export async function readListCounts() {
   'use cache: private';
   cacheLife('userData');
@@ -228,6 +228,15 @@ export async function readPersona(id: string) {
     photos: await loadPhotoMap(group.items),
     today,
   };
+}
+
+/** Archivo: what was finished or archived, newest first. */
+export async function readArchivo() {
+  'use cache: private';
+  cacheLife('userData');
+  const { userId, deps } = await sessionDeps();
+  tagUserData(userId, ['items']);
+  return listArchivo(deps);
 }
 
 // ---------- Proyectos ----------

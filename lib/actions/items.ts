@@ -2,13 +2,14 @@
  * Logic behind the item server actions (app/actions/items.ts) and the list screens.
  * Pure: everything goes through the repos in `deps`, so tests run on the memory backend.
  */
+import { ARCHIVO_LIMIT, closedAt } from '@/lib/archivo';
 import type { ProjectsRepo } from '@/lib/db/projects';
 import { z } from 'zod';
 import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo } from '@/lib/db/people';
 import type { Area, Item, ItemPatch, ItemType, NewItem, Person } from '@/lib/db/types';
-import { completionStatus, defaultStatus, ITEM_TYPE_IDS } from '@/lib/items/itemTypes';
+import { completionStatus, defaultStatus, isOpen, ITEM_TYPE_IDS } from '@/lib/items/itemTypes';
 import { READING_STATES } from '@/lib/libros';
 import { deriveLink } from '@/lib/links/linkify';
 import { nextOccurrence } from '@/lib/tareas';
@@ -314,6 +315,15 @@ export async function listRecent(deps: ActionDeps, now: Date): Promise<Record<Ar
     personal: all.filter((i) => i.area !== 'trabajo'),
     trabajo: all.filter((i) => i.area === 'trabajo'),
   };
+}
+
+/** Archivo: what was finished or archived (not deleted), most recently closed first, at most 200. */
+export async function listArchivo(deps: ActionDeps): Promise<Item[]> {
+  const all = await deps.items.listItems({ needsReview: false });
+  return all
+    .filter((i) => !isOpen(i))
+    .sort((a, b) => closedAt(b).localeCompare(closedAt(a)))
+    .slice(0, ARCHIVO_LIMIT);
 }
 
 /** Papelera: items deleted in the last 30 days, most recently deleted first. */

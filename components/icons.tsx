@@ -157,6 +157,15 @@ export function NoteIcon() {
   );
 }
 
+export function LibraryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden {...line}>
+      <path d="M5 4.5h3v15H5zM10 4.5h3v15h-3z" />
+      <path d="M15.2 5.6l2.9-.8 3.1 14-2.9.8z" />
+    </svg>
+  );
+}
+
 export function FolderIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden {...line}>

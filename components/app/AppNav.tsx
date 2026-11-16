@@ -9,7 +9,9 @@ import {
   GiftIcon,
   GlobeIcon,
   IdeaIcon,
-  ListIcon,
+  LibraryIcon,
+  ArchiveIcon,
+  WeekIcon,
   NoteIcon,
   SearchIcon,
   SettingsIcon,
@@ -21,23 +23,24 @@ import { REVISAR_HREF, tabFor, type Section } from '@/lib/nav';
 import { CaptureLink } from './CaptureLink';
 
 /*
- * One job per tab: Hoy (the day; Semana and Calendario are its other views), Bandeja (review
- * what the AI was not sure about, and what came in lately), Tareas and Listas (every collection,
- * plus Ajustes). Capturar is not a tab: on iPhone the CaptureBar floats
- * right above the tab bar; on desktop the sidebar's first action focuses it.
+ * Five tabs, one job each (PARA-light): Hoy (the day; Semana and Calendario are its other views),
+ * Bandeja (review what the AI was not sure about, and what came in lately), Tareas, Proyectos
+ * (plans with an end) and Biblioteca (every collection, Archivo, Revisión semanal and Ajustes).
+ * Capturar is not a tab: on iPhone the CaptureBar floats right above the tab bar; on desktop
+ * the sidebar's first action focuses it.
  */
 const TABS: TabBarItem[] = [
   { key: 'hoy', label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
   { key: 'bandeja', label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
   { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
   { key: 'proyectos', label: 'Proyectos', href: '/proyectos', icon: <FolderIcon /> },
-  { key: 'listas', label: 'Listas', href: '/listas', icon: <ListIcon /> },
+  { key: 'biblioteca', label: 'Biblioteca', href: '/biblioteca', icon: <LibraryIcon /> },
 ];
 
 /** `also`: other sections that light up the same link (the second view of a section). */
 type SidebarLink = { key: Section; also?: Section[]; label: string; href: string; icon: ReactNode };
 
-/** Same order and groups as the Listas screen, so the two never disagree. */
+/** Same order and groups as the Biblioteca screen, so the two never disagree. */
 const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
   {
     links: [
@@ -68,7 +71,13 @@ const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
       { key: 'notas', label: 'Notas', href: '/notas', icon: <NoteIcon /> },
     ],
   },
-  { links: [{ key: 'ajustes', label: 'Ajustes', href: '/ajustes', icon: <SettingsIcon /> }] },
+  {
+    links: [
+      { key: 'archivo', label: 'Archivo', href: '/archivo', icon: <ArchiveIcon /> },
+      { key: 'revision', label: 'Revisión semanal', href: '/revision', icon: <WeekIcon /> },
+      { key: 'ajustes', label: 'Ajustes', href: '/ajustes', icon: <SettingsIcon /> },
+    ],
+  },
 ];
 
 const isCurrent = (link: SidebarLink, active: Section | null) =>
