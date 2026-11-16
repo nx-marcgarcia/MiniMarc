@@ -47,7 +47,7 @@ export function sectionFor(pathname: string): Section | null {
  * and Listas (every collection, plus Ajustes, which is not a tab).
  */
 export function tabFor(section: Section | null): string {
-  if (section === 'semana') return 'hoy';
+  if (section === 'semana' || section === 'agenda') return 'hoy';
   if (section === 'sin-clasificar' || section === 'bandeja') return 'bandeja';
   if (
     section === 'ideas' ||

@@ -59,10 +59,9 @@ export function HoyFallback() {
           <SkeletonBar width="44%" height={13} style={{ margin: '3px 0' }} />
           <span className="app-headline-pending" style={{ marginTop: 8 }} />
         </div>
-        <SkeletonList header="Citas de hoy" rows={2} subtitle={false} detail />
-        <SkeletonList header="Tareas · Personal" rows={3} subtitle={false} detail />
-        <SkeletonList header="Tareas · Trabajo" rows={2} subtitle={false} detail />
-        <SkeletonList header="Fechas" rows={1} />
+        <SkeletonList header="Tu día" rows={4} subtitle={false} detail />
+        <SkeletonList header="Sin hora" rows={2} subtitle={false} />
+        <SkeletonList header="Próximas fechas" rows={1} />
       </SkeletonRegion>
     </LargeTitle>
   );
@@ -114,6 +113,9 @@ export function PersonasFallback() {
 export function AgendaFallback() {
   return (
     <div className="app-agenda">
+      <div className="app-segmented">
+        <SkeletonBar width="100%" height={32} radius={9} />
+      </div>
       <Glass as="header" className="ui-navbar app-agenda__head">
         <div className="ui-navbar__row">
           <div className="ui-navbar__leading" />

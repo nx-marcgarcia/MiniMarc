@@ -2,13 +2,14 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { InsetList, LargeTitle, Row } from '@/components/ui';
-import type { Area } from '@/lib/db/types';
-import type { Digest, DigestArea, DigestDate, DigestEvent, DigestTask } from '@/lib/digest/build';
-import { formatDay, formatDue } from '@/lib/format';
+import type { Digest, DigestDate } from '@/lib/digest/build';
+import { formatDay } from '@/lib/format';
 import { yearsText } from '@/lib/people/format';
 import { RECONNECT_HREF } from '@/lib/nav';
-import { formatLongDate, madridDateTime, madridToUtc } from '@/lib/time';
+import { formatLongDate, madridToUtc } from '@/lib/time';
 import type { Candidate } from '@/lib/resurfacing/candidates';
+import { buildDayTimeline } from '@/lib/hoy/timeline';
+import { DayTimeline } from './DayTimeline';
 import { ParaHoy } from './ParaHoy';
 import { PushButton } from './PushButton';
 
@@ -23,8 +24,6 @@ export type HoyScreenProps = {
   paraHoy?: Candidate[];
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /** A section header with either its rows or one quiet line. */
 function Section({ header, empty, rows }: { header: string; empty: ReactNode; rows: ReactNode[] }) {
   if (rows.length > 0) return <InsetList header={header}>{rows}</InsetList>;
@@ -34,32 +33,6 @@ function Section({ header, empty, rows }: { header: string; empty: ReactNode; ro
       <div className="app-hoy__empty">{empty}</div>
     </section>
   );
-}
-
-function eventTime(e: DigestEvent, tz: string): string {
-  const start = Date.parse(e.startsAt);
-  if (Date.parse(e.endsAt) - start >= DAY_MS) return 'Todo el día';
-  return madridDateTime(new Date(start), tz).time;
-}
-
-function taskRow({ item, overdue }: DigestTask, today: string, area: Area) {
-  const due = formatDue(item, today);
-  return (
-    <Row
-      key={item.id}
-      href={`/tareas?area=${area}`}
-      chevron={false}
-      title={item.title}
-      subtitle={overdue ? `Vencida · ${due.day}` : undefined}
-      detail={due.time}
-    />
-  );
-}
-
-function taskRows(area: DigestArea, today: string, key: Area): ReactNode[] {
-  const rows = area.items.map((t) => taskRow(t, today, key));
-  if (area.more > 0) rows.push(<Row key="more" href={`/tareas?area=${key}`} title={`+${area.more} más`} />);
-  return rows;
 }
 
 function dateWhen(d: DigestDate, today: string): string {
@@ -87,8 +60,6 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }
   const today = digest.date;
   const longDate = formatLongDate(madridToUtc(today, '12:00', tz), tz);
 
-  const events = digest.events.map((e) => <Row key={e.id} title={e.title} detail={eventTime(e, tz)} />);
-
   return (
     <LargeTitle title="Hoy">
       <ViewSwitch label="Periodo" options={HOY_VIEWS} current="/hoy" />
@@ -99,30 +70,29 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [] }
 
       <ParaHoy candidates={paraHoy} />
 
-      <Section
-        header="Citas de hoy"
-        rows={events}
-        empty={
-          digest.calendarError === 'calendar_auth' ? (
+      {digest.calendarError && (
+        <p className="app-hoy__empty app-hoy__empty--solo" role="status">
+          {digest.calendarError === 'calendar_auth' ? (
             <>
               No se ha podido leer Google Calendar.{' '}
               <Link href={RECONNECT_HREF} className="app-notice__action">
                 Volver a entrar con Google
               </Link>
             </>
-          ) : digest.calendarError ? (
-            'Google Calendar no responde ahora mismo. Mira la Agenda en un rato.'
           ) : (
-            'Ninguna cita hoy.'
-          )
-        }
+            'Google Calendar no responde ahora mismo; faltan las citas.'
+          )}
+        </p>
+      )}
+
+      <DayTimeline
+        timeline={buildDayTimeline({ events: digest.events, tasks: digest.dayTasks, tz, dayEndsAt: madridToUtc(today, '23:59', tz) })}
+        today={today}
+        tz={tz}
       />
 
-      <Section header="Tareas · Personal" rows={taskRows(digest.tasks.personal, today, 'personal')} empty="Nada personal para hoy." />
-      <Section header="Tareas · Trabajo" rows={taskRows(digest.tasks.trabajo, today, 'trabajo')} empty="Nada de trabajo para hoy." />
-
       <Section
-        header="Fechas"
+        header="Próximas fechas"
         rows={digest.dates.map((d) => dateRow(d, today))}
         empty="Ninguna fecha especial en las próximas dos semanas."
       />

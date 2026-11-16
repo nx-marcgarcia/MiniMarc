@@ -6,7 +6,7 @@ import { Segmented } from '@/components/ui';
 export type ViewSwitchOption = { href: string; label: string };
 
 /**
- * Two (or more) views of the same section, each with its own address: Hoy | Semana,
+ * Two (or more) views of the same section, each with its own address: Día | Semana | Calendario,
  * Por revisar | Últimas 24 h, Personas | Regalos. Same pill as Personal / Trabajo; switching
  * replaces the URL (sibling views, not a step deeper), so Back leaves the section.
  */
@@ -26,8 +26,9 @@ export function ViewSwitch({ label, options, current }: { label: string; options
 
 /** The sibling views, so every screen of a section shows the same pills. */
 export const HOY_VIEWS: ViewSwitchOption[] = [
-  { href: '/hoy', label: 'Hoy' },
+  { href: '/hoy', label: 'Día' },
   { href: '/semana', label: 'Semana' },
+  { href: '/agenda', label: 'Calendario' },
 ];
 
 export const BANDEJA_VIEWS: ViewSwitchOption[] = [

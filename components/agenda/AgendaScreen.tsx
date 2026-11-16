@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState, useTransition } from 'react';
 import { addReminders, deleteAgendaEvent } from '@/app/actions/events';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '@/components/icons';
+import { HOY_VIEWS, ViewSwitch } from '@/components/app/ViewSwitch';
 import { Glass, Toast } from '@/components/ui';
 import { addDays, dayDots, dayTitle, monthTitle, WEEKDAY_INITIALS, type AgendaItem } from '@/lib/agenda/week';
 import type { SyncErrorCode } from '@/lib/calendar/taskSync';
@@ -126,6 +127,7 @@ export function AgendaScreen({ today, selected: initialSelected, days, items, er
 
   return (
     <div className="app-agenda">
+      <ViewSwitch label="Periodo" options={HOY_VIEWS} current="/agenda" />
       <Glass as="header" className="ui-navbar app-agenda__head">
         <div className="ui-navbar__row">
           <div className="ui-navbar__leading">

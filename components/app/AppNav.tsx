@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Glass, LinkPending, TabBar, type TabBarItem } from '@/components/ui';
 import {
-  AgendaIcon,
   BagIcon,
   BookIcon,
   CaptureIcon,
@@ -21,16 +20,15 @@ import { REVISAR_HREF, tabFor, type Section } from '@/lib/nav';
 import { CaptureLink } from './CaptureLink';
 
 /*
- * Five tabs, one job each: Hoy (what matters now; the week is its second view), Agenda (Google
- * Calendar), Tareas, Bandeja (review what the AI was not sure about, and what came in lately) and
- * Listas (every collection, plus Ajustes). Capturar is not a tab: on iPhone the CaptureBar floats
+ * One job per tab: Hoy (the day; Semana and Calendario are its other views), Bandeja (review
+ * what the AI was not sure about, and what came in lately), Tareas and Listas (every collection,
+ * plus Ajustes). Capturar is not a tab: on iPhone the CaptureBar floats
  * right above the tab bar; on desktop the sidebar's first action focuses it.
  */
 const TABS: TabBarItem[] = [
   { key: 'hoy', label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
-  { key: 'agenda', label: 'Agenda', href: '/agenda', icon: <AgendaIcon /> },
-  { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
   { key: 'bandeja', label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
+  { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
   { key: 'listas', label: 'Listas', href: '/listas', icon: <ListIcon /> },
 ];
 
@@ -41,10 +39,9 @@ type SidebarLink = { key: Section; also?: Section[]; label: string; href: string
 const SIDEBAR: { header?: string; links: SidebarLink[] }[] = [
   {
     links: [
-      { key: 'hoy', also: ['semana'], label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
-      { key: 'agenda', label: 'Agenda', href: '/agenda', icon: <AgendaIcon /> },
-      { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
+      { key: 'hoy', also: ['semana', 'agenda'], label: 'Hoy', href: '/hoy', icon: <TodayIcon /> },
       { key: 'sin-clasificar', also: ['bandeja'], label: 'Bandeja', href: REVISAR_HREF, icon: <TrayIcon /> },
+      { key: 'tareas', label: 'Tareas', href: '/tareas', icon: <TasksIcon /> },
     ],
   },
   {
