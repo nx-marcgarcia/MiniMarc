@@ -2,6 +2,15 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## Rediseño de interfaz (tras la Fase 4)
+
+- **Botones de verdad** dentro de filas y tarjetas (`.app-btn`: principal, tintado, discreto, destructivo), en lugar del texto azul de la barra superior que se usaba por error. Afecta a «Para hoy», Enlaces, Compras, Bandeja, la tarjeta de captura, subtareas y sugerencias de regalo.
+- **Filas con margen derecho** (se cortaban en Ideas, Enlaces, «Para hoy», subtareas y Bandeja).
+- **Ideas:** categoría y potencial como etiquetas, siguiente paso en su línea y un estado de color por valor (válido en modo oscuro).
+- **Para hoy:** barra roja en lo urgente, tipo del aviso encima del título.
+- **Enlaces:** miniatura de 72 px (o un hueco con icono), título a dos líneas.
+- **Compras:** «En la tienda · N por comprar» como botón destacado.
+
 ## Fase 4: que el cerebro me recuerde las cosas
 
 - **Horario único:** de lunes a viernes, de 9:00 a 16:00 (Madrid, con el cambio de hora resuelto por el reloj de la zona, nunca con horas fijas en UTC). Fuera de ahí no se envía nada, salvo una tarea con hora exacta («llamar el sábado a las 11»), que avisa a su hora. Lo del fin de semana sale el lunes a las 9:00. Opción de saltar festivos (nacionales y de la Comunidad Valenciana).

@@ -99,7 +99,7 @@ function ShoppingMode({ items, stores, onExit }: { items: Item[]; stores: StoreI
                 ))}
             </select>
           </label>
-          <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={onExit}>
+          <button type="button" className="app-btn app-btn--tint" onClick={onExit}>
             Salir
           </button>
         </div>
@@ -155,7 +155,7 @@ function History({ items, stores }: { items: Item[]; stores: StoreInfo[] }) {
             subtitle={[item.storeId ? names.get(item.storeId) : null, item.status === 'descartado' ? 'Descartado' : null].filter(Boolean).join(' · ') || undefined}
             detail={priceText(item) ?? undefined}
             trailing={
-              <button type="button" className="ui-bar-button" aria-label={`Volver a la lista «${item.title}»`} onClick={() => void restore(item)}>
+              <button type="button" className="app-btn app-btn--tint" aria-label={`Volver a la lista «${item.title}»`} onClick={() => void restore(item)}>
                 Volver
               </button>
             }
@@ -189,9 +189,11 @@ export function ComprasScreen({ today, items, history, stores, photos = {} }: Co
         <Segmented label="Vista" options={[...MODES]} value={mode} onChange={setMode} />
       </div>
       {items.length > 0 && mode !== 'historial' && (
-        <InsetList footer="Una lista grande para ir tachando mientras compras.">
-          <Row title="En la tienda" onClick={() => setShopping(true)} />
-        </InsetList>
+        <div className="app-shop-cta">
+          <button type="button" className="app-btn app-btn--primary app-btn--block" aria-label="En la tienda" onClick={() => setShopping(true)}>
+            En la tienda · {items.length} por comprar
+          </button>
+        </div>
       )}
       {mode === 'historial' && <History items={history} stores={stores} />}
     </>

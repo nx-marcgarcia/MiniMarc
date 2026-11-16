@@ -181,10 +181,10 @@ export function CaptureCard({ data, onClose, onNotice }: { data: CaptureCardData
         <div key={item.id} className="app-capture-card__repeat">
           <span>Ya tenías algo parecido</span>
           <span className="app-capture-card__repeat-title">«{item.title}»</span>
-          <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={() => void merge(item)}>
+          <button type="button" className="app-btn app-btn--primary" onClick={() => void merge(item)}>
             Es el mismo
           </button>
-          <button type="button" className="ui-bar-button" onClick={() => setKept((k) => [...k, item.id])}>
+          <button type="button" className="app-btn app-btn--tint" onClick={() => setKept((k) => [...k, item.id])}>
             Mantener ambos
           </button>
         </div>
@@ -197,12 +197,12 @@ export function CaptureCard({ data, onClose, onNotice }: { data: CaptureCardData
       )}
 
       <div className="app-capture-card__actions">
-        <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={() => void undo()}>
+        <button type="button" className="app-btn app-btn--primary" onClick={() => void undo()}>
           Deshacer
         </button>
         <button
           type="button"
-          className="ui-bar-button"
+          className="app-btn app-btn--tint"
           onClick={() => {
             router.push(BANDEJA_HREF);
             onClose();
@@ -210,7 +210,7 @@ export function CaptureCard({ data, onClose, onNotice }: { data: CaptureCardData
         >
           Editar
         </button>
-        <button type="button" className="ui-bar-button" aria-label="Cerrar" onClick={onClose}>
+        <button type="button" className="app-btn app-btn--ghost" aria-label="Cerrar" onClick={onClose}>
           Cerrar
         </button>
       </div>

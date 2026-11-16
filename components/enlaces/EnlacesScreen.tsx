@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { deleteItem, toggleDone, undoDelete } from '@/app/actions/items';
+import { GlobeIcon } from '@/components/icons';
 import { InsetList, LargeTitle, Segmented, Toast, type ToastProps } from '@/components/ui';
 import { settle, type ActionResult } from '@/lib/actions/result';
 import { domainsIn, filterCards, kindsIn, type EnlaceCard } from '@/lib/enlaces';
@@ -104,9 +105,13 @@ export function EnlacesScreen({ cards }: { cards: EnlaceCard[] }) {
               const meta = [card.kindLabel, card.domain].filter(Boolean).join(' · ');
               return (
                 <div key={item.id} className="ui-row app-enlace">
-                  {card.image && (
+                  {card.image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the page's own preview image, no optimizer
-                    <img className="app-enlace__thumb" src={card.image} alt="" width={64} height={64} loading="lazy" decoding="async" />
+                    <img className="app-enlace__thumb" src={card.image} alt="" width={72} height={72} loading="lazy" decoding="async" />
+                  ) : (
+                    <span className="app-enlace__thumb app-enlace__thumb--empty" aria-hidden>
+                      <GlobeIcon />
+                    </span>
                   )}
                   <div className="app-enlace__body">
                     {card.url ? (
@@ -117,11 +122,11 @@ export function EnlacesScreen({ cards }: { cards: EnlaceCard[] }) {
                       <span className="app-enlace__title">{item.title}</span>
                     )}
                     {meta && <span className="app-enlace__meta">{meta}</span>}
-                    <span className="app-enlace__actions">
+                    <span className="app-actions">
                       {tab === 'porver' ? (
                         <button
                           type="button"
-                          className="ui-bar-button"
+                          className="app-btn app-btn--tint"
                           aria-label={`Marcar «${item.title}» como visto`}
                           onClick={() => void resolve(card, () => toggleDone(item.id), 'Marcado como visto', () => toggleDone(item.id))}
                         >
@@ -130,7 +135,7 @@ export function EnlacesScreen({ cards }: { cards: EnlaceCard[] }) {
                       ) : (
                         <button
                           type="button"
-                          className="ui-bar-button"
+                          className="app-btn app-btn--tint"
                           aria-label={`Volver «${item.title}» a por ver`}
                           onClick={() => void resolve(card, () => toggleDone(item.id), 'Vuelve a Por ver', () => toggleDone(item.id))}
                         >
@@ -139,7 +144,7 @@ export function EnlacesScreen({ cards }: { cards: EnlaceCard[] }) {
                       )}
                       <button
                         type="button"
-                        className="ui-bar-button"
+                        className="app-btn app-btn--danger"
                         aria-label={`Eliminar «${item.title}»`}
                         onClick={() => void resolve(card, () => deleteItem(item.id), 'Eliminado', () => undoDelete(item.id))}
                       >

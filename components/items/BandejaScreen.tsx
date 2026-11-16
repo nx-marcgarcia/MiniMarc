@@ -130,7 +130,7 @@ export function BandejaScreen({ items, people, photos = {}, before }: BandejaScr
         title="Bandeja"
         trailing={
           visible.length > 0 && !processing ? (
-            <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={() => { setIndex(0); setProcessing(true); }}>
+            <button type="button" className="app-btn app-btn--primary" onClick={() => { setIndex(0); setProcessing(true); }}>
               Procesar
             </button>
           ) : undefined
@@ -156,16 +156,16 @@ export function BandejaScreen({ items, people, photos = {}, before }: BandejaScr
                   ))}
                 </div>
                 <div className="app-bandeja-process__actions">
-                  <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={() => accept(current)}>
+                  <button type="button" className="app-btn app-btn--primary" onClick={() => accept(current)}>
                     Aceptar (A)
                   </button>
-                  <button type="button" className="ui-bar-button" onClick={() => setIndex((i) => i + 1)}>
+                  <button type="button" className="app-btn app-btn--tint" onClick={() => setIndex((i) => i + 1)}>
                     Saltar (S)
                   </button>
-                  <button type="button" className="ui-bar-button" onClick={() => discard(current)}>
+                  <button type="button" className="app-btn app-btn--tint" onClick={() => discard(current)}>
                     Descartar (D)
                   </button>
-                  <button type="button" className="ui-bar-button" onClick={() => setProcessing(false)}>
+                  <button type="button" className="app-btn app-btn--tint" onClick={() => setProcessing(false)}>
                     Salir (Esc)
                   </button>
                 </div>
@@ -173,7 +173,7 @@ export function BandejaScreen({ items, people, photos = {}, before }: BandejaScr
             ) : (
               <>
                 <h2 className="app-bandeja-process__title">Bandeja vacía</h2>
-                <button type="button" className="ui-bar-button ui-bar-button--strong" onClick={() => setProcessing(false)}>
+                <button type="button" className="app-btn app-btn--primary" onClick={() => setProcessing(false)}>
                   Salir
                 </button>
               </>
@@ -197,7 +197,7 @@ export function BandejaScreen({ items, people, photos = {}, before }: BandejaScr
                 </div>
                 <div className="app-bandeja-row__actions">
                   {item.suggestion && (
-                    <button type="button" className="ui-bar-button ui-bar-button--strong" aria-label={`Aceptar «${item.title}»`} onClick={() => accept(item)}>
+                    <button type="button" className="app-btn app-btn--primary" aria-label={`Aceptar «${item.title}»`} onClick={() => accept(item)}>
                       Aceptar
                     </button>
                   )}
@@ -214,7 +214,7 @@ export function BandejaScreen({ items, people, photos = {}, before }: BandejaScr
                       </option>
                     ))}
                   </select>
-                  <button type="button" className="ui-bar-button" aria-label={`Descartar «${item.title}»`} onClick={() => discard(item)}>
+                  <button type="button" className="app-btn app-btn--tint" aria-label={`Descartar «${item.title}»`} onClick={() => discard(item)}>
                     Descartar
                   </button>
                 </div>

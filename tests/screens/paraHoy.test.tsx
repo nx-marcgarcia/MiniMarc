@@ -21,7 +21,8 @@ test('lista lo pendiente con su motivo y los cuatro botones', () => {
   renderScreen(<ParaHoy candidates={[c()]} />);
   expect(screen.getByText('Para hoy')).toBeTruthy();
   expect(screen.getByText('Llamar al seguro')).toBeTruthy();
-  expect(screen.getByText(/Atrasada · Venció hace 3 días/)).toBeTruthy();
+  expect(screen.getByText('Atrasada')).toBeTruthy();
+  expect(screen.getByText('Venció hace 3 días')).toBeTruthy();
   for (const name of ['Hecho', 'Posponer 1 semana', 'Archivar']) expect(screen.getByRole('button', { name: new RegExp(name) })).toBeTruthy();
   expect(screen.getByRole('link', { name: /Abrir/ }).getAttribute('href')).toBe('/tareas?area=personal');
 });

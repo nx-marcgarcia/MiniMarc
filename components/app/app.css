@@ -2114,7 +2114,8 @@
 }
 
 .app-chip:focus-visible,
-.app-capture-card .ui-bar-button:focus-visible {
+.app-capture-card .ui-bar-button:focus-visible,
+.app-capture-card .app-btn:focus-visible {
   outline: 2px solid var(--accent, #335a80);
   outline-offset: 2px;
 }
@@ -2358,7 +2359,7 @@ a.app-enlace__title:focus-visible {
 /* Regalos: aviso de una fecha cercana sin regalo comprado (components/items/OccasionsSection.tsx) */
 .app-warn {
   font-weight: 600;
-  color: var(--danger, #b3261e);
+  color: var(--destructive);
 }
 
 /* Regalos: botón «Sugerir ideas» en la ficha (components/people/GiftSuggestions.tsx) */
@@ -2509,26 +2510,167 @@ a.app-enlace__title:focus-visible {
   color: var(--label-secondary);
 }
 
-.app-idea__state[data-state='semilla'] {
-  background: color-mix(in srgb, #5b9a6a 16%, transparent);
-  color: #3d7a4d;
-}
-
 .app-idea__state[data-state='explorando'] {
-  background: color-mix(in srgb, var(--accent, #335a80) 14%, transparent);
-  color: var(--accent, #335a80);
+  background: var(--accent-tint);
+  color: var(--accent);
 }
 
 .app-idea__state[data-state='en_marcha'] {
-  background: color-mix(in srgb, #d08a2e 18%, transparent);
-  color: #9a6218;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .app-idea__state[data-state='descartada'] {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .app-idea__state:focus-visible {
   outline: 2px solid var(--accent, #335a80);
   outline-offset: 2px;
+}
+
+/* ---------- Botones y chips (dentro de filas y tarjetas; .ui-bar-button es solo para la barra superior) ---------- */
+.app-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--label);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* 34px visual, 44pt target. */
+.app-btn::after {
+  content: "";
+  position: absolute;
+  inset: -5px -2px;
+}
+
+.app-btn:active {
+  opacity: 0.6;
+}
+
+.app-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.app-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.app-btn--tint {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.app-btn--ghost {
+  padding: 0 8px;
+  background: transparent;
+  color: var(--accent);
+}
+
+.app-btn--danger {
+  padding: 0 8px;
+  background: transparent;
+  color: var(--destructive);
+}
+
+.app-btn--block {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  font-size: 17px;
+}
+
+.app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Hoy → «Para hoy»: lo urgente lleva una barra de color; cada aviso es una tarjeta con sus acciones. */
+.app-resurface {
+  gap: 0;
+}
+
+.app-resurface[data-urgent]::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--destructive);
+}
+
+.app-resurface__kind {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.app-resurface[data-urgent] .app-resurface__kind {
+  color: var(--destructive);
+}
+
+.app-resurface__title {
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+/* Enlaces: miniatura (o un hueco con icono), título a dos líneas y las acciones debajo. */
+.app-enlace__thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+}
+
+.app-enlace__thumb--empty {
+  display: grid;
+  flex: none;
+  place-items: center;
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.app-enlace__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.app-enlace__meta {
+  font-size: 13px;
+}
+
+/* Compras: el botón de ir a la tienda destaca, y cada fila lleva su precio a la derecha. */
+.app-shop-cta {
+  margin: 0 calc(var(--gutter) + var(--safe-right)) 20px calc(var(--gutter) + var(--safe-left));
 }

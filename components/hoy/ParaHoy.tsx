@@ -43,28 +43,27 @@ export function ParaHoy({ candidates }: { candidates: Candidate[] }) {
       {shown.length > 0 && (
         <InsetList header="Para hoy">
           {shown.map((c) => (
-            <div key={c.subject} className="ui-row app-resurface">
+            <div key={c.subject} className="ui-row app-resurface" data-urgent={c.urgent || undefined}>
               <div className="app-resurface__body">
+                <span className="app-resurface__kind">{KIND_LABELS[c.kind]}</span>
                 <span className="app-resurface__title">{c.title}</span>
-                <span className="app-resurface__meta">
-                  {KIND_LABELS[c.kind]} · {c.detail}
-                </span>
+                <span className="app-resurface__meta">{c.detail}</span>
                 {c.askArchive && <span className="app-resurface__ask">Lo has pospuesto 3 veces. ¿Lo archivo?</span>}
-                <span className="app-resurface__actions">
+                <span className="app-actions">
                   {c.itemId && (
-                    <button type="button" className="ui-bar-button" aria-label={`Hecho: ${c.title}`} onClick={() => void act(c, 'hecho')}>
+                    <button type="button" className="app-btn app-btn--primary" aria-label={`Hecho: ${c.title}`} onClick={() => void act(c, 'hecho')}>
                       Hecho
                     </button>
                   )}
-                  <button type="button" className="ui-bar-button" aria-label={`Posponer 1 semana: ${c.title}`} onClick={() => void act(c, 'posponer')}>
+                  <button type="button" className="app-btn app-btn--tint" aria-label={`Posponer 1 semana: ${c.title}`} onClick={() => void act(c, 'posponer')}>
                     Posponer 1 semana
                   </button>
                   {c.itemId && (
-                    <button type="button" className="ui-bar-button" aria-label={`Archivar: ${c.title}`} onClick={() => void act(c, 'archivar')}>
+                    <button type="button" className="app-btn app-btn--ghost" aria-label={`Archivar: ${c.title}`} onClick={() => void act(c, 'archivar')}>
                       Archivar
                     </button>
                   )}
-                  <Link href={c.href} className="ui-bar-button" aria-label={`Abrir: ${c.title}`}>
+                  <Link href={c.href} className="app-btn app-btn--ghost" aria-label={`Abrir: ${c.title}`}>
                     Abrir
                   </Link>
                 </span>

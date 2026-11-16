@@ -41,7 +41,7 @@ export function GiftSuggestions({ personId, occasion }: { personId: string; occa
 
   return (
     <section className="app-suggest">
-      <button type="button" className="ui-bar-button" onClick={suggest} disabled={pending}>
+      <button type="button" className="app-btn app-btn--tint" onClick={suggest} disabled={pending}>
         {pending && ideas === null ? 'Pensando…' : ideas ? 'Otras ideas' : 'Sugerir ideas'}
       </button>
       {error && (
@@ -61,7 +61,7 @@ export function GiftSuggestions({ personId, occasion }: { personId: string; occa
                 added.includes(s.title) ? (
                   <span aria-live="polite">Añadida</span>
                 ) : (
-                  <button type="button" className="ui-bar-button" aria-label={`Añadir «${s.title}»`} onClick={() => keep(s)} disabled={pending}>
+                  <button type="button" className="app-btn app-btn--primary" aria-label={`Añadir «${s.title}»`} onClick={() => keep(s)} disabled={pending}>
                     Añadir
                   </button>
                 )

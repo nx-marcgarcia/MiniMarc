@@ -26,7 +26,7 @@ export function SubtasksEditor({ initial }: { initial: Subtask[] }) {
             <input type="checkbox" checked={s.done} onChange={() => setList((l) => toggleSubtask(l, i))} aria-label={s.title} />
             <span data-done={s.done || undefined}>{s.title}</span>
           </label>
-          <button type="button" className="ui-bar-button" aria-label={`Quitar «${s.title}»`} onClick={() => setList((l) => removeSubtask(l, i))}>
+          <button type="button" className="app-btn app-btn--danger" aria-label={`Quitar «${s.title}»`} onClick={() => setList((l) => removeSubtask(l, i))}>
             Quitar
           </button>
         </div>
