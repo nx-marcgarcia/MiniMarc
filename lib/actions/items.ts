@@ -98,6 +98,8 @@ export const movePatchSchema = z
     storeId: z.string().nullable(),
     remindAt: z.iso.datetime({ offset: true }).nullable(),
     data: z.record(z.string(), z.unknown()),
+    /** What the AI thinks a doubtful item is; null clears it (accepted or reclassified). */
+    suggestion: z.object({ type: z.enum(ITEM_TYPES), confidence: z.number().min(0).max(1) }).nullable(),
     dueAt: z.iso.datetime({ offset: true }).nullable(),
     hasTime: z.boolean(),
     needsReview: z.boolean(),
