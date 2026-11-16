@@ -23,15 +23,17 @@ test('las ideas no llevan círculo de completar y se ven con su categoría y sig
   expect(screen.queryByRole('checkbox')).toBeNull();
   expect(screen.getByText('App de recetas')).toBeTruthy();
   const row = screen.getByText('App de recetas').closest('.app-idea') as HTMLElement;
-  expect(row.querySelector('.app-idea__chip')?.textContent).toBe('negocio');
+  expect(row.querySelector('.app-idea__category')?.textContent).toBe('negocio');
   expect(within(row).getByLabelText('Potencial: 4 de 5').textContent).toBe('★★★★☆');
   expect(within(row).getByText('→ Hablar con Rosendo')).toBeTruthy();
 });
 
-test('las descartadas no salen hasta que se filtra por ese estado', async () => {
+test('cada estado es una pestaña; las descartadas solo salen en la suya', async () => {
   const { user } = renderScreen(ui());
+  expect(screen.getByRole('radio', { name: 'Semilla' }).getAttribute('aria-checked')).toBe('true');
   expect(screen.queryByText('Vender sellos')).toBeNull();
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Estado' }), 'descartada');
+  expect(screen.queryByText('Canal de vídeo')).toBeNull();
+  await user.click(screen.getByRole('radio', { name: 'Descartadas' }));
   expect(screen.getByText('Vender sellos')).toBeTruthy();
   expect(screen.queryByText('App de recetas')).toBeNull();
 });
@@ -39,27 +41,33 @@ test('las descartadas no salen hasta que se filtra por ese estado', async () => 
 test('filtra por categoría y por tag', async () => {
   const { user } = renderScreen(ui());
   await user.selectOptions(screen.getByRole('combobox', { name: 'Categoría' }), 'contenido');
-  expect(screen.getByText('Canal de vídeo')).toBeTruthy();
   expect(screen.queryByText('App de recetas')).toBeNull();
+  await user.click(screen.getByRole('radio', { name: 'Explorando' }));
+  expect(screen.getByText('Canal de vídeo')).toBeTruthy();
   await user.selectOptions(screen.getByRole('combobox', { name: 'Categoría' }), '');
   await user.selectOptions(screen.getByRole('combobox', { name: 'Tag' }), 'app');
-  expect(screen.getByText('App de recetas')).toBeTruthy();
   expect(screen.queryByText('Canal de vídeo')).toBeNull();
+  await user.click(screen.getByRole('radio', { name: 'Semilla' }));
+  expect(screen.getByText('App de recetas')).toBeTruthy();
 });
 
-test('cambiar el estado de una idea la guarda al momento', async () => {
+test('el botón de la fila avanza la idea al siguiente estado y se puede deshacer', async () => {
   const { user } = renderScreen(ui());
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Estado de «App de recetas»' }), 'en_marcha');
-  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('a', { status: 'en_marcha' }));
+  await user.click(screen.getByRole('button', { name: 'Explorar: «App de recetas»' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('a', { status: 'explorando' }));
+  expect(screen.queryByText('App de recetas')).toBeNull();
+  expect(await screen.findByText('Movida a Explorando')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Deshacer' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('a', { status: 'semilla' }));
+  expect(await screen.findByText('App de recetas')).toBeTruthy();
 });
 
 test('si no se puede guardar el estado, la idea vuelve al que tenía y se avisa', async () => {
   itemsActions.moveItem.mockResolvedValue(fail('No se pudo.'));
   const { user } = renderScreen(ui());
-  const select = screen.getByRole('combobox', { name: 'Estado de «App de recetas»' }) as HTMLSelectElement;
-  await user.selectOptions(select, 'explorando');
+  await user.click(screen.getByRole('button', { name: 'Explorar: «App de recetas»' }));
   expect(await screen.findByText('No se pudo.')).toBeTruthy();
-  expect(select.value).toBe('semilla');
+  expect(screen.getByText('App de recetas')).toBeTruthy();
 });
 
 test('pulsar una idea abre su hoja de edición', async () => {

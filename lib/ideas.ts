@@ -59,3 +59,18 @@ const potentialOf = (i: Item): number => (typeof i.data.potential === 'number' ?
 export function sortIdeas(ideas: Item[]): Item[] {
   return [...ideas].sort((a, b) => potentialOf(b) - potentialOf(a) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
+
+/** The button at the end of a row: where an idea goes next. En marcha has none (it is done being an idea). */
+export const IDEA_NEXT: Record<string, { state: string; label: string } | undefined> = {
+  semilla: { state: 'explorando', label: 'Explorar' },
+  explorando: { state: 'en_marcha', label: 'Arrancar' },
+  descartada: { state: 'semilla', label: 'Recuperar' },
+};
+
+/** Toast after moving an idea, naming where it went. */
+export const IDEA_MOVED_TO: Record<string, string> = {
+  semilla: 'Movida a Semilla',
+  explorando: 'Movida a Explorando',
+  en_marcha: 'Marcada en marcha',
+  descartada: 'Descartada',
+};
