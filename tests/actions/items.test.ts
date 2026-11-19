@@ -44,6 +44,15 @@ describe('addItem', () => {
   });
 });
 
+describe('addItem: tienda de una compra', () => {
+  it('una compra guarda la tienda elegida; otros tipos la ignoran', async () => {
+    const compra = await actions.addItem(deps, form({ type: 'compra', title: 'Reloj', storeId: 's1' }));
+    expect(compra.storeId).toBe('s1');
+    const tarea = await actions.addItem(deps, form({ type: 'tarea', title: 'Llamar', storeId: 's1' }));
+    expect(tarea.storeId).toBeNull();
+  });
+});
+
 describe('deleteItem / undoDelete', () => {
   it('deleteItem seguido de undoDelete restaura el elemento', async () => {
     const item = await actions.addItem(deps, form({ type: 'compra', title: 'Leche' }));

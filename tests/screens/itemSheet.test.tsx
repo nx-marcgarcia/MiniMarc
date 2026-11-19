@@ -109,11 +109,48 @@ test('una compra sin tienda deja elegirla en la hoja y la manda en el patch', as
   expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ storeId: 's1' });
 });
 
-test('sin tiendas guardadas la hoja de una compra no enseña «Tienda»', async () => {
+test('sin tiendas guardadas la hoja de una compra deja crear la primera', async () => {
   const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
   await open(user, compra, 'Compras');
-  await waitFor(() => expect(followUpActions.listCaptureChoices).toHaveBeenCalled());
-  expect(screen.queryByLabelText('Tienda')).toBeNull();
+  const select = (await screen.findByLabelText('Tienda')) as HTMLSelectElement;
+  expect(Array.from(select.options).map((o) => o.text)).toEqual(['Sin tienda', 'Nueva tienda…']);
+});
+
+test('«Nueva tienda…» crea la tienda al guardar y la compra se guarda con ella', async () => {
+  followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [{ id: 's1', name: 'Casio' }] }));
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  await user.selectOptions(await screen.findByLabelText('Tienda'), 'Nueva tienda…');
+  await user.type(screen.getByLabelText('Nombre'), ' Aliexpress ');
+  // Choosing the option creates nothing: a cancelled sheet leaves no store behind.
+  expect(followUpActions.createStore).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(followUpActions.createStore).toHaveBeenCalledWith(' Aliexpress '.trim());
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ storeId: 'store-new' });
+});
+
+test('«Nueva tienda…» sin nombre se dice en la hoja y no guarda nada', async () => {
+  followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [] }));
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  await user.selectOptions(await screen.findByLabelText('Tienda'), 'Nueva tienda…');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  expect(await screen.findByText('Escribe el nombre de la tienda.')).toBeTruthy();
+  expect(followUpActions.createStore).not.toHaveBeenCalled();
+  expect(itemsActions.moveItem).not.toHaveBeenCalled();
+});
+
+test('si crear la tienda falla, la compra no se guarda y la hoja lo dice', async () => {
+  followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [] }));
+  followUpActions.createStore.mockResolvedValue({ ok: false, error: 'No se ha podido crear la tienda.' });
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  await user.selectOptions(await screen.findByLabelText('Tienda'), 'Nueva tienda…');
+  await user.type(screen.getByLabelText('Nombre'), 'Casio');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  expect(await screen.findByText('No se ha podido crear la tienda.')).toBeTruthy();
+  expect(itemsActions.moveItem).not.toHaveBeenCalled();
 });
 
 test('un precio inválido se dice en la hoja y no se guarda', async () => {

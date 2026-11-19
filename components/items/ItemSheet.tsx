@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition, type FormEvent, type TransitionStartFunction } from 'react';
+import { createStore } from '@/app/actions/captureFollowUp';
 import { ideaToProject } from '@/app/actions/projects';
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard';
 import { LinkText } from '@/components/links/LinkText';
@@ -66,6 +67,8 @@ export type ItemSheetProps = {
 };
 
 const FORM_ID = 'item-sheet-form';
+/** Value of the "Tienda" select's "Nueva tienda…" option: the store is created when the sheet is saved. */
+const NEW_STORE = '__nueva__';
 
 /** Add or edit an item. Also the non-gesture way to complete, archive or delete (reduced motion, keyboard). */
 export function ItemSheet(props: ItemSheetProps) {
@@ -113,6 +116,7 @@ function ItemForm(props: ItemFormProps) {
   const [area, setArea] = useState<Area>(item?.area ?? defaults?.area ?? 'personal');
   const [error, setError] = useState<string | null>(null);
   const stores = useStoreOptions(open && type === 'compra');
+  const [storeChoice, setStoreChoice] = useState(item?.storeId ?? '');
   // Blocks a second submit (double tap, Enter) before `pending` re-renders the button.
   const inFlight = useRef(false);
   const due = item?.dueAt ? madridDateTime(new Date(item.dueAt)) : null;
@@ -124,15 +128,27 @@ function ItemForm(props: ItemFormProps) {
     e.preventDefault();
     if (inFlight.current) return;
     const fd = new FormData(e.currentTarget);
+    // "Nueva tienda…": the store is created first, then its id goes where a chosen store's would.
+    const newStore = type === 'compra' && fd.get('storeId') === NEW_STORE ? String(fd.get('newStoreName') ?? '').trim() : null;
+    if (newStore === '') return setError('Escribe el nombre de la tienda.');
+    const withStore = async <T,>(use: (storeId: string | null) => Promise<ActionResult<T>>) => {
+      if (!newStore) return use(null);
+      const created = await settle(() => createStore(newStore), 'No se ha podido crear la tienda.');
+      return created.ok ? use(created.value.id) : created;
+    };
     let call: () => Promise<ActionResult<unknown>>;
     if (item) {
       const patch = editPatchFromForm(fd, { type, area, reviewMode, item });
       if (!patch.ok) return setError(patch.error);
-      call = () => onSave(item, patch.value);
+      call = () => withStore((storeId) => onSave(item, storeId ? { ...patch.value, storeId } : patch.value));
     } else {
       const invalid = newItemFormError(fd);
       if (invalid) return setError(invalid);
-      call = () => onCreate(fd);
+      call = () =>
+        withStore((storeId) => {
+          if (storeId) fd.set('storeId', storeId);
+          return onCreate(fd);
+        });
     }
     setError(null);
     inFlight.current = true;
@@ -234,18 +250,27 @@ function ItemForm(props: ItemFormProps) {
             <span>Variante</span>
             <input className="app-input" name="variant" placeholder="Talla, color, modelo…" autoComplete="off" defaultValue={own(item, 'variant')} />
           </label>
-          {stores && stores.length > 0 && (
-            <label className="app-field">
-              <span>Tienda</span>
-              <select className="app-input" name="storeId" defaultValue={item?.storeId ?? ''}>
-                <option value="">Sin tienda</option>
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {stores && (
+            <>
+              <label className="app-field">
+                <span>Tienda</span>
+                <select className="app-input" name="storeId" value={storeChoice} onChange={(e) => setStoreChoice(e.target.value)}>
+                  <option value="">Sin tienda</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                  <option value={NEW_STORE}>Nueva tienda…</option>
+                </select>
+              </label>
+              {storeChoice === NEW_STORE && (
+                <label className="app-field">
+                  <span>Nombre</span>
+                  <input className="app-input" name="newStoreName" placeholder="Casio, Amazon…" autoComplete="off" maxLength={80} />
+                </label>
+              )}
+            </>
           )}
           <label className="app-field">
             <span>Urgencia</span>

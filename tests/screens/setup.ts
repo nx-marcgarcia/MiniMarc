@@ -42,6 +42,7 @@ export const followUpActions = {
   undoCapture: vi.fn(),
   mergeCaptureDuplicate: vi.fn(),
   listCaptureChoices: vi.fn(),
+  createStore: vi.fn(),
 };
 
 export const router = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() };
@@ -75,6 +76,7 @@ function resetDoubles() {
   followUpActions.undoCapture.mockResolvedValue(ok({ deleted: 1, eventsFailed: 0 }));
   followUpActions.mergeCaptureDuplicate.mockImplementation(async () => ok(makeItem()));
   followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [] }));
+  followUpActions.createStore.mockImplementation(async (name) => ok({ id: 'store-new', name: String(name) }));
 }
 
 beforeEach(() => {

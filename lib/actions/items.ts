@@ -75,6 +75,7 @@ export function parseNewItem(fd: FormData): NewItem {
   const own = dataFromForm(type, fd, {});
   if (!own.ok) throw new UserError(own.error);
   if (Object.keys(own.value).length > 0) item.data = own.value;
+  if (type === 'compra' && field(fd, 'storeId')) item.storeId = field(fd, 'storeId');
   if (type === 'libro') {
     item.author = field(fd, 'author').slice(0, AUTHOR_MAX) || null;
     item.link = field(fd, 'link') || null;

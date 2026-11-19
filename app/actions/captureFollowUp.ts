@@ -75,3 +75,16 @@ export async function listCaptureChoices(): Promise<ActionResult<{ people: { id:
     'No se han podido cargar las opciones.',
   );
 }
+
+/** "Nueva tienda…" in a purchase's sheet: the store with that name (found without case or accents, else created). */
+export async function createStore(name: unknown): Promise<ActionResult<{ id: string; name: string }>> {
+  if (typeof name !== 'string' || !name.trim() || name.length > 80) return { ok: false, error: 'Escribe el nombre de la tienda.' };
+  return run(
+    ['items'],
+    async (deps) => {
+      const { id, name: saved } = await deps.stores.upsertStoreByName(name);
+      return { id, name: saved };
+    },
+    'No se ha podido crear la tienda.',
+  );
+}
