@@ -17,7 +17,7 @@ import { itemHref } from '@/lib/items/href';
 import { isOpen } from '@/lib/items/itemTypes';
 import { countdown } from '@/lib/people/format';
 import { occasionsWithGifts } from '@/lib/regalos';
-import { deadlineOf } from '@/lib/tareas';
+import { deadlineOf, followUpOn, isWaiting, waitingFor, waitingSince } from '@/lib/tareas';
 import { madridDateTime } from '@/lib/time';
 
 export type CandidateKind =
@@ -29,6 +29,8 @@ export type CandidateKind =
   | 'idea_olvidada'
   | 'enlace_olvidado'
   | 'libro_pendiente'
+  /** A task in espera whose day to look at it again has come. */
+  | 'seguimiento'
   /** A task with an exact time (or a reminder Marc set): goes out at that time, window or not (timed.ts). */
   | 'con_hora';
 
@@ -63,6 +65,7 @@ const DAY = 86_400_000;
 const RANK: Record<CandidateKind, number> = {
   atrasada: 1,
   vence_hoy: 2,
+  seguimiento: 2,
   regalo_sin_comprar: 3,
   garantia: 4,
   compra_urgente: 5,
@@ -105,6 +108,18 @@ export function findCandidates(input: CandidateInput): Candidate[] {
     const subject = `item:${item.id}`;
     const data = item.data;
 
+    if (isWaiting(item)) {
+      // Waiting: no "overdue" nagging; it asks once, on the day to look at it again.
+      const on = followUpOn(item);
+      if (on && on <= today) {
+        const since = waitingSince(item);
+        const who = waitingFor(item);
+        const days = since ? daysBetween(since, today) : null;
+        const detail = `${days !== null ? `Lleva ${plural(days, 'día', 'días')} en espera` : 'Toca mirar si ha llegado'}${who ? ` de ${who}` : ''}${days !== null ? '. ¿Ha llegado?' : ''}`;
+        add('seguimiento', subject, item.id, item.title, detail, `${on}T00:00:00.000Z`, itemHref(item), item.snoozeCount);
+      }
+      continue;
+    }
     if (item.type === 'tarea' && (item.dueAt || deadlineOf(item))) {
       const deadline = deadlineOf(item);
       const deadlineDays = deadline ? daysBetween(today, deadline) : null;

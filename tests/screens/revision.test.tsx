@@ -14,6 +14,7 @@ beforeEach(() => localStorage.clear());
 const review = (over: Partial<Review> = {}): Review => ({
   inbox: 2,
   projects: [{ project: makeProject({ id: 'p1', name: 'Viaje a Japón' }), nextTask: null }],
+  followUps: [],
   overdue: [makeItem({ id: 't1', title: 'Pagar seguro', dueAt: '2026-11-10T10:00:00.000Z', hasTime: true })],
   rescue: [makeItem({ id: 'e1', type: 'enlace', status: 'por_ver', title: 'Artículo viejo' })],
   tidy: { looseIdeas: [], noStore: 0 },
@@ -51,6 +52,27 @@ test('una tarea atrasada por su fecha límite lo dice, y Mañana no toca la fech
   await user.click(screen.getByRole('button', { name: 'Mañana: Entregar informe' }));
   await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
   expect(Object.keys(itemsActions.moveItem.mock.calls[0][1]).sort()).toEqual(['dueAt', 'hasTime']);
+});
+
+test('seguimientos: Ya llegó la devuelve a pendiente sin los datos de espera; En 3 días cambia el día de mirarla', async () => {
+  const t = makeItem({ id: 'w1', title: 'Contactar tienda Funko', status: 'en_espera', data: { waitingFor: 'Funko', waitingSince: '2026-11-07', reviewOn: '2026-11-16', deadline: '2026-11-30' } });
+  const { user } = renderScreen(ui(review({ followUps: [t] })));
+  expect(screen.getByText('Esperando a Funko · desde hace 9 días')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Mirar en 3 días: Contactar tienda Funko' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0]).toEqual(['w1', { data: { waitingFor: 'Funko', waitingSince: '2026-11-07', reviewOn: '2026-11-19', deadline: '2026-11-30' } }]);
+});
+
+test('seguimientos: Ya llegó', async () => {
+  const t = makeItem({ id: 'w2', title: 'Respuesta del banco', status: 'en_espera', data: { waitingFor: 'Banco', deadline: '2026-11-30' } });
+  const { user } = renderScreen(ui(review({ followUps: [t] })));
+  await user.click(screen.getByRole('button', { name: 'Ya llegó: Respuesta del banco' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('w2', { status: 'pendiente', data: { deadline: '2026-11-30' } }));
+});
+
+test('sin seguimientos, el bloque no aparece', () => {
+  renderScreen(ui());
+  expect(screen.queryByText('Seguimientos')).toBeNull();
 });
 
 test('Archivar algo olvidado lo archiva', async () => {

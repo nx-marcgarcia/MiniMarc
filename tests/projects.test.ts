@@ -23,6 +23,15 @@ describe('projectSummary', () => {
     expect(projectSummary([recent, old]).nextTask?.id).toBe('o');
   });
 
+  it('una tarea en espera no es el siguiente paso; si es la única, el proyecto pide uno', () => {
+    const waiting = makeItem({ id: 'w', status: 'en_espera', dueAt: '2026-11-01T10:00:00.000Z' });
+    const doable = makeItem({ id: 'd', dueAt: '2026-11-30T10:00:00.000Z' });
+    expect(projectSummary([waiting, doable]).nextTask?.id).toBe('d');
+    const only = projectSummary([waiting]);
+    expect(only.nextTask).toBeNull();
+    expect(only.needsNextStep).toBe(true);
+  });
+
   it('sin tareas abiertas pide un siguiente paso', () => {
     const s = projectSummary([makeItem({ type: 'compra', status: 'quiero' }), makeItem({ status: 'hecha' })]);
     expect(s.nextTask).toBeNull();

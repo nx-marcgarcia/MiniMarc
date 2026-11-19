@@ -35,7 +35,7 @@ describe('registro de tipos', () => {
 
   it('los estados son los de la spec', () => {
     const states = (id: (typeof ITEM_TYPE_IDS)[number]) => ITEM_TYPES[id].states.map((s) => s.id);
-    expect(states('tarea')).toEqual(['pendiente', 'hecha']);
+    expect(states('tarea')).toEqual(['pendiente', 'en_espera', 'hecha']);
     expect(states('idea')).toEqual(['semilla', 'explorando', 'en_marcha', 'descartada']);
     expect(states('compra')).toEqual(['quiero', 'en_carrito', 'comprado', 'descartado']);
     expect(states('regalo')).toEqual(['idea', 'comprado', 'envuelto', 'entregado']);

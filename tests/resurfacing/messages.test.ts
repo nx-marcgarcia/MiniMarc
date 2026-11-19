@@ -77,7 +77,7 @@ describe('reminderLines', () => {
   });
 
   it('todos los tipos tienen etiqueta', () => {
-    expect(Object.keys(KIND_LABELS).sort()).toEqual(['atrasada', 'compra_urgente', 'con_hora', 'enlace_olvidado', 'garantia', 'idea_olvidada', 'libro_pendiente', 'regalo_sin_comprar', 'vence_hoy']);
+    expect(Object.keys(KIND_LABELS).sort()).toEqual(['atrasada', 'compra_urgente', 'con_hora', 'enlace_olvidado', 'garantia', 'idea_olvidada', 'libro_pendiente', 'regalo_sin_comprar', 'seguimiento', 'vence_hoy']);
   });
 });
 

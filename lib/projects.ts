@@ -1,6 +1,7 @@
 /** What a project card and its page say about the project's items. Pure. */
 import type { Item, ItemType } from '@/lib/db/types';
 import { isOpen } from '@/lib/items/itemTypes';
+import { isWaiting } from '@/lib/tareas';
 
 export type ProjectSummary = {
   /** Open items per type. */
@@ -15,7 +16,8 @@ export function projectSummary(items: Item[]): ProjectSummary {
   const open = items.filter(isOpen);
   const counts: Partial<Record<ItemType, number>> = {};
   for (const i of open) counts[i.type] = (counts[i.type] ?? 0) + 1;
-  const tasks = open.filter((i) => i.type === 'tarea');
+  // A task waiting for an answer cannot be the next step.
+  const tasks = open.filter((i) => i.type === 'tarea' && !isWaiting(i));
   const dated = tasks.filter((t) => t.dueAt).sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
   const undated = tasks.filter((t) => !t.dueAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   return { counts, nextTask: dated[0] ?? undated[0] ?? null, needsNextStep: tasks.length === 0 };

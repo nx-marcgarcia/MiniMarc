@@ -149,6 +149,7 @@ function ItemForm(props: ItemFormProps) {
   const [area, setArea] = useState<Area>(item?.area ?? defaults?.area ?? 'personal');
   const [error, setError] = useState<string | null>(null);
   const stores = useStoreOptions(open && type === 'compra');
+  const [status, setStatus] = useState(item?.status ?? '');
   const [storeChoice, setStoreChoice] = useState(item?.storeId ?? '');
   // Blocks a second submit (double tap, Enter) before `pending` re-renders the button.
   const inFlight = useRef(false);
@@ -258,13 +259,26 @@ function ItemForm(props: ItemFormProps) {
         <InsetList>
           <label className="app-field">
             <span>Estado</span>
-            <select className="app-input" name="status" defaultValue={item.status}>
+            <select className="app-input" name="status" value={status} onChange={(e) => setStatus(e.target.value)}>
               {ITEM_TYPES[type].states.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
                 </option>
               ))}
             </select>
+          </label>
+        </InsetList>
+      )}
+
+      {item && type === 'tarea' && type === item.type && status === 'en_espera' && (
+        <InsetList footer="Sale de tus pendientes y no avisa hasta el día de volver a mirarla. Sin día, a la semana.">
+          <label className="app-field">
+            <span>Esperando a</span>
+            <input className="app-input" name="waitingFor" placeholder="Persona o respuesta" autoComplete="off" defaultValue={own(item, 'waitingFor')} />
+          </label>
+          <label className="app-field">
+            <span>Volver a mirar el</span>
+            <input className="app-input" type="date" name="reviewOn" defaultValue={own(item, 'reviewOn')} />
           </label>
         </InsetList>
       )}

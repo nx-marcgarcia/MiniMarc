@@ -187,11 +187,12 @@ test('un regalo tiene su estado, precio aproximado y ocasión', async () => {
   expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ status: 'comprado', data: { approxPrice: 30, occasion: 'Navidad' } });
 });
 
-test('una tarea no enseña estado ni campos de compra', async () => {
+test('una tarea enseña su estado (con En espera) y no los campos de una compra', async () => {
   const { user } = renderScreen(screenUi());
   await openRow(user);
-  expect(screen.queryByLabelText('Estado')).toBeNull();
+  expect(Array.from((screen.getByLabelText('Estado') as HTMLSelectElement).options).map((o) => o.value)).toEqual(['pendiente', 'en_espera', 'hecha']);
   expect(screen.queryByLabelText('Precio')).toBeNull();
+  expect(screen.queryByLabelText('Esperando a')).toBeNull();
 });
 
 test('el formulario manual de una compra nueva pide también sus campos propios', async () => {
@@ -343,6 +344,32 @@ test('un proyecto terminado no se ofrece a lo que no está en él', async () => 
   await openRow(user);
   const select = (await screen.findByLabelText('Proyecto')) as HTMLSelectElement;
   expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Viaje a Japón']);
+});
+
+describe('En espera', () => {
+  const t = makeItem({ title: 'Escribir a Funko', status: 'pendiente', data: {} });
+  const ui = (item = t) => <ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [item] }]} />;
+
+  test('al elegir En espera aparecen «Esperando a» y «Volver a mirar el», y se guardan con el estado', async () => {
+    const { user } = renderScreen(ui());
+    await user.click(screen.getByRole('button', { name: 'Abrir «Escribir a Funko»' }));
+    await screen.findByRole('dialog', { name: 'Editar' });
+    expect(screen.queryByLabelText('Esperando a')).toBeNull();
+    await user.selectOptions(screen.getByLabelText('Estado'), 'en_espera');
+    await user.type(screen.getByLabelText('Esperando a'), 'Funko');
+    await user.type(screen.getByLabelText('Volver a mirar el'), '2026-10-29');
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+    const patch = itemsActions.moveItem.mock.calls[0][1];
+    expect(patch.status).toBe('en_espera');
+    expect(patch.data).toMatchObject({ waitingFor: 'Funko', reviewOn: '2026-10-29' });
+  });
+
+  test('la fila de una tarea en espera dice a quién espera, desde cuándo y cuándo mirarla', () => {
+    const waiting = makeItem({ title: 'Escribir a Funko', status: 'en_espera', data: { waitingFor: 'Funko', waitingSince: '2026-10-20', reviewOn: '2026-10-29' } });
+    renderScreen(ui(waiting));
+    expect(screen.getByText(/Esperando a Funko · desde 20 de octubre · mirar 29 de octubre/)).toBeTruthy();
+  });
 });
 
 describe('Fecha límite', () => {

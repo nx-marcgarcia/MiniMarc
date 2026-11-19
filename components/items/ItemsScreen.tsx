@@ -12,7 +12,7 @@ import { priceText } from '@/lib/compras';
 import { formatDay, formatDue, TYPE_LABELS } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
 import { subtaskProgress } from '@/lib/subtasks';
-import { deadlineOf, nextOccurrence } from '@/lib/tareas';
+import { deadlineOf, followUpOn, isWaiting, nextOccurrence, waitingFor, waitingSince } from '@/lib/tareas';
 import { ItemRow } from './ItemRow';
 import { ItemSheet, type NewItemDefaults, type SheetMode } from './ItemSheet';
 import { SwipeRow } from './SwipeRow';
@@ -224,6 +224,14 @@ export function ItemsScreen({
     if (reviewMode) parts.push(TYPE_LABELS[item.type]);
     const { day, time } = formatDue(item, today);
     if (day) parts.push(day);
+    if (isWaiting(item)) {
+      const who = waitingFor(item);
+      const since = waitingSince(item);
+      const review = followUpOn(item);
+      parts.push(who ? `Esperando a ${who}` : 'En espera');
+      if (since) parts.push(`desde ${formatDay(since, today).toLocaleLowerCase('es')}`);
+      if (review) parts.push(`mirar ${formatDay(review, today).toLocaleLowerCase('es')}`);
+    }
     const deadline = item.type === 'tarea' ? deadlineOf(item) : null;
     if (deadline) parts.push(`Límite: ${formatDay(deadline, today).toLocaleLowerCase('es')}`);
     if (item.type === 'regalo' && item.personId && !hidePerson) {

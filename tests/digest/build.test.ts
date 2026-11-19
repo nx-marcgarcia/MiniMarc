@@ -105,6 +105,14 @@ describe('buildDigest', () => {
     expect(d.headline).toBe('Hoy tienes 1 tarea personal.');
   });
 
+  it('a task in espera is not among the day\'s tasks (it comes back as a follow-up)', async () => {
+    const s = setup();
+    await s.add({ type: 'tarea', title: 'Pagar el seguro', area: 'personal', ...due(DATE) });
+    await s.add({ type: 'tarea', title: 'Esperando al fontanero', area: 'personal', status: 'en_espera', ...due(DATE) });
+    const d = await buildDigest(DATE, s.deps);
+    expect(d.tasks.personal.items.map((t) => t.item.title)).toEqual(['Pagar el seguro']);
+  });
+
   it('asks Calendar for the whole Madrid day', async () => {
     const s = setup();
     await buildDigest(DATE, s.deps);

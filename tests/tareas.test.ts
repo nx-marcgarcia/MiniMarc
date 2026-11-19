@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupTareas } from '@/lib/tareas';
+import { followUpOn, groupTareas, isWaiting, withoutWaiting } from '@/lib/tareas';
 import { makeItem } from './screens/setup';
 
 const task = (id: string, dueAt: string | null, over: Record<string, unknown> = {}) =>
@@ -28,6 +28,7 @@ describe('groupTareas', () => {
       ['semana', ['d']],
       ['despues', ['e']],
       ['sin-fecha', ['f']],
+      ['en-espera', []],
     ]);
   });
 
@@ -52,8 +53,23 @@ describe('groupTareas', () => {
     expect(groupTareas([task('a', null, { data: { deadline: 'pronto' } })], TODAY)[5].items.map((i) => i.id)).toEqual(['a']);
   });
 
-  it('devuelve siempre los seis grupos (la pantalla esconde los vacíos) y con su título', () => {
-    expect(groupTareas([], TODAY).map((g) => g.header)).toEqual(['Atrasadas', 'Hoy', 'Mañana', 'Esta semana', 'Más adelante', 'Sin fecha']);
+  it('en espera: sale de los grupos por día y va a su grupo, la que lleva más tiempo esperando primero', () => {
+    const groups = groupTareas(
+      [
+        task('a', at('2026-11-10'), { status: 'en_espera', data: { waitingSince: '2026-11-12' } }),
+        task('b', at('2026-11-16'), { status: 'en_espera', data: { waitingSince: '2026-11-01' } }),
+        task('c', at('2026-11-16')),
+        task('d', null, { status: 'en_espera' }),
+      ],
+      TODAY,
+    );
+    expect(groups.find((g) => g.key === 'en-espera')!.items.map((i) => i.id)).toEqual(['b', 'a', 'd']);
+    expect(groups.find((g) => g.key === 'atrasadas')!.items).toEqual([]);
+    expect(groups.find((g) => g.key === 'hoy')!.items.map((i) => i.id)).toEqual(['c']);
+  });
+
+  it('devuelve siempre los siete grupos (la pantalla esconde los vacíos) y con su título', () => {
+    expect(groupTareas([], TODAY).map((g) => g.header)).toEqual(['Atrasadas', 'Hoy', 'Mañana', 'Esta semana', 'Más adelante', 'Sin fecha', 'En espera']);
   });
 
   it('el día se cuenta en hora de Madrid, no en UTC (23:30 UTC del 16 ya es el 17 en Madrid)', () => {
@@ -77,5 +93,24 @@ describe('groupTareas', () => {
   it('mantiene el orden de entrada dentro de cada grupo', () => {
     const g = groupTareas([task('x', at('2026-11-16', '08:00')), task('y', at('2026-11-16', '09:00'))], TODAY);
     expect(g[1].items.map((i) => i.id)).toEqual(['x', 'y']);
+  });
+});
+
+describe('en espera: ayudas', () => {
+  it('isWaiting solo es verdad para una tarea en espera', () => {
+    expect(isWaiting(task('a', null, { status: 'en_espera' }))).toBe(true);
+    expect(isWaiting(task('a', null))).toBe(false);
+    expect(isWaiting(makeItem({ type: 'idea', status: 'en_espera' }))).toBe(false);
+  });
+
+  it('el día de volver a mirar: el suyo, o a la semana de empezar a esperar, o ninguno', () => {
+    expect(followUpOn({ data: { reviewOn: '2026-11-20', waitingSince: '2026-11-01' } })).toBe('2026-11-20');
+    expect(followUpOn({ data: { waitingSince: '2026-11-10' } })).toBe('2026-11-17');
+    expect(followUpOn({ data: {} })).toBeNull();
+    expect(followUpOn({ data: { reviewOn: 'pronto' } })).toBeNull();
+  });
+
+  it('withoutWaiting quita solo lo de esperar', () => {
+    expect(withoutWaiting({ waitingFor: 'Ana', waitingSince: '2026-11-10', reviewOn: '2026-11-17', deadline: '2026-11-30' })).toEqual({ deadline: '2026-11-30' });
   });
 });

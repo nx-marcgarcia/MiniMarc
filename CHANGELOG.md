@@ -2,6 +2,16 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
+## v2: fiabilidad y planificación (bloques 1 y 2 de la hoja de ruta)
+
+Sin migraciones: los campos nuevos viven en `items.data` y los valida el registro de tipos.
+
+- **Tienda en una compra:** selector **Tienda** en su hoja, con **Nueva tienda…** (se crea al guardar, no al elegir). La compra nueva desde la hoja también guarda su tienda. Arregla las compras antiguas que se quedaban en «Sin tienda».
+- **Separar en productos:** en la hoja de una compra (no de Trabajo), la IA lee la compra y propone la tienda y los productos; los editas, y al confirmar se crea una compra por producto y la original se archiva. Una llamada a Gemini por pulsación; nada se guarda antes de confirmar.
+- **Ordenar lo antiguo** (revisión semanal): ideas que suenan a una tarea («Trabajar») y compras sin tienda, sin IA.
+- **Fecha límite** en las tareas, separada de la fecha prevista: posponer solo mueve la prevista. Tareas manda a «Atrasadas» lo que pasó su límite; la revisión semanal y los avisos («Su fecha límite pasó…», «Su fecha límite es hoy») la respetan. Un límite anterior a la fecha prevista es un error del formulario.
+- **En espera** (estado nuevo de las tareas): con «Esperando a», «Volver a mirar el» y desde cuándo (lo pone la app). Sale de los pendientes, de Hoy y del siguiente paso de un proyecto, y no avisa de atrasada. El día de volver a mirarla (o a la semana) sale un aviso **Seguimiento** y la revisión semanal tiene el bloque **Seguimientos** (Ya llegó · En 3 días · Hecha). Diseño: `docs/superpowers/specs/2026-11-19-fecha-limite-y-en-espera-design.md`.
+
 ## Reformulación: segundo cerebro (PARA ligero)
 
 Ordenar por *para qué* sirve cada cosa, no por *qué tipo* es. Inspirado en Things 3 y GTD (Bandeja y revisión semanal), PARA de Tiago Forte (Proyectos, Áreas, Recursos, Archivo), Capacities (fichas que reúnen lo suyo), Sunsama y Amie (el día en una línea) y Raycast/Linear (⌘K).

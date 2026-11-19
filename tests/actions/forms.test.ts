@@ -241,6 +241,41 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
   });
 });
 
+describe('editPatchFromForm: tarea en espera', () => {
+  const t = (over = {}) => makeItem({ id: 't', type: 'tarea', title: 'Escribir a Funko', status: 'pendiente', area: 'personal', data: {}, ...over });
+  const opts = (item: ReturnType<typeof t>) => ({ type: 'tarea' as const, area: 'personal' as const, item });
+
+  it('al pasarla a espera guarda de quién espera, el día de volver a mirar y desde cuándo (hoy)', () => {
+    const r = editPatchFromForm(form({ title: 'Escribir a Funko', status: 'en_espera', waitingFor: 'Funko', reviewOn: '2026-11-25' }), opts(t()));
+    expect(r.ok && r.value.status).toBe('en_espera');
+    expect(r.ok && r.value.data).toMatchObject({ waitingFor: 'Funko', reviewOn: '2026-11-25' });
+    expect(r.ok && (r.value.data as Record<string, unknown>).waitingSince).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('si ya esperaba desde una fecha, no la pisa', () => {
+    const item = t({ status: 'en_espera', data: { waitingFor: 'Funko', waitingSince: '2026-11-01' } });
+    const r = editPatchFromForm(form({ title: 'Escribir a Funko', status: 'en_espera', waitingFor: 'Funko', reviewOn: '2026-11-25' }), opts(item));
+    expect(r.ok && r.value.data).toEqual({ waitingFor: 'Funko', waitingSince: '2026-11-01', reviewOn: '2026-11-25' });
+  });
+
+  it('al sacarla de espera (o cerrarla) quita lo de esperar y conserva lo demás', () => {
+    const item = t({ status: 'en_espera', data: { waitingFor: 'Funko', waitingSince: '2026-11-01', deadline: '2026-11-30' } });
+    const back = editPatchFromForm(form({ title: 'Escribir a Funko', status: 'pendiente' }), opts(item));
+    expect(back.ok && back.value).toMatchObject({ status: 'pendiente', data: { deadline: '2026-11-30' } });
+    const done = editPatchFromForm(form({ title: 'Escribir a Funko', status: 'hecha' }), opts(item));
+    expect(done.ok && done.value.data).toEqual({ deadline: '2026-11-30' });
+  });
+
+  it('una fecha de volver a mirar inválida es un error del formulario', () => {
+    expect(editPatchFromForm(form({ title: 'X', status: 'en_espera', reviewOn: '2026-02-30' }), opts(t()))).toEqual({ ok: false, error: 'La fecha para volver a mirarla no es válida.' });
+  });
+
+  it('una tarea normal sin cambios no recibe data', () => {
+    const r = editPatchFromForm(form({ title: 'Escribir a Funko' }), opts(t()));
+    expect(r.ok && 'data' in r.value).toBe(false);
+  });
+});
+
 describe('editPatchFromForm: estado y campos propios', () => {
   const compra = makeItem({ id: 'c', type: 'compra', title: 'Reloj', status: 'quiero', area: null, data: { quantity: 1, currency: 'EUR' } });
 

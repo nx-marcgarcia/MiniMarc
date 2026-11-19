@@ -64,6 +64,25 @@ describe('reviewDue', () => {
   });
 });
 
+describe('seguimientos', () => {
+  const w = (id: string, over = {}) => makeItem({ id, type: 'tarea', status: 'en_espera', area: 'personal', hasTime: false, data: {}, ...over });
+
+  it('sale la tarea en espera a la que ya toca mirar; no la que aún no, ni cuenta como atrasada', () => {
+    const r = buildReview({
+      items: [
+        w('a', { dueAt: '2026-11-01T10:00:00Z', data: { reviewOn: '2026-11-16' } }),
+        w('b', { data: { reviewOn: '2026-11-20' } }),
+        w('c', { data: { waitingSince: '2026-11-01' } }),
+      ],
+      projects: [],
+      now: MONDAY,
+      tz: TZ,
+    });
+    expect(r.followUps.map((i) => i.id)).toEqual(['c', 'a']);
+    expect(r.overdue).toEqual([]);
+  });
+});
+
 describe('atrasado por fecha límite', () => {
   const t = (id: string, over = {}) => makeItem({ id, type: 'tarea', status: 'pendiente', area: 'personal', hasTime: false, data: {}, ...over });
 

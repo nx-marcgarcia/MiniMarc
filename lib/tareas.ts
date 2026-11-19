@@ -1,14 +1,15 @@
 /**
  * Tareas: the open tasks grouped by when they are due (Madrid days). Pure; the screen draws.
- * Always the same six groups in the same order (the screen hides the empty ones), so a task
+ * Always the same seven groups in the same order (the screen hides the empty ones), so a task
  * added optimistically has a group to land in.
  */
 import type { Item } from '@/lib/db/types';
 import { isOpen } from '@/lib/items/itemTypes';
 import { isRepeat, nextDue } from '@/lib/recurrence';
+import { addDays } from '@/lib/agenda/week';
 import { isValidDate, madridDateTime } from '@/lib/time';
 
-export type TaskGroupKey = 'atrasadas' | 'hoy' | 'manana' | 'semana' | 'despues' | 'sin-fecha';
+export type TaskGroupKey = 'atrasadas' | 'hoy' | 'manana' | 'semana' | 'despues' | 'sin-fecha' | 'en-espera';
 
 export interface TaskGroup {
   key: TaskGroupKey;
@@ -23,14 +24,52 @@ const HEADERS: Record<TaskGroupKey, string> = {
   semana: 'Esta semana',
   despues: 'Más adelante',
   'sin-fecha': 'Sin fecha',
+  'en-espera': 'En espera',
 };
 
-const ORDER: TaskGroupKey[] = ['atrasadas', 'hoy', 'manana', 'semana', 'despues', 'sin-fecha'];
+const ORDER: TaskGroupKey[] = ['atrasadas', 'hoy', 'manana', 'semana', 'despues', 'sin-fecha', 'en-espera'];
 
 /** Whole days from `from` to `to` ("YYYY-MM-DD"). */
 function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
+
+export const WAITING = 'en_espera';
+
+/** A task waiting for someone or something (status «En espera»): not for doing now, so it makes no noise. */
+export function isWaiting(item: Pick<Item, 'type' | 'status'>): boolean {
+  return item.type === 'tarea' && item.status === WAITING;
+}
+/** After this many days in espera with no `reviewOn`, the task asks to be looked at again. */
+export const WAITING_FOLLOW_UP_DAYS = 7;
+
+const dateField = (item: Pick<Item, 'data'>, key: string): string | null => {
+  const v = item.data[key];
+  return typeof v === 'string' && isValidDate(v) ? v : null;
+};
+export const waitingFor = (item: Pick<Item, 'data'>): string | null => {
+  const v = item.data.waitingFor;
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+};
+export const waitingSince = (item: Pick<Item, 'data'>) => dateField(item, 'waitingSince');
+
+/** The day a waiting task asks to be looked at again: its `reviewOn`, else a week after `waitingSince`; null if neither. */
+export function followUpOn(item: Pick<Item, 'data'>): string | null {
+  const on = dateField(item, 'reviewOn');
+  if (on) return on;
+  const since = waitingSince(item);
+  return since ? addDays(since, WAITING_FOLLOW_UP_DAYS) : null;
+}
+
+const WAITING_KEYS = ['waitingFor', 'waitingSince', 'reviewOn'] as const;
+
+/** `data` without the waiting fields (the task is back to being doable, or done). */
+export function withoutWaiting(data: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...data };
+  for (const key of WAITING_KEYS) delete rest[key];
+  return rest;
+}
+export const hasWaitingData = (data: Record<string, unknown>) => WAITING_KEYS.some((k) => k in data);
 
 /** The task's deadline ("YYYY-MM-DD"), if it has a valid one. */
 export function deadlineOf(item: Pick<Item, 'data'>): string | null {
@@ -42,7 +81,8 @@ export function deadlineOf(item: Pick<Item, 'data'>): string | null {
  * Where a task goes: by its planned date; a task past its deadline is Atrasada whatever its
  * planned date, and one with a deadline but no planned date is grouped by the deadline.
  */
-export function groupOf(item: Pick<Item, 'dueAt' | 'data'>, today: string): TaskGroupKey {
+export function groupOf(item: Pick<Item, 'dueAt' | 'data' | 'type' | 'status'>, today: string): TaskGroupKey {
+  if (isWaiting(item)) return 'en-espera';
   const deadline = deadlineOf(item);
   if (deadline && daysBetween(today, deadline) < 0) return 'atrasadas';
   const date = item.dueAt ? madridDateTime(new Date(item.dueAt)).date : deadline;
@@ -58,6 +98,8 @@ export function groupOf(item: Pick<Item, 'dueAt' | 'data'>, today: string): Task
 export function groupTareas(items: Item[], today: string): TaskGroup[] {
   const groups = new Map<TaskGroupKey, Item[]>(ORDER.map((k) => [k, []]));
   for (const item of items) groups.get(groupOf(item, today))!.push(item);
+  // Waiting: the longest waiting first.
+  groups.get('en-espera')!.sort((a, b) => (waitingSince(a) ?? '9').localeCompare(waitingSince(b) ?? '9'));
   return ORDER.map((key) => ({ key, header: HEADERS[key], items: groups.get(key)! }));
 }
 

@@ -11,7 +11,7 @@ import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item } from '@/lib/db/types';
 import { formatDay, formatDue } from '@/lib/format';
 import { REVIEW_KEY, type Review } from '@/lib/revision';
-import { deadlineOf } from '@/lib/tareas';
+import { deadlineOf, waitingFor, waitingSince, withoutWaiting } from '@/lib/tareas';
 import { madridDateTime, madridToUtc } from '@/lib/time';
 
 /** Why a task is late: its planned day, or its deadline when that is what passed. */
@@ -22,6 +22,14 @@ function lateText(item: Item, today: string): string | undefined {
     return `Límite: ${formatDay(deadline, today).toLocaleLowerCase('es')}`;
   }
   return planned;
+}
+
+/** "Esperando a Ana · desde hace 9 días". */
+function waitingText(item: Item, today: string): string {
+  const who = waitingFor(item);
+  const since = waitingSince(item);
+  const days = since ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${since}T00:00:00Z`)) / 86_400_000) : null;
+  return [who ? `Esperando a ${who}` : 'En espera', days === null ? null : `desde hace ${days} ${days === 1 ? 'día' : 'días'}`].filter(Boolean).join(' · ');
 }
 
 type ToastState = NonNullable<ToastProps['toast']>;
@@ -89,6 +97,7 @@ export function RevisionScreen({ review, today, tz }: { review: Review; today: s
 
   const projects = review.projects.filter((p) => !gone.includes(p.project.id));
   const overdue = review.overdue.filter((i) => !gone.includes(i.id));
+  const followUps = review.followUps.filter((i) => !gone.includes(i.id));
   const rescue = review.rescue.filter((i) => !gone.includes(i.id));
   const looseIdeas = review.tidy.looseIdeas.filter((i) => !gone.includes(i.id));
 
@@ -141,6 +150,24 @@ export function RevisionScreen({ review, today, tz }: { review: Review; today: s
           </DecisionRow>
         ))}
       </Step>
+
+      {followUps.length > 0 && (
+        <InsetList header="Seguimientos" footer="Lo que enviaste o pediste y sigue en espera.">
+          {followUps.map((item) => (
+            <DecisionRow key={item.id} title={item.title} subtitle={waitingText(item, today)}>
+              <button type="button" className="app-btn app-btn--tint" aria-label={`Ya llegó: ${item.title}`} onClick={() => act(item.id, () => moveItem(item.id, { status: 'pendiente', data: withoutWaiting(item.data) }))}>
+                Ya llegó
+              </button>
+              <button type="button" className="app-btn app-btn--ghost" aria-label={`Mirar en 3 días: ${item.title}`} onClick={() => act(item.id, () => moveItem(item.id, { data: { ...item.data, reviewOn: addDays(today, 3) } }))}>
+                En 3 días
+              </button>
+              <button type="button" className="app-btn app-btn--ghost" aria-label={`Hecha: ${item.title}`} onClick={() => act(item.id, () => toggleDone(item.id))}>
+                Hecha
+              </button>
+            </DecisionRow>
+          ))}
+        </InsetList>
+      )}
 
       <Step n={4} title="Rescatar lo olvidado" done={rescue.length === 0}>
         {rescue.length === 0 && <DecisionRow title="Nada olvidado" />}

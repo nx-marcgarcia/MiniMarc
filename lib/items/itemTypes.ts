@@ -55,8 +55,14 @@ export const ITEM_TYPES = {
       estimateMin: z.number().int().positive().optional(),
       /** Fecha límite ("YYYY-MM-DD", día de Madrid): cuándo tiene que estar. `dueAt` es cuándo se piensa hacer; posponer solo mueve esa. */
       deadline: date.optional(),
+      /** En espera: de quién o de qué se espera respuesta. */
+      waitingFor: text.optional(),
+      /** En espera: desde cuándo ("YYYY-MM-DD"); lo pone la app al pasar a espera. */
+      waitingSince: date.optional(),
+      /** En espera: cuándo volver a mirarla ("YYYY-MM-DD"). Sin ella, a los 7 días de `waitingSince`. */
+      reviewOn: date.optional(),
     }),
-    states: states(['pendiente', 'Pendiente'], ['hecha', 'Hecha']),
+    states: states(['pendiente', 'Pendiente'], ['en_espera', 'En espera'], ['hecha', 'Hecha']),
     initialState: 'pendiente',
     doneStates: ['hecha'],
     completeState: 'hecha',

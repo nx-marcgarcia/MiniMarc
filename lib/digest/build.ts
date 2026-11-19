@@ -11,6 +11,7 @@ import { calendarErrorKind, type CalendarGateway } from '@/lib/calendar/client';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo, UpcomingDate } from '@/lib/db/people';
 import type { Area, Item } from '@/lib/db/types';
+import { isWaiting } from '@/lib/tareas';
 import { formatLongDate, madridToUtc } from '@/lib/time';
 
 export const MAX_TASKS_PER_AREA = 5;
@@ -136,7 +137,8 @@ export function collectTasks(
       unclassified++;
       continue;
     }
-    if (item.type !== 'tarea' || !item.dueAt) continue;
+    // A task waiting for an answer is not today's to do: it comes back as a follow-up (resurfacing).
+    if (item.type !== 'tarea' || !item.dueAt || isWaiting(item)) continue;
     const t = Date.parse(item.dueAt);
     if (t >= range.until.getTime()) continue;
     const overdue = t < range.overdueBefore.getTime();

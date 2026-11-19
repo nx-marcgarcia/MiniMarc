@@ -33,7 +33,7 @@ const inputSchema = z
   .object({
     subject: z.string().min(1).max(200),
     itemId: z.string().min(1).max(100).nullable(),
-    kind: z.enum(['atrasada', 'vence_hoy', 'regalo_sin_comprar', 'garantia', 'compra_urgente', 'idea_olvidada', 'enlace_olvidado', 'libro_pendiente', 'con_hora']),
+    kind: z.enum(['atrasada', 'vence_hoy', 'regalo_sin_comprar', 'garantia', 'compra_urgente', 'idea_olvidada', 'enlace_olvidado', 'libro_pendiente', 'seguimiento', 'con_hora']),
   })
   // An item notice names its item; a person's date has none.
   .refine((c) => (c.itemId === null ? c.subject.startsWith('date:') : c.subject === `item:${c.itemId}`), 'Aviso no válido');

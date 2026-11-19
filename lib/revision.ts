@@ -7,7 +7,7 @@ import type { Project } from '@/lib/db/projects';
 import type { Item } from '@/lib/db/types';
 import { isOpen } from '@/lib/items/itemTypes';
 import { projectSummary } from '@/lib/projects';
-import { deadlineOf } from '@/lib/tareas';
+import { deadlineOf, followUpOn, isWaiting } from '@/lib/tareas';
 import { IDEA_STALE_DAYS, LINK_STALE_DAYS } from '@/lib/resurfacing/candidates';
 import { madridDateTime, madridToUtc } from '@/lib/time';
 
@@ -20,6 +20,8 @@ export type Review = {
   inbox: number;
   projects: { project: Project; nextTask: Item | null }[];
   overdue: Item[];
+  /** Tasks in espera whose day to look at them again has come. */
+  followUps: Item[];
   rescue: Item[];
   /** Old data that looks misplaced: ideas that read like a loose action, and purchases with no store. */
   tidy: { looseIdeas: Item[]; noStore: number };
@@ -62,8 +64,11 @@ export function buildReview(input: { items: Item[]; projects: Project[]; now: Da
       .filter((p) => p.status === 'activo')
       .map((project) => ({ project, nextTask: projectSummary(open.filter((i) => i.projectId === project.id)).nextTask })),
     // Past its planned date, or past its deadline whatever the planned date.
+    followUps: open
+      .filter((i) => isWaiting(i) && (followUpOn(i) ?? '9') <= today)
+      .sort((a, b) => (followUpOn(a) ?? '').localeCompare(followUpOn(b) ?? '')),
     overdue: open
-      .filter((i) => i.type === 'tarea' && ((i.dueAt && Date.parse(i.dueAt) < dayStart) || pastDeadline(i, today)))
+      .filter((i) => i.type === 'tarea' && !isWaiting(i) && ((i.dueAt && Date.parse(i.dueAt) < dayStart) || pastDeadline(i, today)))
       .sort((a, b) => overdueKey(a).localeCompare(overdueKey(b))),
     rescue: open
       .filter(stale)

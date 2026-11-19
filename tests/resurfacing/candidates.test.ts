@@ -46,6 +46,25 @@ describe('qué puede volver a salir', () => {
     expect(kinds(cs)).toEqual(['atrasada:item:a']);
   });
 
+  it('en espera: no avisa de atrasada ni de vence hoy; avisa de seguimiento el día de volver a mirarla', () => {
+    const enEspera = (id: string, over: Record<string, unknown> = {}) => tarea(id, { status: 'en_espera', dueAt: ago(5), ...over });
+    expect(find({ items: [enEspera('a', { data: { reviewOn: '2026-11-20' } })] })).toEqual([]);
+    const [c] = find({ items: [enEspera('b', { data: { waitingFor: 'Funko', waitingSince: '2026-11-08', reviewOn: '2026-11-17' } })] });
+    expect(c).toMatchObject({ kind: 'seguimiento', subject: 'item:b', urgent: true });
+    expect(c.detail).toBe('Lleva 9 días en espera de Funko. ¿Ha llegado?');
+  });
+
+  it('en espera sin día de volver a mirar: a la semana de empezar; sin nada, nunca', () => {
+    const w = (id: string, data: Record<string, unknown>) => tarea(id, { status: 'en_espera', data });
+    expect(kinds(find({ items: [w('a', { waitingSince: '2026-11-10' })] }))).toEqual(['seguimiento:item:a']);
+    expect(find({ items: [w('b', { waitingSince: '2026-11-12' })] })).toEqual([]);
+    expect(find({ items: [w('c', {})] })).toEqual([]);
+  });
+
+  it('una tarea en espera de Trabajo no sale', () => {
+    expect(find({ items: [tarea('a', { status: 'en_espera', area: 'trabajo', data: { reviewOn: '2026-11-10' } })] })).toEqual([]);
+  });
+
   it('una tarea de mañana o sin fecha no es un recordatorio', () => {
     expect(find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-18', '00:00').toISOString() }), tarea('b')] })).toEqual([]);
   });

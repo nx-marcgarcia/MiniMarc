@@ -9,6 +9,8 @@ import { isValidDate, toDue } from '@/lib/time';
 import type { MovePatch } from './items';
 import { fail, ok, type ActionResult } from './result';
 import { parseSubtasks } from '@/lib/subtasks';
+import { hasWaitingData, WAITING, withoutWaiting } from '@/lib/tareas';
+import { madridToday } from './today';
 
 const text = (fd: FormData, name: string) => String(fd.get(name) ?? '').trim();
 
@@ -98,6 +100,8 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
     { key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' },
     { key: 'subtasks', kind: 'subtasks', error: 'Las subtareas no son válidas.' },
     { key: 'deadline', kind: 'text', error: 'La fecha límite no es válida.' },
+    { key: 'waitingFor', kind: 'text' },
+    { key: 'reviewOn', kind: 'text', error: 'La fecha para volver a mirarla no es válida.' },
   ],
   libro: [
     { key: 'rating', kind: 'int', error: 'La valoración va de 1 a 5.' },
@@ -178,6 +182,16 @@ export function editPatchFromForm(
     const data = dataFromForm(opts.type, fd, opts.item.data);
     if (!data.ok) return fail(data.error);
     if (JSON.stringify(data.value) !== JSON.stringify(opts.item.data)) patch.data = data.value;
+  }
+  // En espera: the app notes since when; leaving it clears what only made sense while waiting.
+  if (opts.item && opts.item.type === 'tarea' && opts.type === 'tarea') {
+    const status = patch.status ?? opts.item.status;
+    const data = patch.data ?? opts.item.data;
+    if (status === WAITING) {
+      if (!data.waitingSince) patch.data = { ...data, waitingSince: madridToday() };
+    } else if (hasWaitingData(data)) {
+      patch.data = withoutWaiting(data);
+    }
   }
   // The "Proyecto" select is only there once 0014 is applied: without it, the project is not touched.
   if (fd.has('projectId')) {
