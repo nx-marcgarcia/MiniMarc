@@ -200,6 +200,13 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
     expect(dataFromForm('tarea', form({ recurrence: 'cada_lustro' }), {})).toEqual({ ok: false, error: 'La repetición no es válida.' });
   });
 
+  it('tarea: la duración es un número entero de minutos', () => {
+    expect(dataFromForm('tarea', form({ estimateMin: '15' }), {})).toEqual({ ok: true, value: { estimateMin: 15 } });
+    expect(dataFromForm('tarea', form({ estimateMin: '' }), { estimateMin: 15 })).toEqual({ ok: true, value: {} });
+    expect(dataFromForm('tarea', form({ estimateMin: 'rápido' }), {})).toEqual({ ok: false, error: 'La duración no es válida.' });
+    expect(dataFromForm('tarea', form({ estimateMin: '0' }), {})).toEqual({ ok: false, error: 'La duración no es válida.' });
+  });
+
   it('tarea: la fecha límite se guarda, se puede quitar y no puede ser anterior a la fecha prevista', () => {
     const r = dataFromForm('tarea', form({ deadline: '2026-11-20', dueDate: '2026-11-18' }), {});
     expect(r).toEqual({ ok: true, value: { deadline: '2026-11-20' } });

@@ -372,6 +372,10 @@ function ItemForm(props: ItemFormProps) {
               <input className="app-input" type="time" name="dueTime" defaultValue={item?.hasTime ? due?.time : undefined} />
             </label>
             <label className="app-field">
+              <span>Duración (min)</span>
+              <input className="app-input" type="number" name="estimateMin" min={1} step={1} inputMode="numeric" placeholder="Opcional" defaultValue={own(item, 'estimateMin')} />
+            </label>
+            <label className="app-field">
               <span>Fecha límite</span>
               <input className="app-input" type="date" name="deadline" defaultValue={own(item, 'deadline')} />
             </label>

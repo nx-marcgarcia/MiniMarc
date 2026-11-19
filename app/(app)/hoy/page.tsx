@@ -3,7 +3,8 @@ import { Suspense } from 'react';
 import { HoyScreen } from '@/components/hoy/HoyScreen';
 import { HoyFallback } from '@/components/items/ScreenFallback';
 import { currentAreaFilter } from '@/lib/areaServer';
-import { readHoy, readParaHoy } from '@/lib/cache/reads';
+import { readHoy, readHoyPicks, readParaHoy } from '@/lib/cache/reads';
+import { EMPTY_PICKS } from '@/lib/hoy/picks';
 import type { Settings } from '@/lib/db/settings';
 import { FALLBACK_HEADLINE, generateHeadline } from '@/lib/digest/server';
 import { createClient, requireUser } from '@/lib/supabase/server';
@@ -21,10 +22,11 @@ export default function HoyPage({ searchParams }: { searchParams: SearchParams }
 }
 
 async function Hoy({ searchParams }: { searchParams: SearchParams }) {
-  const [{ digest, headlinePrompt, settings }, paraHoy, area] = await Promise.all([
+  const area = await searchParams.then(currentAreaFilter);
+  const [{ digest, headlinePrompt, settings }, paraHoy, picks] = await Promise.all([
     readHoy(),
     readParaHoy().catch(() => []),
-    searchParams.then(currentAreaFilter),
+    readHoyPicks(area).catch(() => EMPTY_PICKS),
   ]);
   // The AI line never holds the page: it streams in on its own when it is not cached yet.
   const headline = headlinePrompt ? (
@@ -39,6 +41,7 @@ async function Hoy({ searchParams }: { searchParams: SearchParams }) {
       tz={settings.tz}
       vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ''}
       paraHoy={paraHoy}
+      picks={picks}
       area={area}
     />
   );

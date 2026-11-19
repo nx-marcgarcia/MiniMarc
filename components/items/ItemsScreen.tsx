@@ -234,6 +234,7 @@ export function ItemsScreen({
     }
     const deadline = item.type === 'tarea' ? deadlineOf(item) : null;
     if (deadline) parts.push(`Límite: ${formatDay(deadline, today).toLocaleLowerCase('es')}`);
+    if (item.type === 'tarea' && typeof item.data.estimateMin === 'number') parts.push(`${item.data.estimateMin} min`);
     if (item.type === 'regalo' && item.personId && !hidePerson) {
       const name = peopleById.get(item.personId);
       if (name) parts.push(`Para ${name}`);

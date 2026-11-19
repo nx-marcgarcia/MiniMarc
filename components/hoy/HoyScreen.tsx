@@ -11,8 +11,10 @@ import { RECONNECT_HREF } from '@/lib/nav';
 import { formatLongDate, madridToUtc } from '@/lib/time';
 import type { Candidate } from '@/lib/resurfacing/candidates';
 import { buildDayTimeline } from '@/lib/hoy/timeline';
+import { EMPTY_PICKS, headlineFor, type HoyPicks as Picks } from '@/lib/hoy/picks';
 import { DayTimeline } from './DayTimeline';
 import { ReviewReminder } from '@/components/revision/ReviewReminder';
+import { HoyPicks } from './HoyPicks';
 import { ParaHoy } from './ParaHoy';
 import { PushButton } from './PushButton';
 
@@ -25,6 +27,8 @@ export type HoyScreenProps = {
   vapidPublicKey: string;
   /** What the brain would bring back now (the block at the top); none hides it. */
   paraHoy?: Candidate[];
+  /** The choosing blocks (priority, 15 minutes); none hides them. */
+  picks?: Picks;
   /** Which tasks the day shows (citas, dates and Para hoy are not filtered). */
   area?: Filter;
 };
@@ -61,7 +65,7 @@ function dateRow(d: DigestDate, today: string) {
 }
 
 /** The morning digest as a screen: readable in ~20 s, one calm section per area. */
-export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], area = 'todo' }: HoyScreenProps) {
+export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], picks = EMPTY_PICKS, area = 'todo' }: HoyScreenProps) {
   const today = digest.date;
   const longDate = formatLongDate(madridToUtc(today, '12:00', tz), tz);
 
@@ -71,11 +75,12 @@ export function HoyScreen({ digest, headline, tz, vapidPublicKey, paraHoy = [], 
       <AreaFilter value={area} />
       <div className="app-hoy__intro">
         <p className="app-hoy__date">{longDate.charAt(0).toUpperCase() + longDate.slice(1)}</p>
-        <p className="app-hoy__headline">{headline ?? digest.headline}</p>
+        <p className="app-hoy__headline">{headline ?? headlineFor(digest.headline, picks)}</p>
       </div>
 
       <ReviewReminder tz={tz} />
       <ParaHoy candidates={paraHoy} />
+      <HoyPicks picks={picks} today={today} />
 
       {digest.calendarError && (
         <p className="app-hoy__empty app-hoy__empty--solo" role="status">

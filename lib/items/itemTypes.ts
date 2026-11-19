@@ -61,6 +61,8 @@ export const ITEM_TYPES = {
       waitingSince: date.optional(),
       /** En espera: cuándo volver a mirarla ("YYYY-MM-DD"). Sin ella, a los 7 días de `waitingSince`. */
       reviewOn: date.optional(),
+      /** «Mi prioridad de hoy»: el día ("YYYY-MM-DD") en que Marc la eligió. Caduca sola al día siguiente. */
+      focusOn: date.optional(),
     }),
     states: states(['pendiente', 'Pendiente'], ['en_espera', 'En espera'], ['hecha', 'Hecha']),
     initialState: 'pendiente',

@@ -346,6 +346,21 @@ test('un proyecto terminado no se ofrece a lo que no está en él', async () => 
   expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Viaje a Japón']);
 });
 
+describe('Duración', () => {
+  test('la hoja guarda la duración y la fila la dice', async () => {
+    const { user } = renderScreen(<ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [makeItem({ title: 'Pagar la luz', data: { estimateMin: 10 } })] }]} />);
+    expect(screen.getByText(/10 min/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Abrir «Pagar la luz»' }));
+    const field = (await screen.findByLabelText('Duración (min)')) as HTMLInputElement;
+    expect(field.value).toBe('10');
+    await user.clear(field);
+    await user.type(field, '25');
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+    expect(itemsActions.moveItem.mock.calls[0][1].data).toEqual({ estimateMin: 25 });
+  });
+});
+
 describe('En espera', () => {
   const t = makeItem({ title: 'Escribir a Funko', status: 'pendiente', data: {} });
   const ui = (item = t) => <ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [item] }]} />;

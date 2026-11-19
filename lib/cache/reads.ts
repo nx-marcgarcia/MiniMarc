@@ -39,6 +39,7 @@ import { createSupabaseStoresRepo } from '@/lib/db/stores';
 import { toCards } from '@/lib/enlaces';
 import { DATE_WINDOW_DAYS, findCandidates } from '@/lib/resurfacing/candidates';
 import { pickForToday } from '@/lib/resurfacing/today';
+import { hoyPicks } from '@/lib/hoy/picks';
 import { isOpen } from '@/lib/items/itemTypes';
 import type { ItemType } from '@/lib/db/types';
 import { countPhotos, loadPhotoMap } from '@/lib/photos/server';
@@ -365,6 +366,16 @@ export async function readParaHoy() {
   ]);
   // `sent: []`: the block shows what is pending, also what a Telegram notice already mentioned.
   return pickForToday(findCandidates({ now, tz: settings.tz, items, upcoming, sent: [] }));
+}
+
+/** Hoy's "elegir" blocks: the day's priority, the short tasks and the list to choose from (the area filter applies to the last two). */
+export async function readHoyPicks(area: AreaFilter) {
+  'use cache: private';
+  cacheLife('userData');
+  const { user, client, settings } = await sessionSettings();
+  tagUserData(user.id, ['items']);
+  const today = toMadrid(new Date(), settings.tz).date;
+  return hoyPicks({ items: await createSupabaseItemsRepo(client).listItems(), today, area });
 }
 
 /** The week of `w` (any day of it; default this week), without waiting on the AI. */

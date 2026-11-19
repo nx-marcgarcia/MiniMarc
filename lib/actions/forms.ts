@@ -100,6 +100,7 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
     { key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' },
     { key: 'subtasks', kind: 'subtasks', error: 'Las subtareas no son válidas.' },
     { key: 'deadline', kind: 'text', error: 'La fecha límite no es válida.' },
+    { key: 'estimateMin', kind: 'int', error: 'La duración no es válida.' },
     { key: 'waitingFor', kind: 'text' },
     { key: 'reviewOn', kind: 'text', error: 'La fecha para volver a mirarla no es válida.' },
   ],
