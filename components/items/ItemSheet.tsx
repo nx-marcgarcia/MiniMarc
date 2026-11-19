@@ -18,6 +18,7 @@ import { REPEAT_LABELS, REPEATS } from '@/lib/recurrence';
 import { parseSubtasks, type Subtask } from '@/lib/subtasks';
 import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
+import { SplitCompra } from './SplitCompra';
 import { SubtasksEditor } from './SubtasksEditor';
 import { useProjectOptions } from './useProjectOptions';
 import { useStoreOptions } from './useStoreOptions';
@@ -72,10 +73,18 @@ const NEW_STORE = '__nueva__';
 
 /** Add or edit an item. Also the non-gesture way to complete, archive or delete (reduced motion, keyboard). */
 export function ItemSheet(props: ItemSheetProps) {
-  const { open, mode, onClose } = props;
+  const { open, mode } = props;
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // The item whose "Separar en productos" view is showing (closing the sheet leaves it).
+  const [splitting, setSplitting] = useState<string | null>(null);
   const editing = mode.kind === 'edit' ? mode.item : null;
-  const title = editing ? (props.reviewMode ? 'Clasificar' : 'Editar') : mode.kind === 'new' ? mode.defaults.label : '';
+  const split = editing !== null && splitting === editing.id;
+  const title = split ? 'Separar en productos' : editing ? (props.reviewMode ? 'Clasificar' : 'Editar') : mode.kind === 'new' ? mode.defaults.label : '';
+  const onClose = () => {
+    setSplitting(null);
+    props.onClose();
+  };
 
   return (
     <Sheet
@@ -83,27 +92,51 @@ export function ItemSheet(props: ItemSheetProps) {
       onClose={onClose}
       title={title}
       leading={
-        <button type="button" className="ui-bar-button" onClick={onClose}>
-          Cancelar
-        </button>
+        split ? (
+          <button type="button" className="ui-bar-button" onClick={() => setSplitting(null)}>
+            Atrás
+          </button>
+        ) : (
+          <button type="button" className="ui-bar-button" onClick={onClose}>
+            Cancelar
+          </button>
+        )
       }
       trailing={
-        <button type="submit" form={FORM_ID} className="ui-bar-button ui-bar-button--strong" disabled={pending}>
-          {editing ? 'OK' : 'Añadir'}
-        </button>
+        split ? undefined : (
+          <button type="submit" form={FORM_ID} className="ui-bar-button ui-bar-button--strong" disabled={pending}>
+            {editing ? 'OK' : 'Añadir'}
+          </button>
+        )
       }
     >
-      {/* Remount per item so the uncontrolled fields start from its values. A new item's fields
-          reset only when the sheet closes, which happens only after a successful save. */}
-      <ItemForm key={editing ? editing.id : `new-${String(open)}`} {...props} startTransition={startTransition} />
+      {split && editing ? (
+        <SplitCompra
+          item={editing}
+          onDone={() => {
+            onClose();
+            router.refresh();
+          }}
+        />
+      ) : (
+        /* Remount per item so the uncontrolled fields start from its values. A new item's fields
+           reset only when the sheet closes, which happens only after a successful save. */
+        <ItemForm
+          key={editing ? editing.id : `new-${String(open)}`}
+          {...props}
+          onClose={onClose}
+          onStartSplit={editing ? () => setSplitting(editing.id) : undefined}
+          startTransition={startTransition}
+        />
+      )}
     </Sheet>
   );
 }
 
-type ItemFormProps = ItemSheetProps & { startTransition: TransitionStartFunction };
+type ItemFormProps = ItemSheetProps & { startTransition: TransitionStartFunction; onStartSplit?: () => void };
 
 function ItemForm(props: ItemFormProps) {
-  const { open, mode, people, photos, reviewMode, onClose, onCreate, onSave, onComplete, onArchive, onDelete, startTransition } = props;
+  const { open, mode, people, photos, reviewMode, onClose, onCreate, onSave, onComplete, onArchive, onDelete, onStartSplit, startTransition } = props;
   const router = useRouter();
   const projectOptions = useProjectOptions(open);
   const item = mode.kind === 'edit' ? mode.item : null;
@@ -410,6 +443,11 @@ function ItemForm(props: ItemFormProps) {
           <button type="button" className="ui-row app-action" onClick={() => onArchive(item)}>
             Archivar
           </button>
+          {item.type === 'compra' && type === 'compra' && item.area !== 'trabajo' && !item.archived && onStartSplit && (
+            <button type="button" className="ui-row app-action" onClick={onStartSplit}>
+              Separar en productos
+            </button>
+          )}
           {item.type === 'idea' && !item.projectId && projectOptions?.available && (
             <button
               type="button"

@@ -45,11 +45,18 @@ export const followUpActions = {
   createStore: vi.fn(),
 };
 
+/** Doubles for `app/actions/compras.ts` ("Separar en productos"). */
+export const comprasActions = {
+  suggestCompraSplit: vi.fn(),
+  splitCompraItem: vi.fn(),
+};
+
 export const router = { push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() };
 
 export const itemsActionsModule = { ...itemsActions };
 export const captureActionsModule = { ...captureActions };
 export const followUpActionsModule = { ...followUpActions };
+export const comprasActionsModule = { ...comprasActions };
 /** Current route seen by `next/navigation`; set per test (reset to these defaults before each one). */
 export const navigation = { pathname: '/tareas', search: '' };
 
@@ -60,7 +67,7 @@ export const navigationModule = {
 };
 
 function resetDoubles() {
-  for (const fn of [...Object.values(itemsActions), ...Object.values(captureActions), ...Object.values(followUpActions), ...Object.values(router)]) {
+  for (const fn of [...Object.values(itemsActions), ...Object.values(captureActions), ...Object.values(followUpActions), ...Object.values(comprasActions), ...Object.values(router)]) {
     fn.mockReset();
   }
   navigation.pathname = '/tareas';
@@ -76,6 +83,8 @@ function resetDoubles() {
   followUpActions.undoCapture.mockResolvedValue(ok({ deleted: 1, eventsFailed: 0 }));
   followUpActions.mergeCaptureDuplicate.mockImplementation(async () => ok(makeItem()));
   followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [] }));
+  comprasActions.suggestCompraSplit.mockResolvedValue(ok({ store: null, products: [] }));
+  comprasActions.splitCompraItem.mockResolvedValue(ok({ count: 2 }));
   followUpActions.createStore.mockImplementation(async (name) => ok({ id: 'store-new', name: String(name) }));
 }
 

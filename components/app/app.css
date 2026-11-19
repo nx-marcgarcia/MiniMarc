@@ -2763,3 +2763,22 @@ a.app-enlace__title:focus-visible {
 .app-review__finish {
   padding: 8px calc(var(--gutter) + var(--safe-right)) 28px calc(var(--gutter) + var(--safe-left));
 }
+
+/* "Separar en productos": one row per product (name, price, Quitar). */
+.app-split-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-target);
+  padding-left: 16px;
+}
+
+.app-split-row > .app-input:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-split-row__price {
+  flex: none;
+  width: 72px;
+}

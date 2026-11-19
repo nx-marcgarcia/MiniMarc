@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { screen, waitFor } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ok } from '@/lib/actions/result';
 import { makeProject, projectsActions } from '../projectsDoubles';
-import { followUpActions, itemsActions, makeItem, renderScreen, router } from './setup';
+import { comprasActions, followUpActions, itemsActions, makeItem, renderScreen, router } from './setup';
 
 vi.mock('@/app/actions/items', () => import('./setup').then((m) => m.itemsActionsModule));
 vi.mock('@/app/actions/photos', () => ({ addPhoto: vi.fn(), deletePhoto: vi.fn() }));
@@ -343,4 +343,115 @@ test('un proyecto terminado no se ofrece a lo que no está en él', async () => 
   await openRow(user);
   const select = (await screen.findByLabelText('Proyecto')) as HTMLSelectElement;
   expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Viaje a Japón']);
+});
+
+describe('Separar en productos', () => {
+  const aliexpress = makeItem({ id: 'a1', type: 'compra', title: 'Aliexpress', notes: 'funda, cable y soporte', status: 'quiero', area: null, data: {} });
+  const proposal = {
+    store: { name: 'Aliexpress', domain: 'aliexpress.com' },
+    products: [
+      { title: 'Funda móvil', price: null, link: null, notes: null },
+      { title: 'Cable USB-C', price: 4.5, link: null, notes: null },
+      { title: 'Soporte', price: null, link: null, notes: null },
+    ],
+  };
+  const ui = (item = aliexpress) => <ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [item] }]} />;
+
+  async function startSplit(user: ReturnType<typeof renderScreen>['user'], item = aliexpress) {
+    await open(user, item, 'Compras');
+    await user.click(screen.getByRole('button', { name: 'Separar en productos' }));
+  }
+
+  test('enseña lo que la IA ha visto, editable, sin guardar nada hasta confirmar', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    const { user } = renderScreen(ui());
+    await startSplit(user);
+    expect(await screen.findByDisplayValue('Funda móvil')).toBeTruthy();
+    expect((screen.getByLabelText('Precio del producto 2') as HTMLInputElement).value).toBe('4,5');
+    expect((screen.getByLabelText('Tienda') as HTMLInputElement).value).toBe('Aliexpress');
+    expect(screen.getByRole('button', { name: 'Separar en 3 compras' })).toBeTruthy();
+    expect(comprasActions.suggestCompraSplit).toHaveBeenCalledWith('a1');
+    expect(comprasActions.splitCompraItem).not.toHaveBeenCalled();
+  });
+
+  test('confirmar manda los productos que quedan, con la tienda y los precios editados', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    const { user } = renderScreen(ui());
+    await startSplit(user);
+    await screen.findByDisplayValue('Soporte');
+    await user.click(screen.getByLabelText('Quitar el producto 3'));
+    const price = screen.getByLabelText('Precio del producto 1');
+    await user.type(price, '12,90');
+    const store = screen.getByLabelText('Tienda');
+    await user.clear(store);
+    await user.type(store, 'Amazon');
+    await user.click(screen.getByRole('button', { name: 'Separar en 2 compras' }));
+    await waitFor(() => expect(comprasActions.splitCompraItem).toHaveBeenCalledTimes(1));
+    expect(comprasActions.splitCompraItem).toHaveBeenCalledWith('a1', {
+      store: { name: 'Amazon', domain: 'aliexpress.com' },
+      products: [
+        { title: 'Funda móvil', price: 12.9, link: null, notes: null },
+        { title: 'Cable USB-C', price: 4.5, link: null, notes: null },
+      ],
+    });
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+  });
+
+  test('con menos de dos productos no se puede confirmar', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    const { user } = renderScreen(ui());
+    await startSplit(user);
+    await screen.findByDisplayValue('Soporte');
+    await user.click(screen.getByLabelText('Quitar el producto 3'));
+    await user.click(screen.getByLabelText('Quitar el producto 2'));
+    expect((screen.getByRole('button', { name: 'Hacen falta al menos dos productos' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  test('un precio inválido se dice y no se manda', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    const { user } = renderScreen(ui());
+    await startSplit(user);
+    await user.type(await screen.findByLabelText('Precio del producto 1'), 'abc');
+    await user.click(screen.getByRole('button', { name: 'Separar en 3 compras' }));
+    expect(await screen.findByText('El precio de «Funda móvil» no es válido.')).toBeTruthy();
+    expect(comprasActions.splitCompraItem).not.toHaveBeenCalled();
+  });
+
+  test('si la IA no ve varios productos, lo dice; si falla el guardado, la hoja se queda con lo escrito', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok({ store: null, products: [proposal.products[0]] }));
+    const first = renderScreen(ui());
+    await startSplit(first.user);
+    expect(await screen.findByText(/No veo varios productos/)).toBeTruthy();
+    first.unmount();
+
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    comprasActions.splitCompraItem.mockResolvedValue({ ok: false, error: 'No se ha podido separar. No se ha cambiado nada.' });
+    const second = renderScreen(ui());
+    await startSplit(second.user);
+    await screen.findByDisplayValue('Soporte');
+    await second.user.click(screen.getByRole('button', { name: 'Separar en 3 compras' }));
+    expect(await screen.findByText('No se ha podido separar. No se ha cambiado nada.')).toBeTruthy();
+    expect(screen.getByDisplayValue('Soporte')).toBeTruthy();
+  });
+
+  test('«Atrás» vuelve a la hoja de la compra', async () => {
+    comprasActions.suggestCompraSplit.mockResolvedValue(ok(proposal));
+    const { user } = renderScreen(ui());
+    await startSplit(user);
+    await screen.findByDisplayValue('Soporte');
+    await user.click(screen.getByRole('button', { name: 'Atrás' }));
+    expect(await screen.findByLabelText('Título')).toBeTruthy();
+  });
+
+  test('una compra de Trabajo no ofrece separar (no va a la IA)', async () => {
+    const { user } = renderScreen(ui({ ...aliexpress, area: 'trabajo' }));
+    await open(user, aliexpress, 'Compras');
+    expect(screen.queryByRole('button', { name: 'Separar en productos' })).toBeNull();
+  });
+
+  test('una tarea no ofrece separar', async () => {
+    const { user } = renderScreen(screenUi());
+    await openRow(user);
+    expect(screen.queryByRole('button', { name: 'Separar en productos' })).toBeNull();
+  });
 });
