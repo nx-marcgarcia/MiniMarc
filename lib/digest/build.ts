@@ -11,6 +11,7 @@ import { calendarErrorKind, type CalendarGateway } from '@/lib/calendar/client';
 import type { ItemsRepo } from '@/lib/db/items';
 import type { PeopleRepo, UpcomingDate } from '@/lib/db/people';
 import type { Area, Item } from '@/lib/db/types';
+import { CALM_HEADLINE } from '@/lib/digest/headlines';
 import { isWaiting } from '@/lib/tareas';
 import { formatLongDate, madridToUtc } from '@/lib/time';
 
@@ -21,8 +22,7 @@ export const HEADLINE_TIMEOUT_MS = 6000;
 export const HEADLINE_MAX = 140;
 /** Headline when the AI fails, or when there is something to show but nothing personal to say. */
 export const FALLBACK_HEADLINE = 'Buenos días';
-/** Headline when the day is empty: no AI call. */
-export const CALM_HEADLINE = 'Buenos días. Día tranquilo.';
+export { CALM_HEADLINE };
 
 export interface DigestDeps {
   items: ItemsRepo;

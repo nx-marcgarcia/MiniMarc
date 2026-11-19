@@ -4,7 +4,7 @@
  */
 import { matchesArea, type AreaFilter } from '@/lib/area';
 import type { Item } from '@/lib/db/types';
-import { CALM_HEADLINE } from '@/lib/digest/build';
+import { CALM_HEADLINE } from '@/lib/digest/headlines';
 import { isOpen } from '@/lib/items/itemTypes';
 import { groupOf, isWaiting, type TaskGroupKey } from '@/lib/tareas';
 
