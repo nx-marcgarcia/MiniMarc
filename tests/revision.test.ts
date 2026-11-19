@@ -64,6 +64,26 @@ describe('reviewDue', () => {
   });
 });
 
+describe('atrasado por fecha límite', () => {
+  const t = (id: string, over = {}) => makeItem({ id, type: 'tarea', status: 'pendiente', area: 'personal', hasTime: false, data: {}, ...over });
+
+  it('una tarea con fecha prevista futura pero límite pasado está atrasada; una con límite futuro no', () => {
+    const r = buildReview({
+      items: [
+        t('a', { dueAt: '2026-11-20T10:00:00Z', data: { deadline: '2026-11-15' } }),
+        t('b', { dueAt: '2026-11-20T10:00:00Z', data: { deadline: '2026-11-25' } }),
+        t('c', { dueAt: null, data: { deadline: '2026-11-10' } }),
+        t('d', { dueAt: '2026-11-12T10:00:00Z' }),
+      ],
+      projects: [],
+      now: MONDAY,
+      tz: TZ,
+    });
+    // Oldest first, by planned date or else by deadline.
+    expect(r.overdue.map((i) => i.id)).toEqual(['c', 'd', 'a']);
+  });
+});
+
 describe('datos por ordenar', () => {
   const idea = (over = {}) => makeItem({ type: 'idea', status: 'semilla', area: null, data: {}, ...over });
 

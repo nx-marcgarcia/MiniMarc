@@ -6,7 +6,7 @@
 import type { Item } from '@/lib/db/types';
 import { isOpen } from '@/lib/items/itemTypes';
 import { isRepeat, nextDue } from '@/lib/recurrence';
-import { madridDateTime } from '@/lib/time';
+import { isValidDate, madridDateTime } from '@/lib/time';
 
 export type TaskGroupKey = 'atrasadas' | 'hoy' | 'manana' | 'semana' | 'despues' | 'sin-fecha';
 
@@ -32,9 +32,22 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
-export function groupOf(item: Pick<Item, 'dueAt'>, today: string): TaskGroupKey {
-  if (!item.dueAt) return 'sin-fecha';
-  const days = daysBetween(today, madridDateTime(new Date(item.dueAt)).date);
+/** The task's deadline ("YYYY-MM-DD"), if it has a valid one. */
+export function deadlineOf(item: Pick<Item, 'data'>): string | null {
+  const d = item.data.deadline;
+  return typeof d === 'string' && isValidDate(d) ? d : null;
+}
+
+/**
+ * Where a task goes: by its planned date; a task past its deadline is Atrasada whatever its
+ * planned date, and one with a deadline but no planned date is grouped by the deadline.
+ */
+export function groupOf(item: Pick<Item, 'dueAt' | 'data'>, today: string): TaskGroupKey {
+  const deadline = deadlineOf(item);
+  if (deadline && daysBetween(today, deadline) < 0) return 'atrasadas';
+  const date = item.dueAt ? madridDateTime(new Date(item.dueAt)).date : deadline;
+  if (!date) return 'sin-fecha';
+  const days = daysBetween(today, date);
   if (days < 0) return 'atrasadas';
   if (days === 0) return 'hoy';
   if (days === 1) return 'manana';

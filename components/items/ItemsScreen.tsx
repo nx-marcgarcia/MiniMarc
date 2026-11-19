@@ -9,10 +9,10 @@ import { applyListOps, draftItem, fitsNewList, isDraft, staysInList, type ListOp
 import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item, Person } from '@/lib/db/types';
 import { priceText } from '@/lib/compras';
-import { formatDue, TYPE_LABELS } from '@/lib/format';
+import { formatDay, formatDue, TYPE_LABELS } from '@/lib/format';
 import type { PhotoMap } from '@/lib/photos/view';
 import { subtaskProgress } from '@/lib/subtasks';
-import { nextOccurrence } from '@/lib/tareas';
+import { deadlineOf, nextOccurrence } from '@/lib/tareas';
 import { ItemRow } from './ItemRow';
 import { ItemSheet, type NewItemDefaults, type SheetMode } from './ItemSheet';
 import { SwipeRow } from './SwipeRow';
@@ -224,6 +224,8 @@ export function ItemsScreen({
     if (reviewMode) parts.push(TYPE_LABELS[item.type]);
     const { day, time } = formatDue(item, today);
     if (day) parts.push(day);
+    const deadline = item.type === 'tarea' ? deadlineOf(item) : null;
+    if (deadline) parts.push(`Límite: ${formatDay(deadline, today).toLocaleLowerCase('es')}`);
     if (item.type === 'regalo' && item.personId && !hidePerson) {
       const name = peopleById.get(item.personId);
       if (name) parts.push(`Para ${name}`);

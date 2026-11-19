@@ -345,6 +345,51 @@ test('un proyecto terminado no se ofrece a lo que no está en él', async () => 
   expect([...select.options].map((o) => o.text)).toEqual(['Ninguno', 'Viaje a Japón']);
 });
 
+describe('Fecha límite', () => {
+  const withDeadline = makeItem({ title: 'Entregar informe', dueAt: '2026-10-25T10:00:00.000Z', data: { deadline: '2026-10-30' } });
+  const ui = (item = withDeadline) => <ItemsScreen title="Tareas" today="2026-10-22" sections={[{ key: 'a', items: [item] }]} />;
+
+  test('la fila dice el límite y la hoja lo trae relleno', async () => {
+    const { user } = renderScreen(ui());
+    expect(screen.getByText(/Límite: 30 de octubre/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Abrir «Entregar informe»' }));
+    await screen.findByRole('dialog', { name: 'Editar' });
+    expect((screen.getByLabelText('Fecha límite') as HTMLInputElement).value).toBe('2026-10-30');
+  });
+
+  test('cambiar la fecha prevista no toca el límite, y cambiar el límite lo manda en data', async () => {
+    const { user } = renderScreen(ui());
+    await user.click(screen.getByRole('button', { name: 'Abrir «Entregar informe»' }));
+    await screen.findByRole('dialog', { name: 'Editar' });
+    const date = screen.getByLabelText('Fecha') as HTMLInputElement;
+    await user.clear(date);
+    await user.type(date, '2026-10-27');
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+    expect(itemsActions.moveItem.mock.calls[0][1].data).toBeUndefined();
+
+    itemsActions.moveItem.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Abrir «Entregar informe»' }));
+    const deadline = (await screen.findByLabelText('Fecha límite')) as HTMLInputElement;
+    await user.clear(deadline);
+    await user.type(deadline, '2026-11-05');
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+    expect(itemsActions.moveItem.mock.calls[0][1].data).toEqual({ deadline: '2026-11-05' });
+  });
+
+  test('un límite anterior a la fecha prevista se dice en la hoja y no se guarda', async () => {
+    const { user } = renderScreen(ui());
+    await user.click(screen.getByRole('button', { name: 'Abrir «Entregar informe»' }));
+    const deadline = (await screen.findByLabelText('Fecha límite')) as HTMLInputElement;
+    await user.clear(deadline);
+    await user.type(deadline, '2026-10-20');
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    expect(await screen.findByText('La fecha límite no puede ser anterior a la fecha prevista.')).toBeTruthy();
+    expect(itemsActions.moveItem).not.toHaveBeenCalled();
+  });
+});
+
 describe('Separar en productos', () => {
   const aliexpress = makeItem({ id: 'a1', type: 'compra', title: 'Aliexpress', notes: 'funda, cable y soporte', status: 'quiero', area: null, data: {} });
   const proposal = {

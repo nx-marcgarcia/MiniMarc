@@ -32,6 +32,20 @@ describe('qué puede volver a salir', () => {
     expect(find({ items: [tarea('b', { dueAt: madridToUtc('2026-11-17', '15:00').toISOString(), hasTime: true })] })).toEqual([]);
   });
 
+  it('la fecha límite avisa aunque la fecha prevista sea futura o no exista', () => {
+    const pasada = find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-25', '00:00').toISOString(), data: { deadline: '2026-11-14' } })] });
+    expect(pasada[0]).toMatchObject({ kind: 'atrasada', urgent: true });
+    expect(pasada[0].detail).toMatch(/Su fecha límite pasó hace 3 días/);
+    const hoy = find({ items: [tarea('b', { data: { deadline: '2026-11-17' } })] });
+    expect(hoy[0]).toMatchObject({ kind: 'vence_hoy', detail: 'Su fecha límite es hoy' });
+    expect(find({ items: [tarea('c', { data: { deadline: '2026-11-19' } })] })).toEqual([]);
+  });
+
+  it('posponer la fecha prevista no esconde una fecha límite que ya pasó', () => {
+    const cs = find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-30', '00:00').toISOString(), data: { deadline: '2026-11-16' } })] });
+    expect(kinds(cs)).toEqual(['atrasada:item:a']);
+  });
+
   it('una tarea de mañana o sin fecha no es un recordatorio', () => {
     expect(find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-18', '00:00').toISOString() }), tarea('b')] })).toEqual([]);
   });

@@ -80,6 +80,7 @@ type FieldSpec = { key: string; kind: 'int' | 'money' | 'text' | 'subtasks'; err
 const PRICE_ERROR = 'El precio no es válido.';
 /** A repeating task counts its next date from its own: without one there is nothing to count from. */
 export const REPEAT_NEEDS_DATE = 'Para repetirla, la tarea necesita fecha.';
+export const DEADLINE_BEFORE_DATE = 'La fecha límite no puede ser anterior a la fecha prevista.';
 
 /** The fields of each type the forms edit (the registry's schema is the real validator). */
 const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
@@ -96,6 +97,7 @@ const DATA_FIELDS: Partial<Record<ItemType, FieldSpec[]>> = {
   tarea: [
     { key: 'recurrence', kind: 'text', error: 'La repetición no es válida.' },
     { key: 'subtasks', kind: 'subtasks', error: 'Las subtareas no son válidas.' },
+    { key: 'deadline', kind: 'text', error: 'La fecha límite no es válida.' },
   ],
   libro: [
     { key: 'rating', kind: 'int', error: 'La valoración va de 1 a 5.' },
@@ -136,6 +138,9 @@ export function dataFromForm(type: ItemType, fd: FormData, base: Record<string, 
       out[spec.key] = raw;
     }
   }
+  // Planning a task after its deadline is almost always a slip.
+  const planned = text(fd, 'dueDate');
+  if (type === 'tarea' && typeof out.deadline === 'string' && planned && out.deadline < planned) return fail(DEADLINE_BEFORE_DATE);
   const parsed = ITEM_TYPES[type].fields.safeParse(out);
   if (parsed.success) return ok(parsed.data);
   const bad = specs.find((s) => s.key === parsed.error.issues[0]?.path[0]);

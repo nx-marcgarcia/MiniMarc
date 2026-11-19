@@ -9,9 +9,20 @@ import { InsetList, LargeTitle, Toast, type ToastProps } from '@/components/ui';
 import { addDays } from '@/lib/agenda/week';
 import { settle, type ActionResult } from '@/lib/actions/result';
 import type { Item } from '@/lib/db/types';
-import { formatDue } from '@/lib/format';
+import { formatDay, formatDue } from '@/lib/format';
 import { REVIEW_KEY, type Review } from '@/lib/revision';
+import { deadlineOf } from '@/lib/tareas';
 import { madridDateTime, madridToUtc } from '@/lib/time';
+
+/** Why a task is late: its planned day, or its deadline when that is what passed. */
+function lateText(item: Item, today: string): string | undefined {
+  const deadline = deadlineOf(item);
+  const planned = formatDue(item, today).day;
+  if (deadline && deadline < today && (!item.dueAt || madridDateTime(new Date(item.dueAt)).date >= today)) {
+    return `Límite: ${formatDay(deadline, today).toLocaleLowerCase('es')}`;
+  }
+  return planned;
+}
 
 type ToastState = NonNullable<ToastProps['toast']>;
 
@@ -117,7 +128,7 @@ export function RevisionScreen({ review, today, tz }: { review: Review; today: s
       <Step n={3} title="Atrasado" done={overdue.length === 0}>
         {overdue.length === 0 && <DecisionRow title="Nada atrasado" />}
         {overdue.map((item) => (
-          <DecisionRow key={item.id} title={item.title} subtitle={`${formatDue(item, today).day}${item.area === 'trabajo' ? ' · Trabajo' : ''}`}>
+          <DecisionRow key={item.id} title={item.title} subtitle={[lateText(item, today), item.area === 'trabajo' ? 'Trabajo' : null].filter(Boolean).join(' · ')}>
             <button type="button" className="app-btn app-btn--tint" aria-label={`Hecho: ${item.title}`} onClick={() => act(item.id, () => toggleDone(item.id))}>
               Hecho
             </button>

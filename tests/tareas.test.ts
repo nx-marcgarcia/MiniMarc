@@ -31,6 +31,27 @@ describe('groupTareas', () => {
     ]);
   });
 
+  it('fecha límite: pasada manda a Atrasadas aunque la fecha prevista sea futura; sin fecha prevista agrupa por el límite', () => {
+    const groups = groupTareas(
+      [
+        task('a', at('2026-11-20'), { data: { deadline: '2026-11-15' } }),
+        task('b', null, { data: { deadline: '2026-11-17' } }),
+        task('c', null, { data: { deadline: '2026-11-16' } }),
+        task('d', at('2026-11-17'), { data: { deadline: '2026-11-30' } }),
+      ],
+      TODAY,
+    );
+    expect(groups.map((g) => [g.key, g.items.map((i) => i.id)]).filter(([, ids]) => (ids as string[]).length)).toEqual([
+      ['atrasadas', ['a']],
+      ['hoy', ['c']],
+      ['manana', ['b', 'd']],
+    ]);
+  });
+
+  it('una fecha límite inválida se ignora', () => {
+    expect(groupTareas([task('a', null, { data: { deadline: 'pronto' } })], TODAY)[5].items.map((i) => i.id)).toEqual(['a']);
+  });
+
   it('devuelve siempre los seis grupos (la pantalla esconde los vacíos) y con su título', () => {
     expect(groupTareas([], TODAY).map((g) => g.header)).toEqual(['Atrasadas', 'Hoy', 'Mañana', 'Esta semana', 'Más adelante', 'Sin fecha']);
   });

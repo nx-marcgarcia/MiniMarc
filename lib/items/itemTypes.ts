@@ -53,6 +53,8 @@ export const ITEM_TYPES = {
       context: z.enum(['casa', 'ordenador', 'recados']).optional(),
       /** Minutos. */
       estimateMin: z.number().int().positive().optional(),
+      /** Fecha límite ("YYYY-MM-DD", día de Madrid): cuándo tiene que estar. `dueAt` es cuándo se piensa hacer; posponer solo mueve esa. */
+      deadline: date.optional(),
     }),
     states: states(['pendiente', 'Pendiente'], ['hecha', 'Hecha']),
     initialState: 'pendiente',

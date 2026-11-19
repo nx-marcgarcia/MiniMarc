@@ -44,6 +44,15 @@ test('Mañana mueve la fecha al día siguiente a la misma hora', async () => {
   expect(itemsActions.moveItem.mock.calls[0]).toEqual(['t1', { dueAt: '2026-11-17T10:00:00.000Z', hasTime: true }]);
 });
 
+test('una tarea atrasada por su fecha límite lo dice, y Mañana no toca la fecha límite', async () => {
+  const t = makeItem({ id: 'd1', title: 'Entregar informe', dueAt: '2026-11-20T10:00:00.000Z', hasTime: false, data: { deadline: '2026-11-14' } });
+  const { user } = renderScreen(ui(review({ overdue: [t] })));
+  expect(screen.getByText(/Límite: 14 de noviembre/)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Mañana: Entregar informe' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(Object.keys(itemsActions.moveItem.mock.calls[0][1]).sort()).toEqual(['dueAt', 'hasTime']);
+});
+
 test('Archivar algo olvidado lo archiva', async () => {
   const { user } = renderScreen(ui());
   await user.click(screen.getByRole('button', { name: 'Archivar: Artículo viejo' }));

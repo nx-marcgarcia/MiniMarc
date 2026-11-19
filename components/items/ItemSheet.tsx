@@ -346,7 +346,9 @@ function ItemForm(props: ItemFormProps) {
           <div className="app-form__segmented">
             <Segmented label="Área" options={[...AREA_OPTIONS]} value={area} onChange={setArea} />
           </div>
-          <InsetList footer={area === 'trabajo' ? 'Las tareas de Trabajo no se envían a la IA.' : undefined}>
+          <InsetList
+            footer={`«Fecha» es cuándo piensas hacerla; «Fecha límite», cuándo tiene que estar. Posponer solo mueve la primera.${area === 'trabajo' ? ' Las tareas de Trabajo no se envían a la IA.' : ''}`}
+          >
             <label className="app-field">
               <span>Fecha</span>
               <input className="app-input" type="date" name="dueDate" defaultValue={due?.date} />
@@ -354,6 +356,10 @@ function ItemForm(props: ItemFormProps) {
             <label className="app-field">
               <span>Hora</span>
               <input className="app-input" type="time" name="dueTime" defaultValue={item?.hasTime ? due?.time : undefined} />
+            </label>
+            <label className="app-field">
+              <span>Fecha límite</span>
+              <input className="app-input" type="date" name="deadline" defaultValue={own(item, 'deadline')} />
             </label>
             <label className="app-field">
               <span>Repetir</span>

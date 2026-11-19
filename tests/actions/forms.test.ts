@@ -200,6 +200,18 @@ describe('dataFromForm: los campos propios de cada tipo', () => {
     expect(dataFromForm('tarea', form({ recurrence: 'cada_lustro' }), {})).toEqual({ ok: false, error: 'La repetición no es válida.' });
   });
 
+  it('tarea: la fecha límite se guarda, se puede quitar y no puede ser anterior a la fecha prevista', () => {
+    const r = dataFromForm('tarea', form({ deadline: '2026-11-20', dueDate: '2026-11-18' }), {});
+    expect(r).toEqual({ ok: true, value: { deadline: '2026-11-20' } });
+    expect(dataFromForm('tarea', form({ deadline: '' }), { deadline: '2026-11-20' })).toEqual({ ok: true, value: {} });
+    expect(dataFromForm('tarea', form({ deadline: '2026-11-17', dueDate: '2026-11-18' }), {})).toEqual({
+      ok: false,
+      error: 'La fecha límite no puede ser anterior a la fecha prevista.',
+    });
+    expect(dataFromForm('tarea', form({ deadline: '2026-02-30' }), {})).toEqual({ ok: false, error: 'La fecha límite no es válida.' });
+    expect(dataFromForm('tarea', form({ deadline: '2026-11-20' }), { recurrence: 'semanal' })).toMatchObject({ ok: true, value: { deadline: '2026-11-20', recurrence: 'semanal' } });
+  });
+
   it('tarea: las subtareas viajan como JSON y una lista vacía las quita', () => {
     const list = [{ title: 'Lijar', done: false }, { title: 'Pintar', done: true }];
     expect(dataFromForm('tarea', form({ subtasks: JSON.stringify(list) }), {})).toEqual({ ok: true, value: { subtasks: list } });

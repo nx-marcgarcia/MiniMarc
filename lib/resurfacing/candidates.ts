@@ -17,6 +17,7 @@ import { itemHref } from '@/lib/items/href';
 import { isOpen } from '@/lib/items/itemTypes';
 import { countdown } from '@/lib/people/format';
 import { occasionsWithGifts } from '@/lib/regalos';
+import { deadlineOf } from '@/lib/tareas';
 import { madridDateTime } from '@/lib/time';
 
 export type CandidateKind =
@@ -104,10 +105,16 @@ export function findCandidates(input: CandidateInput): Candidate[] {
     const subject = `item:${item.id}`;
     const data = item.data;
 
-    if (item.type === 'tarea' && item.dueAt) {
-      const days = daysBetween(today, madridDateTime(new Date(item.dueAt), tz).date);
-      if (days < 0) add('atrasada', subject, item.id, item.title, `Venció ${hace(-days)}`, item.dueAt, itemHref(item), item.snoozeCount);
-      else if (days === 0 && !item.hasTime) add('vence_hoy', subject, item.id, item.title, 'Vence hoy', item.dueAt, itemHref(item), item.snoozeCount);
+    if (item.type === 'tarea' && (item.dueAt || deadlineOf(item))) {
+      const deadline = deadlineOf(item);
+      const deadlineDays = deadline ? daysBetween(today, deadline) : null;
+      const days = item.dueAt ? daysBetween(today, madridDateTime(new Date(item.dueAt), tz).date) : null;
+      const since = item.dueAt ?? `${deadline}T00:00:00.000Z`;
+      // The deadline is the commitment: it speaks first, even when the planned date is still ahead.
+      if (deadlineDays !== null && deadlineDays < 0) add('atrasada', subject, item.id, item.title, `Su fecha límite pasó ${hace(-deadlineDays)}`, since, itemHref(item), item.snoozeCount);
+      else if (days !== null && days < 0) add('atrasada', subject, item.id, item.title, `Venció ${hace(-days)}`, since, itemHref(item), item.snoozeCount);
+      else if (deadlineDays === 0 && !(item.hasTime && days === 0)) add('vence_hoy', subject, item.id, item.title, 'Su fecha límite es hoy', since, itemHref(item), item.snoozeCount);
+      else if (days === 0 && !item.hasTime) add('vence_hoy', subject, item.id, item.title, 'Vence hoy', since, itemHref(item), item.snoozeCount);
     } else if (item.type === 'idea' && (item.status === 'semilla' || item.status === 'explorando') && ageDays(item.updatedAt, now) >= IDEA_STALE_DAYS) {
       add('idea_olvidada', subject, item.id, item.title, `Sin tocar ${hace(ageDays(item.updatedAt, now))}`, item.updatedAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'enlace' && item.status === 'por_ver' && ageDays(item.createdAt, now) > LINK_STALE_DAYS) {

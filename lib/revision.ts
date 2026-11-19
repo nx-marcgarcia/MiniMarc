@@ -7,6 +7,7 @@ import type { Project } from '@/lib/db/projects';
 import type { Item } from '@/lib/db/types';
 import { isOpen } from '@/lib/items/itemTypes';
 import { projectSummary } from '@/lib/projects';
+import { deadlineOf } from '@/lib/tareas';
 import { IDEA_STALE_DAYS, LINK_STALE_DAYS } from '@/lib/resurfacing/candidates';
 import { madridDateTime, madridToUtc } from '@/lib/time';
 
@@ -38,6 +39,13 @@ export function looksLikeLooseAction(item: Item): boolean {
   return words.length <= 3 && /^[\p{L}]{3,}(ar|er|ir|arse|erse|irse)$/iu.test(words[0]);
 }
 
+const pastDeadline = (i: Item, today: string) => {
+  const d = deadlineOf(i);
+  return d !== null && d < today;
+};
+/** What a late task is sorted by: its planned date, else its deadline. */
+const overdueKey = (i: Item) => i.dueAt ?? `${deadlineOf(i) ?? ''}T00:00:00.000Z`;
+
 const ageDays = (iso: string, now: Date) => Math.floor((now.getTime() - Date.parse(iso)) / DAY);
 
 export function buildReview(input: { items: Item[]; projects: Project[]; now: Date; tz: string }): Review {
@@ -53,9 +61,10 @@ export function buildReview(input: { items: Item[]; projects: Project[]; now: Da
     projects: projects
       .filter((p) => p.status === 'activo')
       .map((project) => ({ project, nextTask: projectSummary(open.filter((i) => i.projectId === project.id)).nextTask })),
+    // Past its planned date, or past its deadline whatever the planned date.
     overdue: open
-      .filter((i) => i.type === 'tarea' && i.dueAt && Date.parse(i.dueAt) < dayStart)
-      .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!)),
+      .filter((i) => i.type === 'tarea' && ((i.dueAt && Date.parse(i.dueAt) < dayStart) || pastDeadline(i, today)))
+      .sort((a, b) => overdueKey(a).localeCompare(overdueKey(b))),
     rescue: open
       .filter(stale)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
