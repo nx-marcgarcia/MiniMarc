@@ -11,6 +11,7 @@ import type { ResurfacingEvent } from '@/lib/db/resurfacing';
 import type { Item } from '@/lib/db/types';
 import { itemHref } from '@/lib/items/href';
 import { isOpen } from '@/lib/items/itemTypes';
+import { isWaiting } from '@/lib/tareas';
 import type { Candidate } from './candidates';
 
 const MIN = 60_000;
@@ -36,7 +37,8 @@ export function timedDue(input: TimedInput): Candidate[] {
   const out: Candidate[] = [];
 
   for (const item of input.items) {
-    if (item.area === 'trabajo' || item.archived || item.needsReview || !isOpen(item)) continue;
+    // A task waiting for an answer does not ping "Ahora": it comes back as a follow-up.
+    if (item.area === 'trabajo' || item.archived || item.needsReview || !isOpen(item) || isWaiting(item)) continue;
     if (item.snoozedUntil && Date.parse(item.snoozedUntil) > now.getTime()) continue;
 
     const when =

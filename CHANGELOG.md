@@ -2,7 +2,7 @@
 
 Segundo cerebro: se construye por fases (ver la hoja de ruta). Cada fase deja la app desplegable.
 
-## v2: fiabilidad y planificación (bloques 1 y 2 de la hoja de ruta)
+## v2: fiabilidad, planificación y Hoy útil (bloques 1 a 3 de la hoja de ruta)
 
 Sin migraciones: los campos nuevos viven en `items.data` y los valida el registro de tipos.
 
@@ -11,6 +11,8 @@ Sin migraciones: los campos nuevos viven en `items.data` y los valida el registr
 - **Ordenar lo antiguo** (revisión semanal): ideas que suenan a una tarea («Trabajar») y compras sin tienda, sin IA.
 - **Fecha límite** en las tareas, separada de la fecha prevista: posponer solo mueve la prevista. Tareas manda a «Atrasadas» lo que pasó su límite; la revisión semanal y los avisos («Su fecha límite pasó…», «Su fecha límite es hoy») la respetan. Un límite anterior a la fecha prevista es un error del formulario.
 - **En espera** (estado nuevo de las tareas): con «Esperando a», «Volver a mirar el» y desde cuándo (lo pone la app). Sale de los pendientes, de Hoy y del siguiente paso de un proyecto, y no avisa de atrasada. El día de volver a mirarla (o a la semana) sale un aviso **Seguimiento** y la revisión semanal tiene el bloque **Seguimientos** (Ya llegó · En 3 días · Hecha). Diseño: `docs/superpowers/specs/2026-11-19-fecha-limite-y-en-espera-design.md`.
+- **Hoy ayuda a elegir** (sin IA, bloque 3): **Tu prioridad de hoy** (una tarea elegida por ti; caduca sola al día siguiente), **Si tienes 15 minutos** (hasta tres tareas con duración de 15 min o menos) y un campo **Duración (min)** en la hoja de la tarea. Un día sin citas ni tareas con fecha deja de decir «Día tranquilo» si hay algo que elegir. Diseño: `docs/superpowers/specs/2026-11-19-hoy-util-sin-ia-design.md`.
+- **Avisos con contexto y respuestas** (web, «Para hoy»): los avisos de lo olvidado dicen por qué salen y qué hacer («Lleva 4 semanas parada. ¿Defines un primer paso?»); nuevo aviso **Aplazada** para tareas sin fecha que llevan 14 días sin tocarse. Respuestas nuevas: **Más adelante** (30 días), **Ya no me interesa** (archiva), **No me recuerdes** (para siempre) y **En espera** (en tareas). Telegram no cambia. Una tarea en espera ya no avisa «Ahora» aunque tenga hora.
 
 ## Reformulación: segundo cerebro (PARA ligero)
 

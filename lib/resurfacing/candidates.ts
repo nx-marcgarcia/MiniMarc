@@ -29,6 +29,8 @@ export type CandidateKind =
   | 'idea_olvidada'
   | 'enlace_olvidado'
   | 'libro_pendiente'
+  /** An open task with no date that has gone untouched for a while. */
+  | 'tarea_aplazada'
   /** A task in espera whose day to look at it again has come. */
   | 'seguimiento'
   /** A task with an exact time (or a reminder Marc set): goes out at that time, window or not (timed.ts). */
@@ -54,6 +56,7 @@ export interface Candidate {
 
 export const REPEAT_AFTER_DAYS = 7;
 export const IDEA_STALE_DAYS = 30;
+export const TASK_STALE_DAYS = 14;
 export const LINK_STALE_DAYS = 60;
 export const BOOK_STALE_DAYS = 60;
 export const URGENT_PURCHASE_DAYS = 14;
@@ -70,6 +73,7 @@ const RANK: Record<CandidateKind, number> = {
   garantia: 4,
   compra_urgente: 5,
   idea_olvidada: 6,
+  tarea_aplazada: 6,
   enlace_olvidado: 7,
   libro_pendiente: 8,
   con_hora: 0,
@@ -89,6 +93,8 @@ export interface CandidateInput {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY);
 const ageDays = (iso: string, now: Date) => Math.floor((now.getTime() - Date.parse(iso)) / DAY);
+/** "9 días", "4 semanas", "3 meses": how long something has been parked. */
+export const tiempo = (days: number) => (days < 14 ? plural(days, 'día', 'días') : days < 60 ? plural(Math.floor(days / 7), 'semana', 'semanas') : plural(Math.floor(days / 30), 'mes', 'meses'));
 const hace = (days: number) => (days < 60 ? `hace ${plural(days, 'día', 'días')}` : `hace ${plural(Math.floor(days / 30), 'mes', 'meses')}`);
 
 export function findCandidates(input: CandidateInput): Candidate[] {
@@ -130,12 +136,14 @@ export function findCandidates(input: CandidateInput): Candidate[] {
       else if (days !== null && days < 0) add('atrasada', subject, item.id, item.title, `Venció ${hace(-days)}`, since, itemHref(item), item.snoozeCount);
       else if (deadlineDays === 0 && !(item.hasTime && days === 0)) add('vence_hoy', subject, item.id, item.title, 'Su fecha límite es hoy', since, itemHref(item), item.snoozeCount);
       else if (days === 0 && !item.hasTime) add('vence_hoy', subject, item.id, item.title, 'Vence hoy', since, itemHref(item), item.snoozeCount);
+    } else if (item.type === 'tarea' && ageDays(item.updatedAt, now) >= TASK_STALE_DAYS) {
+      add('tarea_aplazada', subject, item.id, item.title, `Lleva ${tiempo(ageDays(item.updatedAt, now))} sin tocarse. ¿La haces o la dejas para más adelante?`, item.updatedAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'idea' && (item.status === 'semilla' || item.status === 'explorando') && ageDays(item.updatedAt, now) >= IDEA_STALE_DAYS) {
-      add('idea_olvidada', subject, item.id, item.title, `Sin tocar ${hace(ageDays(item.updatedAt, now))}`, item.updatedAt, itemHref(item), item.snoozeCount);
+      add('idea_olvidada', subject, item.id, item.title, `Lleva ${tiempo(ageDays(item.updatedAt, now))} parada. ¿Defines un primer paso?`, item.updatedAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'enlace' && item.status === 'por_ver' && ageDays(item.createdAt, now) > LINK_STALE_DAYS) {
-      add('enlace_olvidado', subject, item.id, item.title, `Guardado ${hace(ageDays(item.createdAt, now))} y sin ver`, item.createdAt, itemHref(item), item.snoozeCount);
+      add('enlace_olvidado', subject, item.id, item.title, `Lo guardaste ${hace(ageDays(item.createdAt, now))} y sigue sin ver`, item.createdAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'libro' && item.status === 'por_leer' && ageDays(item.createdAt, now) >= BOOK_STALE_DAYS) {
-      add('libro_pendiente', subject, item.id, item.title, `Por leer desde ${hace(ageDays(item.createdAt, now))}`, item.createdAt, itemHref(item), item.snoozeCount);
+      add('libro_pendiente', subject, item.id, item.title, `Lo guardaste ${hace(ageDays(item.createdAt, now))} y sigue por leer`, item.createdAt, itemHref(item), item.snoozeCount);
     } else if (item.type === 'compra' && (item.status === 'quiero' || item.status === 'en_carrito') && data.urgency === 'alta' && ageDays(item.createdAt, now) >= URGENT_PURCHASE_DAYS) {
       add('compra_urgente', subject, item.id, item.title, `Urgente, en tu lista ${hace(ageDays(item.createdAt, now))}`, item.createdAt, itemHref(item), item.snoozeCount);
     }

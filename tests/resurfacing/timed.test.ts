@@ -25,6 +25,11 @@ describe('timedDue: tareas con hora exacta', () => {
     expect(['10:30', '11:00', '11:30', '12:00'].filter((t) => timedDue({ now: madridToUtc('2026-11-21', t), tz: 'Europe/Madrid', items: later, sent: [] }).length > 0)).toEqual(['11:30']);
   });
 
+  it('una tarea en espera no avisa «Ahora» aunque tenga hora', () => {
+    const now = madridToUtc('2026-11-21', '11:00');
+    expect(timedDue({ now, tz: 'Europe/Madrid', items: [tarea('a', '2026-11-21', '11:00', { status: 'en_espera' })], sent: [] })).toEqual([]);
+  });
+
   it('no repite lo que ya avisó', () => {
     const items = [tarea('a', '2026-11-21', '11:00')];
     const now = madridToUtc('2026-11-21', '11:00');

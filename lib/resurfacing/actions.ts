@@ -10,6 +10,7 @@ import type { PeopleRepo } from '@/lib/db/people';
 import type { ResurfaceAction, ResurfacingEvent, ResurfacingRepo } from '@/lib/db/resurfacing';
 import type { Item } from '@/lib/db/types';
 import { completionStatus, isOpen, ITEM_TYPES } from '@/lib/items/itemTypes';
+import { isWaiting } from '@/lib/tareas';
 import { madridDateTime, madridToUtc } from '@/lib/time';
 import type { Candidate } from './candidates';
 
@@ -57,7 +58,7 @@ async function done(deps: ActDeps, item: Item): Promise<string> {
 async function snooze(deps: ActDeps, item: Item): Promise<string> {
   const now = deps.now();
   const patch: Parameters<ItemsRepo['updateItem']>[1] = { snoozeCount: item.snoozeCount + 1 };
-  if (item.type === 'tarea' && item.dueAt) {
+  if (item.type === 'tarea' && item.dueAt && !isWaiting(item)) {
     // A task moves its date (it stops being overdue) to 7 days from today, at the same local time.
     const { time } = madridDateTime(new Date(item.dueAt), deps.tz);
     const today = madridDateTime(now, deps.tz).date;
@@ -101,4 +102,41 @@ export async function actOnEvent(deps: ActDeps, eventId: string, action: Resurfa
 export async function actOnCandidate(deps: ActDeps, c: Pick<Candidate, 'subject' | 'itemId' | 'kind'>, action: ResurfaceAction): Promise<ActOutcome> {
   const event = await deps.resurfacing.record({ itemId: c.itemId, subject: c.subject, kind: c.kind, channel: 'web' });
   return perform(deps, event, action);
+}
+
+/** The answers of "Para hoy" beyond the buttons of Telegram (web only): they need no new value in the database. */
+export const ANSWERS = ['mas_adelante', 'no_recordar', 'espera'] as const;
+export type Answer = (typeof ANSWERS)[number];
+
+/** "Más adelante": the notice does not come back for this many days. */
+export const LATER_DAYS = 30;
+/** "No me recuerdes": silenced until a date no one will reach. */
+export const SILENCED_UNTIL = '2100-01-01T00:00:00.000Z';
+/** "En espera" asks to look at the task again after this many days. */
+export const WAITING_REVIEW_DAYS = 7;
+
+/**
+ * A "Para hoy" answer: «Más adelante» (30 days), «No me recuerdes» (for good) or «En espera» (the
+ * task waits for someone and asks again in a week). The item stays where it was. All three are
+ * recorded as `posponer` (the database admits no other value): three «más adelante» in a row make the
+ * notice ask whether to archive, which is what one wants.
+ */
+export async function answerCandidate(deps: ActDeps, c: Pick<Candidate, 'subject' | 'itemId' | 'kind'>, answer: Answer): Promise<ActOutcome> {
+  if (!c.itemId) throw new UserError('Eso se hace desde la ficha de la persona');
+  const item = await find(deps, c.itemId);
+  const now = deps.now();
+  let message: string;
+  if (answer === 'espera') {
+    if (item.type !== 'tarea') throw new UserError('Solo una tarea puede estar en espera');
+    const today = madridDateTime(now, deps.tz).date;
+    const data = { ...item.data, waitingSince: today, reviewOn: addDays(today, WAITING_REVIEW_DAYS) };
+    await afterWrite(deps, await deps.items.updateItem(item.id, { status: 'en_espera', data }));
+    message = 'En espera. Te lo recuerdo dentro de una semana';
+  } else {
+    const snoozedUntil = answer === 'no_recordar' ? SILENCED_UNTIL : new Date(now.getTime() + LATER_DAYS * DAY).toISOString();
+    await afterWrite(deps, await deps.items.updateItem(item.id, { snoozedUntil, snoozeCount: answer === 'mas_adelante' ? item.snoozeCount + 1 : item.snoozeCount }));
+    message = answer === 'no_recordar' ? 'No te lo vuelvo a recordar' : 'Te lo recuerdo más adelante';
+  }
+  const event = await deps.resurfacing.record({ itemId: c.itemId, subject: c.subject, kind: c.kind, channel: 'web' });
+  return { message, event: await deps.resurfacing.markAction(event.id, 'posponer') };
 }

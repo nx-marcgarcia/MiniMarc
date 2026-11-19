@@ -5,7 +5,7 @@ import { createMemoryBackend } from '@/lib/db/memory';
 import { createPeopleRepo } from '@/lib/db/people';
 import { createResurfacingRepo } from '@/lib/db/resurfacing';
 import type { Candidate } from '@/lib/resurfacing/candidates';
-import { actOnCandidate, actOnEvent, type ActDeps } from '@/lib/resurfacing/actions';
+import { actOnCandidate, actOnEvent, answerCandidate, LATER_DAYS, SILENCED_UNTIL, type ActDeps } from '@/lib/resurfacing/actions';
 import { madridToUtc } from '@/lib/time';
 
 const NOW = madridToUtc('2026-11-17', '11:00'); // martes
@@ -181,5 +181,59 @@ describe('casos raros', () => {
     const out = await actOnCandidate(deps, c, 'archivar');
     expect(out.event).toMatchObject({ channel: 'web', kind: 'idea_olvidada', subject: `item:${idea.id}`, action: 'archivar' });
     expect((await deps.items.listItems()).find((i) => i.id === idea.id)?.archived).toBe(true);
+  });
+});
+
+describe('respuestas de «Para hoy»', () => {
+  const cand = (id: string, kind: Candidate['kind'] = 'idea_olvidada') => ({ subject: `item:${id}`, itemId: id, kind });
+  const get = async (deps: ActDeps, id: string) => (await deps.items.listItems()).find((i) => i.id === id)!;
+
+  it('Más adelante: no vuelve en 30 días y cuenta como un aplazamiento', async () => {
+    const deps = setup();
+    const idea = await deps.items.createItem({ type: 'idea', title: 'App' });
+    const out = await answerCandidate(deps, cand(idea.id), 'mas_adelante');
+    expect(out.message).toBe('Te lo recuerdo más adelante');
+    const after = await get(deps, idea.id);
+    expect(after.snoozedUntil).toBe(new Date(NOW.getTime() + LATER_DAYS * 86_400_000).toISOString());
+    expect(after.snoozeCount).toBe(1);
+    expect(after.status).toBe('semilla');
+    expect(out.event).toMatchObject({ action: 'posponer', channel: 'web', kind: 'idea_olvidada' });
+  });
+
+  it('No me recuerdes: silenciada para siempre, sin tocar su estado ni su cuenta', async () => {
+    const deps = setup();
+    const idea = await deps.items.createItem({ type: 'idea', title: 'App' });
+    await answerCandidate(deps, cand(idea.id), 'no_recordar');
+    const after = await get(deps, idea.id);
+    expect(after.snoozedUntil).toBe(SILENCED_UNTIL);
+    expect(after.snoozeCount).toBe(0);
+    expect(after.archived).toBe(false);
+  });
+
+  it('En espera: la tarea pasa a espera desde hoy y a mirar dentro de una semana, conservando sus datos', async () => {
+    const deps = setup();
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Escribir a Funko', area: 'personal', data: { deadline: '2026-12-01' } });
+    const out = await answerCandidate(deps, cand(t.id, 'tarea_aplazada'), 'espera');
+    expect(out.message).toBe('En espera. Te lo recuerdo dentro de una semana');
+    const after = await get(deps, t.id);
+    expect(after.status).toBe('en_espera');
+    expect(after.data).toMatchObject({ deadline: '2026-12-01', waitingSince: '2026-11-17', reviewOn: '2026-11-24' });
+  });
+
+  it('En espera solo vale para una tarea; un aviso de persona no se contesta aquí', async () => {
+    const deps = setup();
+    const idea = await deps.items.createItem({ type: 'idea', title: 'App' });
+    await expect(answerCandidate(deps, cand(idea.id), 'espera')).rejects.toThrow('Solo una tarea puede estar en espera');
+    await expect(answerCandidate(deps, { subject: 'date:p1:2026-11-20', itemId: null, kind: 'regalo_sin_comprar' }, 'mas_adelante')).rejects.toThrow(UserError);
+  });
+
+  it('Posponer un seguimiento no mueve la fecha de la tarea: aplaza el aviso', async () => {
+    const deps = setup();
+    const dueAt = madridToUtc('2026-11-10', '00:00').toISOString();
+    const t = await deps.items.createItem({ type: 'tarea', title: 'Esperar al banco', area: 'personal', status: 'en_espera', dueAt, data: { waitingSince: '2026-11-01' } });
+    await actOnCandidate(deps, cand(t.id, 'seguimiento'), 'posponer');
+    const after = await get(deps, t.id);
+    expect(after.dueAt).toBe(dueAt);
+    expect(after.snoozedUntil).toBe(new Date(NOW.getTime() + 7 * 86_400_000).toISOString());
   });
 });

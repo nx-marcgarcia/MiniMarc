@@ -18,6 +18,7 @@ export const KIND_LABELS: Record<CandidateKind, string> = {
   enlace_olvidado: 'Enlace sin ver',
   libro_pendiente: 'Libro por leer',
   seguimiento: 'Seguimiento',
+  tarea_aplazada: 'Aplazada',
   con_hora: 'Ahora',
 };
 

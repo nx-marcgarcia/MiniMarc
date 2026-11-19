@@ -66,13 +66,25 @@ describe('qué puede volver a salir', () => {
   });
 
   it('una tarea de mañana o sin fecha no es un recordatorio', () => {
-    expect(find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-18', '00:00').toISOString() }), tarea('b')] })).toEqual([]);
+    expect(find({ items: [tarea('a', { dueAt: madridToUtc('2026-11-18', '00:00').toISOString() }), tarea('b', { updatedAt: ago(2) })] })).toEqual([]);
+  });
+
+  it('una tarea sin fecha que lleva 14 días sin tocarse se rescata como aplazada, con su motivo', () => {
+    const cs = find({ items: [tarea('a', { updatedAt: ago(21) }), tarea('b', { updatedAt: ago(13) }), tarea('c', { updatedAt: ago(40), status: 'en_espera' }), tarea('d', { updatedAt: ago(40), area: 'trabajo' })] });
+    expect(kinds(cs)).toEqual(['tarea_aplazada:item:a']);
+    expect(cs[0]).toMatchObject({ urgent: false, detail: 'Lleva 3 semanas sin tocarse. ¿La haces o la dejas para más adelante?' });
+  });
+
+  it('abrir una tarea no la renueva (solo cuenta cuando cambia su contenido) y lo aplazado hasta una fecha no sale', () => {
+    // La antigüedad es `updatedAt`: nada de abrir la toca; «Más adelante» la esconde con `snoozedUntil`.
+    const later = new Date(NOW.getTime() + 5 * DAY).toISOString();
+    expect(find({ items: [tarea('a', { updatedAt: ago(30), snoozedUntil: later })] })).toEqual([]);
   });
 
   it('una idea sin tocar en 30 días (no una de hace 29, ni una descartada o en marcha)', () => {
     const cs = find({ items: [idea('a', { updatedAt: ago(30) }), idea('b', { updatedAt: ago(29) }), idea('c', { status: 'descartada' }), idea('d', { status: 'en_marcha' })] });
     expect(kinds(cs)).toEqual(['idea_olvidada:item:a']);
-    expect(cs[0].detail).toMatch(/30 días/);
+    expect(cs[0].detail).toBe('Lleva 4 semanas parada. ¿Defines un primer paso?');
   });
 
   it('un enlace por ver de hace más de 2 meses, y un libro por leer de hace tiempo', () => {
@@ -86,6 +98,8 @@ describe('qué puede volver a salir', () => {
       ],
     });
     expect(kinds(cs).sort()).toEqual(['enlace_olvidado:item:l1', 'libro_pendiente:item:b1']);
+    expect(cs.find((c) => c.kind === 'enlace_olvidado')!.detail).toBe('Lo guardaste hace 2 meses y sigue sin ver');
+    expect(cs.find((c) => c.kind === 'libro_pendiente')!.detail).toBe('Lo guardaste hace 2 meses y sigue por leer');
   });
 
   it('una compra urgente que lleva semanas en «quiero»; una normal o reciente no', () => {
