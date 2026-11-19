@@ -131,10 +131,10 @@ function ItemForm(props: ItemFormProps) {
     // "Nueva tienda…": the store is created first, then its id goes where a chosen store's would.
     const newStore = type === 'compra' && fd.get('storeId') === NEW_STORE ? String(fd.get('newStoreName') ?? '').trim() : null;
     if (newStore === '') return setError('Escribe el nombre de la tienda.');
-    const withStore = async <T,>(use: (storeId: string | null) => Promise<ActionResult<T>>) => {
-      if (!newStore) return use(null);
+    const withStore = async <T,>(save: (storeId: string | null) => Promise<ActionResult<T>>) => {
+      if (!newStore) return save(null);
       const created = await settle(() => createStore(newStore), 'No se ha podido crear la tienda.');
-      return created.ok ? use(created.value.id) : created;
+      return created.ok ? save(created.value.id) : created;
     };
     let call: () => Promise<ActionResult<unknown>>;
     if (item) {
