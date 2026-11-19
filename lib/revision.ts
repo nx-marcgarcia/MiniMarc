@@ -12,6 +12,7 @@ import { madridDateTime, madridToUtc } from '@/lib/time';
 
 export const REVIEW_KEY = 'revision-semanal';
 export const RESCUE_MAX = 10;
+export const TIDY_MAX = 10;
 const DAY = 86_400_000;
 
 export type Review = {
@@ -19,9 +20,23 @@ export type Review = {
   projects: { project: Project; nextTask: Item | null }[];
   overdue: Item[];
   rescue: Item[];
+  /** Old data that looks misplaced: ideas that read like a loose action, and purchases with no store. */
+  tidy: { looseIdeas: Item[]; noStore: number };
   /** Monday of next week, "YYYY-MM-DD". */
   nextWeekStart: string;
 };
+
+/**
+ * An idea that is really a loose action ("Trabajar", "llamar al médico"): up to three words, the
+ * first an infinitive, and nothing else filled in. Deliberately loose; the review only asks.
+ */
+export function looksLikeLooseAction(item: Item): boolean {
+  if (item.type !== 'idea' || item.status !== 'semilla' || item.needsReview || item.projectId) return false;
+  if (item.notes?.trim() || item.link) return false;
+  if (['category', 'potential', 'nextStep'].some((k) => item.data[k])) return false;
+  const words = item.title.trim().split(/\s+/);
+  return words.length <= 3 && /^[\p{L}]{3,}(ar|er|ir|arse|erse|irse)$/iu.test(words[0]);
+}
 
 const ageDays = (iso: string, now: Date) => Math.floor((now.getTime() - Date.parse(iso)) / DAY);
 
@@ -45,6 +60,10 @@ export function buildReview(input: { items: Item[]; projects: Project[]; now: Da
       .filter(stale)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .slice(0, RESCUE_MAX),
+    tidy: {
+      looseIdeas: open.filter(looksLikeLooseAction).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, TIDY_MAX),
+      noStore: open.filter((i) => i.type === 'compra' && !i.storeId).length,
+    },
     nextWeekStart: addDays(parseWeekParam(undefined, today), 7),
   };
 }

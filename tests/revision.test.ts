@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeProject } from './projectsDoubles';
-import { buildReview, reviewDue } from '@/lib/revision';
+import { buildReview, looksLikeLooseAction, reviewDue } from '@/lib/revision';
 import { makeItem } from './screens/setup';
 
 const TZ = 'Europe/Madrid';
@@ -61,5 +61,45 @@ describe('reviewDue', () => {
     expect(reviewDue('2026-11-13T10:00:00Z', MONDAY, TZ)).toBe(false);
     expect(reviewDue('2026-11-08T10:00:00Z', MONDAY, TZ)).toBe(true);
     expect(reviewDue(null, TUESDAY, TZ)).toBe(false);
+  });
+});
+
+describe('datos por ordenar', () => {
+  const idea = (over = {}) => makeItem({ type: 'idea', status: 'semilla', area: null, data: {}, ...over });
+
+  it('una idea corta que empieza por verbo y sin nada más suena a tarea', () => {
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar' }))).toBe(true);
+    expect(looksLikeLooseAction(idea({ title: 'Llamar al médico' }))).toBe(true);
+    expect(looksLikeLooseAction(idea({ title: 'comprar pan' }))).toBe(true);
+  });
+
+  it('no si tiene notas, enlace, campos de idea, proyecto, o es larga o no empieza por verbo', () => {
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar', notes: 'algo' }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar', link: 'https://x.es' }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar', data: { nextStep: 'Probar' } }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar', projectId: 'p1' }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Llamar al médico mañana por la tarde' }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Blog de viajes' }))).toBe(false);
+    expect(looksLikeLooseAction(idea({ title: 'Trabajar', status: 'explorando' }))).toBe(false);
+    expect(looksLikeLooseAction(makeItem({ title: 'Trabajar' }))).toBe(false);
+  });
+
+  it('buildReview junta las ideas sueltas (de las dos áreas, sin las de la Bandeja) y cuenta las compras sin tienda', () => {
+    const r = buildReview({
+      items: [
+        idea({ id: 'a', title: 'Trabajar' }),
+        idea({ id: 'b', title: 'Estudiar', area: 'trabajo' }),
+        idea({ id: 'c', title: 'Dormir', needsReview: true }),
+        makeItem({ id: 'k1', type: 'compra', status: 'quiero', area: null, storeId: null, data: {} }),
+        makeItem({ id: 'k2', type: 'compra', status: 'quiero', area: null, storeId: 's1', data: {} }),
+        makeItem({ id: 'k3', type: 'compra', status: 'comprado', area: null, storeId: null, data: {} }),
+        makeItem({ id: 'k4', type: 'compra', status: 'quiero', area: null, storeId: null, archived: true, data: {} }),
+      ],
+      projects: [],
+      now: MONDAY,
+      tz: TZ,
+    });
+    expect(r.tidy.looseIdeas.map((i) => i.id).sort()).toEqual(['a', 'b']);
+    expect(r.tidy.noStore).toBe(1);
   });
 });

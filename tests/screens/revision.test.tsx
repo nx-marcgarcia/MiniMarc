@@ -16,6 +16,7 @@ const review = (over: Partial<Review> = {}): Review => ({
   projects: [{ project: makeProject({ id: 'p1', name: 'Viaje a Japón' }), nextTask: null }],
   overdue: [makeItem({ id: 't1', title: 'Pagar seguro', dueAt: '2026-11-10T10:00:00.000Z', hasTime: true })],
   rescue: [makeItem({ id: 'e1', type: 'enlace', status: 'por_ver', title: 'Artículo viejo' })],
+  tidy: { looseIdeas: [], noStore: 0 },
   nextWeekStart: '2026-11-23',
   ...over,
 });
@@ -71,4 +72,27 @@ test('Hoy recuerda la revisión un lunes sin revisión reciente, y no si ya se h
   renderScreen(<ReviewReminder tz="Europe/Madrid" now={monday} />);
   await new Promise((r) => setTimeout(r, 0));
   expect(screen.queryByRole('link', { name: /Toca revisión semanal/ })).toBeNull();
+});
+
+test('ordenar lo antiguo: una idea suelta se pasa a tarea o se deja, y las compras sin tienda llevan a Compras', async () => {
+  const trabajar = makeItem({ id: 'i1', type: 'idea', status: 'semilla', title: 'Trabajar', area: null });
+  const { user } = renderScreen(ui(review({ tidy: { looseIdeas: [trabajar], noStore: 3 } })));
+  expect(screen.getByText('3 compras sin tienda')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Abrir Compras' }).getAttribute('href')).toBe('/compras');
+  await user.click(screen.getByRole('button', { name: 'Es una tarea: Trabajar' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledWith('i1', { type: 'tarea' }));
+  await waitFor(() => expect(screen.queryByText('Trabajar')).toBeNull());
+});
+
+test('«Es una idea» solo la quita de la lista, sin guardar nada', async () => {
+  const trabajar = makeItem({ id: 'i1', type: 'idea', status: 'semilla', title: 'Trabajar', area: null });
+  const { user } = renderScreen(ui(review({ tidy: { looseIdeas: [trabajar], noStore: 0 } })));
+  await user.click(screen.getByRole('button', { name: 'Es una idea: Trabajar' }));
+  await waitFor(() => expect(screen.queryByText('Trabajar')).toBeNull());
+  expect(itemsActions.moveItem).not.toHaveBeenCalled();
+});
+
+test('sin nada por ordenar, el bloque no aparece', () => {
+  renderScreen(ui());
+  expect(screen.queryByText('Ordenar lo antiguo')).toBeNull();
 });

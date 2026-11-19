@@ -79,6 +79,7 @@ export function RevisionScreen({ review, today, tz }: { review: Review; today: s
   const projects = review.projects.filter((p) => !gone.includes(p.project.id));
   const overdue = review.overdue.filter((i) => !gone.includes(i.id));
   const rescue = review.rescue.filter((i) => !gone.includes(i.id));
+  const looseIdeas = review.tidy.looseIdeas.filter((i) => !gone.includes(i.id));
 
   return (
     <LargeTitle title="Revisión semanal">
@@ -151,6 +152,34 @@ export function RevisionScreen({ review, today, tz }: { review: Review; today: s
           </Link>
         </DecisionRow>
       </Step>
+
+      {(looseIdeas.length > 0 || review.tidy.noStore > 0) && (
+        <InsetList header="Ordenar lo antiguo" footer="Solo se pregunta; no se cambia nada sin que lo decidas.">
+          {looseIdeas.map((item) => (
+            <DecisionRow key={item.id} title={item.title} subtitle="En Ideas, pero suena a una tarea">
+              <button type="button" className="app-btn app-btn--tint" aria-label={`Es una tarea: ${item.title}`} onClick={() => act(item.id, () => moveItem(item.id, { type: 'tarea' }))}>
+                Es una tarea
+              </button>
+              <button type="button" className="app-btn app-btn--ghost" aria-label={`Es una idea: ${item.title}`} onClick={() => setGone((g) => [...g, item.id])}>
+                Es una idea
+              </button>
+              <button type="button" className="app-btn app-btn--danger" aria-label={`Archivar: ${item.title}`} onClick={() => act(item.id, () => moveItem(item.id, { archived: true }))}>
+                Archivar
+              </button>
+            </DecisionRow>
+          ))}
+          {review.tidy.noStore > 0 && (
+            <DecisionRow
+              title={`${review.tidy.noStore} ${review.tidy.noStore === 1 ? 'compra' : 'compras'} sin tienda`}
+              subtitle="Ponles tienda para verlas agrupadas, o sepáralas si son varios productos"
+            >
+              <Link href="/compras" className="app-btn app-btn--tint">
+                Abrir Compras
+              </Link>
+            </DecisionRow>
+          )}
+        </InsetList>
+      )}
 
       <div className="app-review__finish">
         <button
