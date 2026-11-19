@@ -19,6 +19,7 @@ import { madridDateTime } from '@/lib/time';
 import { ItemPhotos } from './ItemPhotos';
 import { SubtasksEditor } from './SubtasksEditor';
 import { useProjectOptions } from './useProjectOptions';
+import { useStoreOptions } from './useStoreOptions';
 
 export type NewItemDefaults = { type: ItemType; area?: Area; personId?: string; projectId?: string; label: string };
 
@@ -111,6 +112,7 @@ function ItemForm(props: ItemFormProps) {
   const [type, setType] = useState<ItemType>(item?.type ?? defaults?.type ?? 'tarea');
   const [area, setArea] = useState<Area>(item?.area ?? defaults?.area ?? 'personal');
   const [error, setError] = useState<string | null>(null);
+  const stores = useStoreOptions(open && type === 'compra');
   // Blocks a second submit (double tap, Enter) before `pending` re-renders the button.
   const inFlight = useRef(false);
   const due = item?.dueAt ? madridDateTime(new Date(item.dueAt)) : null;
@@ -232,6 +234,19 @@ function ItemForm(props: ItemFormProps) {
             <span>Variante</span>
             <input className="app-input" name="variant" placeholder="Talla, color, modelo…" autoComplete="off" defaultValue={own(item, 'variant')} />
           </label>
+          {stores && stores.length > 0 && (
+            <label className="app-field">
+              <span>Tienda</span>
+              <select className="app-input" name="storeId" defaultValue={item?.storeId ?? ''}>
+                <option value="">Sin tienda</option>
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="app-field">
             <span>Urgencia</span>
             <select className="app-input" name="urgency" defaultValue={own(item, 'urgency')}>

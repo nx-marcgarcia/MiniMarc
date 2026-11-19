@@ -179,6 +179,11 @@ export function editPatchFromForm(
     const projectId = text(fd, 'projectId') || null;
     if (projectId !== (opts.item?.projectId ?? null)) patch.projectId = projectId;
   }
+  // The "Tienda" select only appears once the stores are loaded: without it, the store is not touched.
+  if (opts.type === 'compra' && fd.has('storeId')) {
+    const storeId = text(fd, 'storeId') || null;
+    if (storeId !== (opts.item?.storeId ?? null)) patch.storeId = storeId;
+  }
   if (opts.type === 'tarea' && text(fd, 'recurrence') && !patch.dueAt) return fail(REPEAT_NEEDS_DATE);
   if (opts.reviewMode) patch.needsReview = false;
   return ok(patch);

@@ -118,6 +118,19 @@ describe('editPatchFromForm', () => {
     });
   });
 
+  it('compra: la tienda elegida va en el patch; sin cambio o sin selector, no se toca', () => {
+    const compra = makeItem({ id: 'c1', type: 'compra', title: 'Reloj', status: 'quiero', area: null, storeId: null, data: {} });
+    const opts = { type: 'compra' as const, area: 'personal' as const, item: compra };
+    const chosen = editPatchFromForm(form({ title: 'Reloj', storeId: 's1' }), opts);
+    expect(chosen.ok && chosen.value.storeId).toBe('s1');
+    const unchanged = editPatchFromForm(form({ title: 'Reloj', storeId: '' }), opts);
+    expect(unchanged.ok && 'storeId' in unchanged.value).toBe(false);
+    const noSelect = editPatchFromForm(form({ title: 'Reloj' }), { ...opts, item: { ...compra, storeId: 's1' } });
+    expect(noSelect.ok && 'storeId' in noSelect.value).toBe(false);
+    const cleared = editPatchFromForm(form({ title: 'Reloj', storeId: '' }), { ...opts, item: { ...compra, storeId: 's1' } });
+    expect(cleared.ok && cleared.value.storeId).toBeNull();
+  });
+
   it('fecha inválida → error en español, sin patch', () => {
     expect(editPatchFromForm(form({ title: 'X', dueDate: '2026-02-30' }), { type: 'tarea', area: 'personal' })).toEqual({
       ok: false,

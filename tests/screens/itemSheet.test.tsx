@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest';
 import { ItemsScreen } from '@/components/items/ItemsScreen';
 import { ok } from '@/lib/actions/result';
 import { makeProject, projectsActions } from '../projectsDoubles';
-import { itemsActions, makeItem, renderScreen, router } from './setup';
+import { followUpActions, itemsActions, makeItem, renderScreen, router } from './setup';
 
 vi.mock('@/app/actions/items', () => import('./setup').then((m) => m.itemsActionsModule));
 vi.mock('@/app/actions/photos', () => ({ addPhoto: vi.fn(), deletePhoto: vi.fn() }));
@@ -95,6 +95,25 @@ test('guardar una compra manda el estado y el precio nuevos', async () => {
   await user.click(screen.getByRole('button', { name: 'OK' }));
   await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
   expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ status: 'en_carrito', data: { quantity: 1, currency: 'EUR', price: 19.9, variant: 'Azul' } });
+});
+
+test('una compra sin tienda deja elegirla en la hoja y la manda en el patch', async () => {
+  followUpActions.listCaptureChoices.mockResolvedValue(ok({ people: [], stores: [{ id: 's1', name: 'Casio' }, { id: 's2', name: 'Amazon' }] }));
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  const select = (await screen.findByLabelText('Tienda')) as HTMLSelectElement;
+  expect(select.value).toBe('');
+  await user.selectOptions(select, 's1');
+  await user.click(screen.getByRole('button', { name: 'OK' }));
+  await waitFor(() => expect(itemsActions.moveItem).toHaveBeenCalledTimes(1));
+  expect(itemsActions.moveItem.mock.calls[0][1]).toMatchObject({ storeId: 's1' });
+});
+
+test('sin tiendas guardadas la hoja de una compra no enseña «Tienda»', async () => {
+  const { user } = renderScreen(<ItemsScreen title="Compras" today="2026-10-22" sections={[{ key: 'a', items: [compra] }]} />);
+  await open(user, compra, 'Compras');
+  await waitFor(() => expect(followUpActions.listCaptureChoices).toHaveBeenCalled());
+  expect(screen.queryByLabelText('Tienda')).toBeNull();
 });
 
 test('un precio inválido se dice en la hoja y no se guarda', async () => {
